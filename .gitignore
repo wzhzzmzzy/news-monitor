@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+archive/
+.env*
+*.log
+.DS_Store
+coverage/
+.vitest-result/
+archive/
+config.yaml

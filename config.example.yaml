@@ -1,0 +1,37 @@
+# 抓取配置
+newsApiBaseUrl: "http://localhost:13000"
+
+# 热榜源 (每 2 小时分析一次)
+hotlist_sources:
+  - { id: wallstreetcn-hot, name: "华尔街见闻", type: api, url: "/api/s?id=wallstreetcn-hot" }
+  - { id: thepaper, name: "澎湃新闻", type: api, url: "/api/s?id=thepaper" }
+  - { id: cls-hot, name: "财联社", type: api, url: "/api/s?id=cls-hot" }
+  - { id: weibo, name: "微博", type: api, url: "/api/s?id=weibo" }
+
+# 实时新闻流 (每 30 分钟抓取一次)
+stream_sources:
+  - { id: jin10, name: "金十数据", type: api, url: "/api/s?id=jin10" }
+  - { id: zaobao, name: "联合早报", type: api, url: "/api/s?id=zaobao" }
+
+# 分析配置
+analysis_window_days: 7
+enable_stream_analysis: true
+
+monitorCron: "*/30 * * * *"
+reportCron: "0 13 * * *"
+serverPort: 12440
+
+# 存储配置
+archiveDir: "./archive"
+
+# LLM 配置
+llmProvider: "deepseek"
+llmApiKey: "YOUR_API_KEY"
+llmBaseUrl: "https://api.deepseek.com"
+llmModel: "deepseek-chat"
+
+# 邮件通知配置 (SMTP)
+smtpPass: "YOUR_SMTP_PASS"
+emailFrom: "YOUR_EMAIL@example.com"
+emailTo:
+  - "user@example.com"
