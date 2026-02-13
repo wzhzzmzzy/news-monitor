@@ -23,7 +23,8 @@ import {
   TOPIC_DETAIL_PROMPT,
   DAILY_SUMMARY_PROMPT,
   HISTORICAL_TOP_TOPICS_PROMPT,
-  HISTORICAL_TOPIC_EVOLUTION_PROMPT
+  HISTORICAL_TOPIC_EVOLUTION_PROMPT,
+  ORPHAN_SELECTION_PROMPT
 } from './analyzer/prompts.js'
 
 import type { StorageService } from './storage.js'
@@ -190,15 +191,20 @@ export class AnalyzerService {
     // Pre-calculate source counts for rawTopics to help LLM identify cross-platform trends
     const richRawTopics = rawTopics.map(t => {
       const allSources = new Set<string>()
+      let bestRank = 999
       t.newsIds.forEach(id => {
         const news = newsMap[id]
-        if (news) news.sources.forEach(s => allSources.add(s))
+        if (news) {
+          news.sources.forEach(s => allSources.add(s))
+          bestRank = Math.min(bestRank, news.maxRank)
+        }
       })
       return {
         title: t.topic,
         score: t.heatScore,
         ids: t.newsIds,
-        sourceCount: allSources.size
+        sourceCount: allSources.size,
+        maxRank: bestRank === 999 ? 0 : bestRank
       }
     })
 
@@ -224,6 +230,59 @@ export class AnalyzerService {
         throw error
       }
     })
+
+    // 2.5 Identify Orphans (Call 1.5: LLM Selection)
+    // First, filter candidates: unused, high rank/score
+    const usedNewsIds = new Set<string>()
+    topicList.topTopics.forEach(t => t.relevantNewsIds.forEach(id => usedNewsIds.add(id)))
+
+    const orphanCandidates = richRawTopics
+      .filter(t => {
+        const isUsed = t.ids.some(id => usedNewsIds.has(id)) || 
+                       topicList.topTopics.some(top => top.title.includes(t.title) || t.title.includes(top.title))
+        if (isUsed) return false
+        
+        // Loose criteria for candidates pool: Rank <= 10 OR Score >= 50
+        // We let LLM do the strict filtering
+        const isCandidate = (t.maxRank > 0 && t.maxRank <= 10) || t.score >= 50
+        return isCandidate
+      })
+      .sort((a, b) => {
+         // Sort candidates by importance to give LLM the best context
+         if (a.maxRank > 0 && b.maxRank > 0) return a.maxRank - b.maxRank
+         if (a.maxRank > 0) return -1
+         if (b.maxRank > 0) return 1
+         return b.score - a.score
+      })
+      .slice(0, 20) // Provide top 20 candidates to LLM
+
+    let orphans: typeof richRawTopics = []
+
+    if (orphanCandidates.length > 0) {
+      try {
+        const { object: selection } = await withRetry(async () => {
+          return await generateObject({
+            model: this.model,
+            schema: z.object({
+              selectedTitles: z.array(z.string()).describe('The exact titles of the selected news items'),
+              reasoning: z.string().optional()
+            }),
+            prompt: ORPHAN_SELECTION_PROMPT(orphanCandidates)
+          })
+        })
+
+        // Map selected titles back to objects
+        orphans = selection.selectedTitles
+          .map(title => orphanCandidates.find(c => c.title === title))
+          .filter(t => t !== undefined) as typeof richRawTopics
+        
+        logger.info(`LLM selected ${orphans.length} orphans from ${orphanCandidates.length} candidates.`)
+      } catch (err) {
+        logger.error(err as any, 'Failed to select orphans via LLM, falling back to top candidates.')
+        // Fallback: take top 3 candidates
+        orphans = orphanCandidates.slice(0, 3)
+      }
+    }
 
     // 3. For each topic, generate detailed analysis and select news (Call 2)
     const detailedTopicSchema = z.object({
@@ -284,7 +343,10 @@ export class AnalyzerService {
     const { text: summary } = await withRetry(async () => {
       return await generateText({
         model: this.model,
-        prompt: DAILY_SUMMARY_PROMPT(topics.map(t => t.title))
+        prompt: DAILY_SUMMARY_PROMPT(
+          topics.map(t => t.title),
+          orphans.map(t => `${t.title} (Rank: ${t.maxRank || 'N/A'}, Sources: ${t.sourceCount})`)
+        )
       })
     })
 
@@ -296,6 +358,17 @@ export class AnalyzerService {
       date: date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }),
       summary,
       topics: topics.sort((a, b) => b.score - a.score),
+      orphans: orphans.map(t => {
+        const primaryId = t.ids[0]
+        const originalNews = primaryId ? newsMap[primaryId] : null
+        return {
+          title: originalNews ? originalNews.title : t.title, // Use original news title if available
+          score: t.score,
+          sourceCount: t.sourceCount,
+          maxRank: t.maxRank,
+          url: originalNews ? originalNews.url : undefined
+        }
+      }),
       sourceNames
     }
 

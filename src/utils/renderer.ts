@@ -53,6 +53,29 @@ export function renderDailyReport(data: DailyReportData): string {
     })
     .join('')
 
+  const orphansHtml = data.orphans && data.orphans.length > 0 
+    ? `
+      <section style="margin-top: 40px; padding-top: 20px; border-top: 2px dashed #eee;">
+        <h3 style="color: #5f6368; font-size: 16px; margin-bottom: 16px;">🔍 值得关注的其他新闻 (Orphan News)</h3>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          ${data.orphans.map(item => `
+            <li style="margin-bottom: 10px; font-size: 14px;">
+              <span style="display: inline-block; padding: 2px 6px; background: #f1f3f4; border-radius: 4px; font-size: 11px; color: #5f6368; margin-right: 8px;">
+                Rank ${item.maxRank > 0 ? item.maxRank : '-'}
+              </span>
+              <a href="${item.url || '#'}" style="color: #1a73e8; text-decoration: none; font-weight: 500;">
+                ${item.title}
+              </a>
+              <span style="color: #9aa0a6; font-size: 12px; margin-left: 6px;">
+                (Sources: ${item.sourceCount})
+              </span>
+            </li>
+          `).join('')}
+        </ul>
+      </section>
+    ` 
+    : ''
+
   return `
     <!DOCTYPE html>
     <html>
@@ -75,6 +98,8 @@ export function renderDailyReport(data: DailyReportData): string {
         <main>
           ${topicsHtml}
         </main>
+
+        ${orphansHtml}
 
         <footer style="margin-top: 60px; text-align: center; color: #70757a; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
           多平台热点新闻趋势分析
