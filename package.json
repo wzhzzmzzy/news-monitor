@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/index.ts --config config.dev.yaml",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/index.js --config config.yaml",
     "lint": "eslint src/**",
     "test": "vitest"
   },

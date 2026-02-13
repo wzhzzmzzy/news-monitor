@@ -15,7 +15,8 @@ vi.mock('@ai-sdk/openai', () => ({
 describe('AnalyzerService', () => {
   const mockConfig: Config = {
     llmModel: 'gpt-4o',
-    // ... other props not needed for constructor but required by type
+    hotlist_sources: [],
+    stream_sources: [],
   } as any
   let analyzer: AnalyzerService
 
@@ -183,5 +184,34 @@ describe('AnalyzerService', () => {
     
     expect(correlation['t1']).toHaveLength(1)
     expect(correlation['t1'][0].content).toContain('Mars')
+  })
+
+  it('should generate a historical report', async () => {
+    const batches: HourlyBatchResult[] = [
+      { timestamp: '2026-02-10T10:00:00Z', summary: 'Day 1', keyInfo: [] },
+    ]
+    const range = { start: new Date('2026-02-10'), end: new Date('2026-02-11'), mode: 'historical' as const }
+
+    vi.mocked(generateObject).mockResolvedValue({
+      object: {
+        summary: 'Historical micro summary',
+        topics: [
+          { 
+            title: 'Topic H', 
+            baseScore: 90, 
+            evolution: 'Start to end', 
+            relevantNewsIds: ['n1'],
+            timeline: [{ date: '2026-02-10', event: 'Initial', heatScore: 50 }]
+          }
+        ]
+      }
+    } as any)
+
+    const report = await analyzer.generateHistoricalReport(batches, [], {}, range)
+
+    expect(report).toContain('Topic H')
+    expect(report).toContain('Historical micro summary')
+    expect(report).toContain('历史趋势报告')
+    expect(generateObject).toHaveBeenCalled()
   })
 })

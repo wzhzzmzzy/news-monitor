@@ -73,16 +73,64 @@ emailTo:
   ```
   抓取配置中的所有源，更新索引并进行 AI 关键词提取。
 
-- **手动生成日报**：
+- **手动生成日报/历史趋势报告**：
   ```bash
-  pnpm dev report [--date YYYY-MM-DD] [--id index]
+  # 生成今日报告 (1 AM 至今)
+  pnpm dev report
+  
+  # 生成指定日期的日报
+  pnpm dev report --date 2026-02-13
+  
+  # 生成自定义时间窗口的历史报告 (支持跨度高达 7 天)
+  pnpm dev report --start "26-02-10 10:00" --end "26-02-13 18:00"
+  
+  # 使用特定的配置文件
+  pnpm dev report --config config.dev.yaml
   ```
-  生成指定日期的趋势报告并发送邮件。
+  生成指定范围的趋势报告并发送邮件。
 
 - **测试邮件配置**：
   ```bash
   pnpm dev test-email
   ```
+
+## API 与参数定义
+
+### 1. CLI 参数详解 (cac)
+
+| 参数 | 别名 | 描述 | 默认值 | 示例 |
+| :--- | :--- | :--- | :--- | :--- |
+| `--config` | `-c` | 配置文件路径 | `config.yaml` | `config.dev.yaml` |
+| `--date` | - | 日报指定日期 (YYYY-MM-DD) | 当天 | `2026-02-13` |
+| `--start` | - | 历史报告起始时间 (yy-mm-dd hh:MM) | 当天 01:00 | `26-02-10_10:00` |
+| `--end` | - | 历史报告结束时间 (yy-mm-dd hh:MM) | 当前时间 | `26-02-13_18:00` |
+
+> **提示**：为了方便在 URL 中输入，时间格式中的空格可以用下划线 `_` 或 `T` 代替。
+| `--id` | - | 收件人索引 (在 emailTo 列表中的下标) | 全部发送 | `0` |
+
+### 2. HTTP 监控接口 (Hono)
+常驻模式 (`serve`) 启动后，可通过 HTTP 访问以下接口：
+
+*   **GET `/`**：返回系统健康状态、运行时间 (Uptime) 及监控/报告任务的最近运行结果。
+*   **GET `/run/monitor`**：手动触发一次抓取与分析任务。
+*   **GET `/run/report?start=26-02-10_10:00&end=26-02-13_18:00&id=0`**：手动触发一次报告生成与发送。
+支持通过 `start` 和 `end` 参数指定时间段，通过 `id` 参数指定收件人索引。
+
+### 3. 配置参数详解 (Zod Schema)
+
+| 键名 | 类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| `newsApiBaseUrl` | String (URL) | 是 | 数据抓取 API 的基础地址。 |
+| `hotlist_sources` | Array<Object> | 是 | 热榜源配置。包含 `id`, `name`, `type` (api/rss/html), `url`。 |
+| `stream_sources` | Array<Object> | 否 | 实时流配置。结构同热榜源。 |
+| `report_window_days` | Number | 否 | 自动报告的时间窗口（默认 1）。设置为 3 则自动生成过去 3 天的趋势报告。 |
+| `analysis_window_days` | Number | 否 | 多日分析的回溯天数（默认 3）。 |
+| `monitorCron` | String (Cron) | 否 | 抓取任务调度。默认 `*/30 * * * *`（每30分钟）。 |
+| `reportCron` | String (Cron) | 否 | 报告生成调度。默认 `0 23 * * *`（每天23:00）。 |
+| `llmProvider` | String | 是 | `openai`, `deepseek` 或 `anthropic`。 |
+| `llmApiKey` | String | 是 | 对应的 API Key。 |
+| `llmModel` | String | 是 | 模型名称（如 `deepseek-chat`）。 |
+| `emailTo` | Array<String> | 是 | 接收报告的邮箱列表。 |
 
 ## 部署建议
 

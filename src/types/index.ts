@@ -131,3 +131,36 @@ export interface DailyReportData {
   topics: ReportTopic[];
   sourceNames?: Record<string, string>;
 }
+
+// -- Historical Analysis Models --
+
+export interface TimeRange {
+  start: Date;
+  end: Date;
+  mode: 'single' | 'historical';
+}
+
+export interface TimelineEntry {
+  date: string;
+  event: string;
+  heatScore: number;
+}
+
+export interface HistoricalTopic {
+  title: string;
+  score: number;
+  evolution: string;
+  timeline: TimelineEntry[];
+  news: ReportNewsItem[];
+}
+
+export interface HistoricalReportData {
+  timeRange: {
+    start: string;
+    end: string;
+    mode: 'single' | 'historical';
+  };
+  summary: string;
+  topics: HistoricalTopic[];
+  sourceNames?: Record<string, string>;
+}
