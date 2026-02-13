@@ -66,7 +66,7 @@ export class Reporter {
     const reportFilename = `report-${format(date, 'yyyyMMdd-HHmm')}.html`
     await this.storage.saveText(reportFilename, report, date)
     
-            const subject = `TrendRadar 每日简报 - ${format(date, 'yyyy-MM-dd')}`
+            const subject = `每日简报 - ${format(date, 'yyyy-MM-dd')}`
     
             
     
@@ -104,18 +104,27 @@ export class Reporter {
     
         const date = range.end;
     
-        const reportFilename = `report-range-${format(range.start, 'yyyyMMddHHmm')}-to-${format(range.end, 'yyyyMMddHHmm')}.html`;
+                const reportFilename = `report-range-${format(range.start, 'yyyyMMddHHmm')}-to-${format(range.end, 'yyyyMMddHHmm')}.html`;
     
-        await this.storage.saveText(reportFilename, report, date);
+                await this.storage.saveText(reportFilename, report, date);
     
+            
     
+            
     
-                const typeName = range.mode === 'historical' ? '历史趋势报告' : '今日新闻总结';
-                const subject = `TrendRadar ${typeName} [${format(range.start, 'MM-dd HH:mm')} 至 ${format(range.end, 'MM-dd HH:mm')}]`;        
-            await this.notifier.sendReport(subject, report, recipientIndex);    
+            
     
+                        const typeName = range.mode === 'historical' ? '历史趋势报告' : '今日新闻总结';
     
-        logger.success(`${range.mode === 'historical' ? 'Historical' : 'Single-Day'} report generated and sent.`);
+                        const subject = `${typeName} [${format(range.start, 'MM-dd HH:mm')} 至 ${format(range.end, 'MM-dd HH:mm')}]`;        
+    
+                    await this.notifier.sendReport(subject, report, recipientIndex);    
+    
+            
+    
+            
+    
+                logger.success(`${range.mode === 'historical' ? 'Historical' : 'Single-Day'} report generated and sent.`);
     
       }
     
