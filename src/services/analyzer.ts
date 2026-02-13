@@ -17,6 +17,14 @@ import {
   aggregateBatchesToDaily 
 } from '../utils/analysis.js'
 import { formatDate } from '../utils/time.js'
+import { 
+  BATCH_ANALYSIS_PROMPT, 
+  DAILY_TOP_TOPICS_PROMPT, 
+  TOPIC_DETAIL_PROMPT,
+  DAILY_SUMMARY_PROMPT,
+  HISTORICAL_TOP_TOPICS_PROMPT,
+  HISTORICAL_TOPIC_EVOLUTION_PROMPT
+} from './analyzer/prompts.js'
 
 import type { StorageService } from './storage.js'
 
@@ -56,7 +64,7 @@ export class AnalyzerService {
     logger.info(`正在分析 ${validItems.length} 条新闻...`)
 
     const newsContext = validItems
-      .map((item) => `ID: ${item.id} | [${item.sources.join(', ')}] ${item.title}`)
+      .map((item) => `ID: ${item.id} | [${item.sources.join(', ')}] Rank: ${item.maxRank} | ${item.title}`)
       .join('\n')
 
     try {
@@ -73,14 +81,7 @@ export class AnalyzerService {
               newsIds: z.array(z.string()).describe('输入中属于该话题的 ID 列表。'),
             })),
           }),
-          prompt: `分析以下新闻标题并提取关键趋势和话题。
-          请使用中文返回摘要和结构化的关键信息。
-          
-          对于识别出的每个话题，列出属于该话题的新闻 ID。
-          
-          新闻标题：
-          ${newsContext}
-          `,
+          prompt: BATCH_ANALYSIS_PROMPT(newsContext),
         })
       })
 
@@ -186,25 +187,27 @@ export class AnalyzerService {
       })).max(10)
     })
 
+    // Pre-calculate source counts for rawTopics to help LLM identify cross-platform trends
+    const richRawTopics = rawTopics.map(t => {
+      const allSources = new Set<string>()
+      t.newsIds.forEach(id => {
+        const news = newsMap[id]
+        if (news) news.sources.forEach(s => allSources.add(s))
+      })
+      return {
+        title: t.topic,
+        score: t.heatScore,
+        ids: t.newsIds,
+        sourceCount: allSources.size
+      }
+    })
+
     const { object: topicList } = await withRetry(async () => {
       try {
         return await generateObject({
           model: this.model,
           schema: topTopicsSchema,
-          prompt: `基于以下今日抓取的原始话题数据，识别并整合出今天最重要的 5-10 个核心话题。
-        对于相似的话题请进行合并。
-        
-        要求：
-        1. 话题标题 (title) 必须是 1 个或多个客观、中立的精炼短语或词语。
-        2. 每个短语/词语的字数严格限制在 6 字以内。
-        3. 严禁进行任何价值判断，仅根据报道热度和频率识别事实性话题。
-        
-        原始话题：
-        ${JSON.stringify(rawTopics.map(t => ({ title: t.topic, score: t.heatScore, ids: t.newsIds })), null, 2)}
-        
-        持续关注的话题 (参考)：
-        ${JSON.stringify(clusters?.map(c => c.main_topic) || [])}
-        `
+          prompt: DAILY_TOP_TOPICS_PROMPT(richRawTopics, clusters)
         })
       } catch (error: any) {
         if (error.text) {
@@ -250,20 +253,7 @@ export class AnalyzerService {
           return await generateObject({
             model: this.model,
             schema: detailedTopicSchema,
-            prompt: `请针对话题 "${top.title}" 进行深度分析。
-          
-          参考新闻列表：
-          ${JSON.stringify(relevantNews.map(n => ({ title: n.title, url: n.url, sources: n.sources })))}
-          
-          要求：
-          1. 分析内容必须客观、实事求是，仅基于给出的新闻信息做直接的趋势总结。
-          2. 严禁进行任何价值判断（如褒贬、主观预测或评价）。
-          3. 字数严格控制在 100 字以内。
-          4. 从参考新闻中，遴选出 1-10 条最核心的新闻。
-          5. 如果同一新闻在多个平台都有报道，请将其合并，以一个主标题和多个附属平台链接的形式给出。
-          6. platform 和 source 字段请严格使用新闻列表提供的原始 ID (如 weibo, zhihu, cls-hot 等)，不要输出中文名。
-          7. **重要：必须返回合法的 JSON。如果新闻标题中包含双引号，请务必将其转义（如 \"内容\"）或替换为中文引号（“”）。**
-          `
+            prompt: TOPIC_DETAIL_PROMPT(top.title, relevantNews)
           })
         } catch (error: any) {
           if (error.text) {
@@ -294,16 +284,7 @@ export class AnalyzerService {
     const { text: summary } = await withRetry(async () => {
       return await generateText({
         model: this.model,
-        prompt: `基于以下今日的核心话题，写一段精炼的执行摘要（Executive Summary）。
-        
-        要求：
-        1. 摘要必须实事求是，仅概括今日整体趋势走势。
-        2. 严禁进行价值判断，不做任何主观评价。
-        3. 字数严格控制在 150 字以内。
-        
-        今日话题：
-        ${topics.map(t => `- ${t.title}`).join('\n')}
-        `
+        prompt: DAILY_SUMMARY_PROMPT(topics.map(t => t.title))
       })
     })
 
@@ -344,6 +325,21 @@ export class AnalyzerService {
     // Fuzzy deduplication to reduce input size
     const { deduplicated: rawTopics } = fuzzyDeduplicateTopics(rawTopicsData)
 
+    // Pre-calculate source counts for historical rawTopics
+    const richRawTopics = rawTopics.map(t => {
+      const allSources = new Set<string>()
+      t.newsIds.forEach(id => {
+        const news = newsMap[id]
+        if (news) news.sources.forEach(s => allSources.add(s))
+      })
+      return {
+        title: t.topic,
+        score: t.heatScore,
+        ids: t.newsIds,
+        sourceCount: allSources.size
+      }
+    })
+
     // 2. Step 1: Identify top historical topics and generate global summary (Call 1)
     const topTopicsSchema = z.object({
       summary: z.string().describe('此时间段内整体趋势演变的宏观摘要。'),
@@ -359,19 +355,11 @@ export class AnalyzerService {
         return await generateObject({
           model: this.model,
           schema: topTopicsSchema,
-          prompt: `基于以下时间段内抓取的原始话题数据，识别并整合出最重要的 5-10 个核心话题，并提供一段宏观摘要。
-        
-        时间范围：${timeRange.start.toISOString()} 至 ${timeRange.end.toISOString()}
-        模式：${timeRange.mode}
-        
-        原始话题：
-        ${JSON.stringify(rawTopics.map(t => ({ title: t.topic, score: t.heatScore, ids: t.newsIds })), null, 2)}
-        
-        要求：
-        1. 话题标题 (title) 字数严格限制在 6 字以内。
-        2. 摘要必须实事求是，仅概括此时间段内的整体趋势演变。
-        3. 使用中文返回结果。
-        `
+          prompt: HISTORICAL_TOP_TOPICS_PROMPT({
+            start: timeRange.start.toISOString(),
+            end: timeRange.end.toISOString(),
+            mode: timeRange.mode
+          }, richRawTopics)
         })
       } catch (error: any) {
         if (error.text) {
@@ -425,20 +413,12 @@ export class AnalyzerService {
             return await generateObject({
               model: this.model,
               schema: detailedHistoricalTopicSchema,
-              prompt: `请针对话题 "${item.title}" 生成历史演变分析和时间轴。
-            
-            相关话题历史节点数据：
-            ${JSON.stringify(relatedRaw.map(r => ({ time: formatDate(new Date(r.timestamp)), score: r.heatScore })))}
-            
-            参考新闻列表：
-            ${JSON.stringify(relevantNews.map(n => ({ title: n.title, url: n.url, sources: n.sources })))}
-            
-            要求：
-            1. evolution: 描述该话题在 ${timeRange.start.toISOString()} 至 ${timeRange.end.toISOString()} 期间的起承转合，客观且精炼。
-            2. timeline: 记录关键的时间节点、对应的事件描述和热度。date 字段必须使用 YYYY-MM-DD 格式。
-            3. selectedNews: 从新闻列表中挑选最具代表性的 3-5 条。
-            4. 使用中文返回。
-            `
+              prompt: HISTORICAL_TOPIC_EVOLUTION_PROMPT(
+                item.title,
+                { start: timeRange.start.toISOString(), end: timeRange.end.toISOString() },
+                relatedRaw.map(r => ({ time: formatDate(new Date(r.timestamp)), score: r.heatScore })),
+                relevantNews
+              )
             })
           } catch (error: any) {
             if (error.text) {
