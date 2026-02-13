@@ -15,7 +15,8 @@ export interface Config {
   hotlist_sources: SourceConfig[];
   stream_sources: SourceConfig[];
   monitorCron: string;
-  reportCron: string;
+  dailyReportCron: string;
+  historicalReportCron: string;
   serverPort: number;
 
   // Analysis
@@ -36,6 +37,7 @@ export interface Config {
   smtpPort?: number;
   smtpUser?: string;
   smtpPass: string;
+  emailFromName?: string;
   emailFrom: string;
   emailTo: string[];
 }

@@ -54,7 +54,7 @@ export class NotifierService {
     const isHtml = content.trim().startsWith('<!DOCTYPE html>') || content.trim().startsWith('<html')
 
     const info = await this.transporter.sendMail({
-      from: this.config.emailFrom,
+      from: `"${this.config.emailFromName}" <${this.config.emailFrom}>`,
       to: recipients.join(', '),
       subject: subject,
       text: isHtml ? 'Please view this email in an HTML-compatible client.' : content,

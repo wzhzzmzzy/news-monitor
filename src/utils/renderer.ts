@@ -129,7 +129,7 @@ export function renderHistoricalReport(data: HistoricalReportData): string {
     `
   }).join('')
 
-  const modeName = timeRange.mode === 'historical' ? '历史趋势报告' : '深度单日报'
+  const modeName = timeRange.mode === 'historical' ? '历史趋势报告' : '今日新闻总结'
 
   return `
     <!DOCTYPE html>

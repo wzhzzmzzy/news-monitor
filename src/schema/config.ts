@@ -30,11 +30,11 @@ export const configSchema = z.preprocess(
     
     // Analysis settings
     analysis_window_days: z.number().int().min(1).default(3),
-    report_window_days: z.number().int().min(1).default(1), // New field
     enable_stream_analysis: z.boolean().default(false),
     
     monitorCron: z.string().default('*/30 * * * *'),
-    reportCron: z.string().default('0 23 * * *'),
+    dailyReportCron: z.string().default('0 23 * * *'),
+    historicalReportCron: z.string().default('0 10 * * 1'), // Default: Every Monday at 10 AM
     serverPort: z.number().int().positive().default(12440),
     archiveDir: z.string().default('./archive'),
     llmProvider: z.enum(['openai', 'deepseek', 'anthropic']),
@@ -45,6 +45,7 @@ export const configSchema = z.preprocess(
     smtpPort: z.number().int().positive().optional(),
     smtpUser: z.string().optional(),
     smtpPass: z.string(),
+    emailFromName: z.string().default('NewsHead'),
     emailFrom: z.string().email(),
     emailTo: z.array(z.string().email()).min(1),
   })
