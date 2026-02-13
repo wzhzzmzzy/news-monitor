@@ -32,6 +32,9 @@ importers:
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
+      jsonrepair:
+        specifier: ^3.13.2
+        version: 3.13.2
       nodemailer:
         specifier: ^6.10.0
         version: 6.10.1
@@ -706,6 +709,10 @@ packages:
   jsondiffpatch@0.6.0:
     resolution: {integrity: sha512-3QItJOXp2AP1uv7waBkao5nCvhEv+QmJAd38Ybq7wNI74Q+BBmnLn4EDKz6yI9xGAIQoUF87qHt+kc1IVxB4zQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+
+  jsonrepair@3.13.2:
+    resolution: {integrity: sha512-Leuly0nbM4R+S5SVJk3VHfw1oxnlEK9KygdZvfUtEtTawNDyzB4qa1xWTmFt1aeoA7sXZkVTRuIixJ8bAvqVUg==}
     hasBin: true
 
   loupe@3.2.1:
@@ -1541,6 +1548,8 @@ snapshots:
       '@types/diff-match-patch': 1.0.36
       chalk: 5.6.2
       diff-match-patch: 1.0.5
+
+  jsonrepair@3.13.2: {}
 
   loupe@3.2.1: {}
 

@@ -5,6 +5,7 @@ import type { Config, NewsIndexItem, HourlyBatchResult, DailyTrendSummary, Trend
 import logger from '../utils/logger.js'
 import { withRetry } from '../utils/retry.js'
 import { renderDailyReport } from '../utils/renderer.js'
+import { tryRepairJSON } from '../utils/json.js'
 import { 
   fuzzyDeduplicateTopics, 
   calculateDurationWeight, 
@@ -171,18 +172,21 @@ export class AnalyzerService {
     }
 
     // 2. Identify and consolidate top topics (Call 1)
+    const topTopicsSchema = z.object({
+      topTopics: z.array(z.object({
+        title: z.string(),
+        baseScore: z.number(),
+        relevantNewsIds: z.array(z.string()),
+        isLongTerm: z.boolean()
+      })).max(10)
+    })
+
     const { object: topicList } = await withRetry(async () => {
-      return await generateObject({
-        model: this.model,
-        schema: z.object({
-          topTopics: z.array(z.object({
-            title: z.string(),
-            baseScore: z.number(),
-            relevantNewsIds: z.array(z.string()),
-            isLongTerm: z.boolean()
-          })).max(10)
-        }),
-        prompt: `基于以下今日抓取的原始话题数据，识别并整合出今天最重要的 5-10 个核心话题。
+      try {
+        return await generateObject({
+          model: this.model,
+          schema: topTopicsSchema,
+          prompt: `基于以下今日抓取的原始话题数据，识别并整合出今天最重要的 5-10 个核心话题。
         对于相似的话题请进行合并。
         
         要求：
@@ -196,10 +200,37 @@ export class AnalyzerService {
         持续关注的话题 (参考)：
         ${JSON.stringify(clusters?.map(c => c.main_topic) || [])}
         `
-      })
+        })
+      } catch (error: any) {
+        if (error.text) {
+          logger.warn('Top topics generation failed to parse JSON, attempting repair...')
+          try {
+            const repaired = tryRepairJSON(error.text)
+            const parsed = JSON.parse(repaired)
+            return { object: topTopicsSchema.parse(parsed) }
+          } catch (repairError) {
+            logger.error('JSON repair failed for top topics.')
+            throw error
+          }
+        }
+        throw error
+      }
     })
 
-    // 3. For each topic, generate detailed analysis and select news (Call 2 - possibly multiple if needed, but here consolidated for efficiency)
+    // 3. For each topic, generate detailed analysis and select news (Call 2)
+    const detailedTopicSchema = z.object({
+      analysis: z.string().describe('该话题的深度语义分析，包含背景和今日进展。'),
+      groupedNews: z.array(z.object({
+        title: z.string().describe('新闻标题（选择一个最具代表性的）。'),
+        url: z.string().describe('主链接（选择一个最权威的，如新华网、澎湃、头条等）。'),
+        source: z.string().describe('主链接的来源 ID（如 weibo, zhihu 等）。'),
+        otherPlatforms: z.array(z.object({
+          platform: z.string().describe('对应平台的 ID（如 weibo, zhihu, cls-hot 等）。'),
+          url: z.string()
+        })).optional().describe('同一事件在其他平台的报道链接。')
+      })).max(10)
+    })
+    
     const topics: ReportTopic[] = []
     
     for (const top of topicList.topTopics) {
@@ -210,21 +241,11 @@ export class AnalyzerService {
         .slice(0, 15) // Limit input to LLM
 
       const { object: detailedTopic } = await withRetry(async () => {
-        return await generateObject({
-          model: this.model,
-          schema: z.object({
-            analysis: z.string().describe('该话题的深度语义分析，包含背景和今日进展。'),
-            groupedNews: z.array(z.object({
-              title: z.string().describe('新闻标题（选择一个最具代表性的）。'),
-              url: z.string().describe('主链接（选择一个最权威的，如新华网、澎湃、头条等）。'),
-              source: z.string().describe('主链接的来源 ID（如 weibo, zhihu 等）。'),
-              otherPlatforms: z.array(z.object({
-                platform: z.string().describe('对应平台的 ID（如 weibo, zhihu, cls-hot 等）。'),
-                url: z.string()
-              })).optional().describe('同一事件在其他平台的报道链接。')
-            })).max(10)
-          }),
-          prompt: `请针对话题 "${top.title}" 进行深度分析。
+        try {
+          return await generateObject({
+            model: this.model,
+            schema: detailedTopicSchema,
+            prompt: `请针对话题 "${top.title}" 进行深度分析。
           
           参考新闻列表：
           ${JSON.stringify(relevantNews.map(n => ({ title: n.title, url: n.url, sources: n.sources })))}
@@ -236,8 +257,23 @@ export class AnalyzerService {
           4. 从参考新闻中，遴选出 1-10 条最核心的新闻。
           5. 如果同一新闻在多个平台都有报道，请将其合并，以一个主标题和多个附属平台链接的形式给出。
           6. platform 和 source 字段请严格使用新闻列表提供的原始 ID (如 weibo, zhihu, cls-hot 等)，不要输出中文名。
+          7. **重要：必须返回合法的 JSON。如果新闻标题中包含双引号，请务必将其转义（如 \"内容\"）或替换为中文引号（“”）。**
           `
-        })
+          })
+        } catch (error: any) {
+          if (error.text) {
+            logger.warn(`Analysis generation failed for topic "${top.title}", attempting repair...`)
+            try {
+              const repaired = tryRepairJSON(error.text)
+              const parsed = JSON.parse(repaired)
+              return { object: detailedTopicSchema.parse(parsed) }
+            } catch (repairError) {
+              logger.error(`JSON repair failed for topic "${top.title}".`)
+              throw error
+            }
+          }
+          throw error
+        }
       })
 
       topics.push({

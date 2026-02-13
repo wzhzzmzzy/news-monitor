@@ -86,19 +86,22 @@ emailTo:
 
 ## 部署建议
 
-### 使用 PM2 (推荐)
+### 使用 PM2 (推荐常驻模式)
+利用内置的 `serve` 命令配合 PM2 开启守护进程：
 ```bash
 pm2 start "pnpm dev serve" --name trend-radar
 ```
 
-### 使用 Crontab
-如果不想使用常驻进程，可利用 `start.sh` 配合系统 Crontab：
+### 使用 Crontab (手动模式)
+如果倾向于使用系统级定时任务，可以直接调用 CLI 命令：
 ```bash
-# 每小时运行一次抓取
-0 * * * * /path/to/project/start.sh monitor
+# 每小时运行一次抓取与分析
+0 * * * * cd /path/to/project && /usr/local/bin/pnpm dev monitor >> /tmp/monitor.log 2>&1
+
 # 每天 23:30 发送日报
-30 23 * * * /path/to/project/start.sh report
+30 23 * * * cd /path/to/project && /usr/local/bin/pnpm dev report >> /tmp/report.log 2>&1
 ```
+> **注意**：请确保 cron 任务中 `pnpm` 和 `node` 的路径正确。
 
 ## 开发与测试
 
