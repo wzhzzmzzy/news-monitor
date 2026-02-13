@@ -1,108 +1,87 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan - Dynamic Historical Analysis
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `003-dynamic-historical-analysis` | **Date**: 2026-02-13 | **Spec**: `specs/003-dynamic-historical-analysis/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+Introduce a dynamic time window mechanism to allow users to generate reports for arbitrary periods, with automatic mode switching between "Single-Day" and "Historical Trend" analysis.
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+The core logic of TrendRadar will be shifted from fixed "Natural Day" reporting to a dynamic `[start, end]` window. The system will automatically aggregate data across multiple `archive/YYYY-MM-DD/` directories. 
+
+Two modes will be supported:
+1. **Single-Day Mode**: When the range is within a single local day. Focuses on details.
+2. **Historical Trend Mode**: When the range crosses multiple days. Focuses on evolution and timeline.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript 5.x / Node.js 22
+**Primary Dependencies**: cac, date-fns, pino-pretty, ai (SDK)
+**Storage**: File-system based (archive/ directory)
+**Testing**: Vitest
+**Project Type**: CLI tool
+**Performance Goals**: Aggregate 7 days of data (< 200 HourlyBatchResult) within 2 seconds.
+**Constraints**: Maximum 7 days analysis range.
+**Scale/Scope**: ~5-10 core topics per report, handling up to 1000 news items per week.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-- [ ] **Simplicity**: Is this the simplest workable solution? (Principle I)
-- [ ] **Modularity**: Is functionality split into focused, small modules? (Principle II)
-- [ ] **FP Paradigm**: Does it prefer function composition over Classes? (Principle II)
-- [ ] **Testability**: Is the logic designed to be unit-testable? (Principle III)
-- [ ] **Type Safety**: Does the design avoid `any` and use strict types? (Principle IV)
+- [x] **Simplicity**: Simple range-based filtering and mode switching. (Principle I)
+- [x] **Modularity**: Data aggregation logic separated into StorageService; Analysis logic in AnalyzerService. (Principle II)
+- [x] **FP Paradigm**: Using date utility functions and pure aggregation logic. (Principle II)
+- [x] **Testability**: New storage aggregation and analyzer prompts are testable. (Principle III)
+- [x] **Type Safety**: Defining strict interfaces for HistoricalReportData. (Principle IV)
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+specs/003-dynamic-historical-analysis/
+├── plan.md              # This file
+├── research.md          # Research on historical prompt strategies
+├── data-model.md        # Extended data models for historical analysis
+├── quickstart.md        # How to use --start and --end
+├── contracts/           # API/Interface changes
+└── tasks.md             # Implementation tasks
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
+├── core/
+│   └── reporter.ts      # Update to handle dynamic reports
 ├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+│   ├── analyzer.ts      # New historical analysis logic/prompts
+│   └── storage.ts       # Cross-date data aggregation
+├── utils/
+│   ├── logger.ts        # Local time output optimization
+│   ├── renderer.ts      # Adaptive HTML templates
+│   └── time.ts          # New time parsing utilities
+└── index.ts             # CLI command updates
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+## Phase 0: Research & Foundation
+- [ ] Document LLM prompt strategy for "Evolution Insight" in `research.md`.
+- [ ] Verify `pino-pretty` local time configuration.
+- [ ] Research `date-fns` behavior for local time interval calculations.
 
-## Complexity Tracking
+## Phase 1: Design & Contracts
+- [ ] Define `HistoricalReportData` and `TimeRange` types in `src/types/index.ts`.
+- [ ] Update `StorageService` interface for range-based retrieval.
+- [ ] Update `AnalyzerService` interface for historical reports.
+- [ ] Run `.specify/scripts/bash/update-agent-context.sh gemini`.
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
+## Phase 2: Implementation (Core)
+- [ ] Optimize Logger time output to local time.
+- [ ] Implement `src/utils/time.ts` for `yy-mm-dd hh:MM` parsing.
+- [ ] Implement `StorageService.getBatchesInRange` and `getNewsIndexInRange`.
+- [ ] Update `index.ts` to support `--start` and `--end`.
+- [ ] Configure environment-specific configs:
+    - Update `package.json` scripts (`dev` uses `config.dev.yaml`, `start` uses `config.yaml`).
+    - Add `config.dev.yaml` to `.gitignore`.
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+## Phase 3: AI & Rendering
+- [ ] Implement `AnalyzerService.generateHistoricalReport`.
+- [ ] Update `renderer.ts` with adaptive CSS and components for Historical Mode.
+- [ ] Add unit tests for range aggregation and time parsing.

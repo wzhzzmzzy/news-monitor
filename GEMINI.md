@@ -1,8 +1,8 @@
-# Gemini Context: Multi-Day Analysis
+# Gemini Context: Dynamic Historical Analysis
 
-**Active Feature**: `002-multi-day-analysis`
-**Spec**: `specs/002-multi-day-analysis/spec.md`
-**Plan**: `specs/002-multi-day-analysis/plan.md`
+**Active Feature**: `003-dynamic-historical-analysis`
+**Spec**: `specs/003-dynamic-historical-analysis/spec.md`
+**Plan**: `specs/003-dynamic-historical-analysis/plan.md`
 
 ## Tech Stack
 - **Runtime**: Node.js 22
@@ -15,3 +15,10 @@
 2. **Functional**: FP over Classes.
 3. **Type Safety**: No `any`.
 4. **Reliability**: 5xx retries, exponential backoff.
+
+## Active Technologies
+- TypeScript 5.x / Node.js 22 + cac, date-fns, pino-pretty, ai (SDK) (003-dynamic-historical-analysis)
+- File-system based (archive/ directory) (003-dynamic-historical-analysis)
+
+## Recent Changes
+- 003-dynamic-historical-analysis: Added TypeScript 5.x / Node.js 22 + cac, date-fns, pino-pretty, ai (SDK)
