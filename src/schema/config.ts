@@ -30,6 +30,7 @@ export const configSchema = z.preprocess(
     
     // Analysis settings
     analysis_window_days: z.number().int().min(1).default(3),
+    report_window_days: z.number().int().min(1).default(1), // New field
     enable_stream_analysis: z.boolean().default(false),
     
     monitorCron: z.string().default('*/30 * * * *'),

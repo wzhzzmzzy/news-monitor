@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { format, eachDayOfInterval, isBefore, parseISO } from 'date-fns'
-import type { DailyTrendSummary, StreamItem } from '../types/index.js'
+import { format, eachDayOfInterval, isBefore, parseISO, isWithinInterval } from 'date-fns'
+import type { DailyTrendSummary, StreamItem, HourlyBatchResult, NewsIndexItem } from '../types/index.js'
 
 export class StorageService {
   private archiveDir: string
@@ -140,8 +140,100 @@ export class StorageService {
       }
     }
 
-    // Filter by timestamp
-    const sinceIso = since.toISOString()
-    return allItems.filter(item => item.timestamp >= sinceIso)
-  }
-}
+        // Filter by timestamp
+
+        const sinceIso = since.toISOString()
+
+        return allItems.filter(item => item.timestamp >= sinceIso)
+
+      }
+
+    
+
+      async getBatchesInRange(start: Date, end: Date): Promise<HourlyBatchResult[]> {
+
+        const dates = eachDayOfInterval({ start, end });
+
+        const allBatches: HourlyBatchResult[] = [];
+
+    
+
+        for (const date of dates) {
+
+          const batches = await this.loadJson<HourlyBatchResult[]>('keywords.json', date);
+
+          if (batches) {
+
+            const filtered = batches.filter(b => {
+
+              const bTime = parseISO(b.timestamp);
+
+              return isWithinInterval(bTime, { start, end });
+
+            });
+
+            allBatches.push(...filtered);
+
+          }
+
+        }
+
+        return allBatches;
+
+      }
+
+    
+
+      async getNewsIndexInRange(start: Date, end: Date): Promise<Record<string, NewsIndexItem>> {
+
+        const dates = eachDayOfInterval({ start, end });
+
+        const mergedIndex: Record<string, NewsIndexItem> = {};
+
+    
+
+        for (const date of dates) {
+
+          const dailyIndex = await this.loadJson<Record<string, NewsIndexItem>>('index.json', date);
+
+          if (dailyIndex) {
+
+            for (const [id, item] of Object.entries(dailyIndex)) {
+
+              if (!mergedIndex[id]) {
+
+                mergedIndex[id] = { ...item };
+
+              } else {
+
+                if (item.lastSeen > mergedIndex[id].lastSeen) {
+
+                  mergedIndex[id].lastSeen = item.lastSeen;
+
+                }
+
+                if (item.firstSeen < mergedIndex[id].firstSeen) {
+
+                  mergedIndex[id].firstSeen = item.firstSeen;
+
+                }
+
+                mergedIndex[id].occurrences += item.occurrences;
+
+                mergedIndex[id].maxRank = Math.min(mergedIndex[id].maxRank, item.maxRank);
+
+              }
+
+            }
+
+          }
+
+        }
+
+        return mergedIndex;
+
+      }
+
+    }
+
+    

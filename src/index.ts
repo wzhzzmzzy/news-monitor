@@ -10,6 +10,7 @@ import { AnalyzerService } from './services/analyzer.js'
 import { NotifierService } from './services/notifier.js'
 import { Reporter } from './core/reporter.js'
 import logger from './utils/logger.js'
+import { createTimeRange, formatDate } from './utils/time.js'
 
 const cli = cac('trend-radar')
 
@@ -88,6 +89,27 @@ async function runMonitor(configPath: string) {
   }
 }
 
+async function runHistoricalReport(configPath: string, startStr: string, endStr?: string, recipientIndex?: number) {
+  let storage: StorageService | undefined
+  try {
+    const config = loadConfig(configPath)
+    storage = new StorageService(config.archiveDir)
+    const analyzer = new AnalyzerService(config, storage)
+    const notifier = new NotifierService(config)
+    const reporter = new Reporter(storage, analyzer, notifier)
+
+    const range = createTimeRange(startStr, endStr)
+    logger.info(`Generating ${range.mode} report from ${range.start.toISOString()} to ${range.end.toISOString()}...`)
+    
+    await reporter.runHistoricalReport(range, recipientIndex)
+    
+    logger.success('Historical reporting task completed successfully.')
+  } catch (error) {
+    logger.error(error as any, 'Historical reporting task failed:')
+    throw error
+  }
+}
+
 async function runReport(configPath: string, dateStr?: string, recipientIndex?: number) {
   status.report.lastStatus = 'running'
   let storage: StorageService | undefined
@@ -132,11 +154,20 @@ cli
   .command('report', 'Generate and send daily report')
   .option('-c, --config <file>', 'Path to config file', { default: 'config.yaml' })
   .option('--date <date>', 'Date to report on (YYYY-MM-DD)')
+  .option('--start <time>', 'Start time (yy-mm-dd hh:MM)')
+  .option('--end <time>', 'End time (yy-mm-dd hh:MM)')
   .option('--id <index>', 'Recipient index in the config email list')
   .action(async (options) => {
     try {
       const recipientIndex = options.id !== undefined ? parseInt(options.id, 10) : undefined
-      await runReport(options.config, options.date, recipientIndex)
+      
+      if (options.start || options.end) {
+        const todayStr = formatDate(new Date()).slice(2)
+        const start = options.start || `${todayStr} 01:00`
+        await runHistoricalReport(options.config, start, options.end, recipientIndex)
+      } else {
+        await runReport(options.config, options.date, recipientIndex)
+      }
     } catch (error) {
       process.exit(1)
     }
@@ -165,9 +196,19 @@ cli
     // Report
     const reportJob = new CronJob(config.reportCron, async () => {
       try {
-        await runReport(options.config)
+        if (config.report_window_days > 1) {
+          const now = new Date();
+          const start = new Date(now);
+          start.setDate(now.getDate() - (config.report_window_days - 1));
+          start.setHours(0, 0, 0, 0);
+          
+          const startStr = `${formatDate(start).slice(2)}_00:00`;
+          await runHistoricalReport(options.config, startStr);
+        } else {
+          await runReport(options.config);
+        }
       } catch (err) {
-        // Error already logged in runReport
+        // Error already logged in run functions
       }
     })
 
@@ -186,6 +227,8 @@ cli
     app.get('/run/:task', async (c) => {
       const task = c.req.param('task')
       const id = c.req.query('id')
+      const start = c.req.query('start')
+      const end = c.req.query('end')
       const recipientIndex = id !== undefined ? parseInt(id, 10) : undefined
 
       if (task === 'monitor') {
@@ -193,6 +236,28 @@ cli
         return c.json({ message: 'Monitor task triggered' })
       }
       if (task === 'report') {
+        if (start || end) {
+          const todayStr = formatDate(new Date()).slice(2)
+          const startStr = (start as string) || `${todayStr} 01:00`
+          runHistoricalReport(options.config, startStr, end as string, recipientIndex).catch(() => {})
+          return c.json({ message: 'Historical report task triggered', range: { start: startStr, end } })
+        }
+
+        if (config.report_window_days > 1) {
+          const now = new Date();
+          const startDate = new Date(now);
+          startDate.setDate(now.getDate() - (config.report_window_days - 1));
+          startDate.setHours(0, 0, 0, 0);
+          
+          const startStr = `${formatDate(startDate).slice(2)} 00:00`;
+          runHistoricalReport(options.config, startStr, undefined, recipientIndex).catch(() => {})
+          return c.json({ 
+            message: 'Multi-day report task triggered (config)', 
+            window_days: config.report_window_days,
+            start: startStr 
+          })
+        }
+
         runReport(options.config, undefined, recipientIndex).catch(() => {})
         return c.json({ message: 'Report task triggered' })
       }

@@ -1,10 +1,14 @@
 import { generateObject, generateText, type LanguageModelV1 } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { z } from 'zod'
-import type { Config, NewsIndexItem, HourlyBatchResult, DailyTrendSummary, TrendCluster, TrendItem, StreamItem, DailyReportData, ReportTopic } from '../types/index.js'
+import type { 
+  Config, NewsIndexItem, HourlyBatchResult, DailyTrendSummary, 
+  TrendCluster, TrendItem, StreamItem, DailyReportData, ReportTopic,
+  HistoricalReportData, HistoricalTopic, TimelineEntry
+} from '../types/index.js'
 import logger from '../utils/logger.js'
 import { withRetry } from '../utils/retry.js'
-import { renderDailyReport } from '../utils/renderer.js'
+import { renderDailyReport, renderHistoricalReport } from '../utils/renderer.js'
 import { tryRepairJSON } from '../utils/json.js'
 import { 
   fuzzyDeduplicateTopics, 
@@ -12,6 +16,7 @@ import {
   isTrendRelated, 
   aggregateBatchesToDaily 
 } from '../utils/analysis.js'
+import { formatDate } from '../utils/time.js'
 
 import type { StorageService } from './storage.js'
 
@@ -314,6 +319,173 @@ export class AnalyzerService {
     }
 
     return renderDailyReport(reportData)
+  }
+
+  async generateHistoricalReport(
+    batches: HourlyBatchResult[],
+    clusters: TrendCluster[],
+    newsIndex: Record<string, NewsIndexItem>,
+    timeRange: { start: Date; end: Date; mode: 'single' | 'historical' }
+  ): Promise<string> {
+    if (batches.length === 0) return '指定时间范围内无有效分析数据。'
+
+    logger.info(`正在生成历史趋势报告 (${timeRange.start.toISOString()} 至 ${timeRange.end.toISOString()})...`)
+
+    const newsMap = newsIndex || {}
+    
+    // 1. Prepare raw topic data
+    const rawTopicsData = batches.flatMap(b => b.keyInfo.map(k => ({
+      topic: k.topic,
+      heatScore: k.heatScore,
+      newsIds: k.newsIds,
+      timestamp: b.timestamp
+    })))
+
+    // Fuzzy deduplication to reduce input size
+    const { deduplicated: rawTopics } = fuzzyDeduplicateTopics(rawTopicsData)
+
+    // 2. Step 1: Identify top historical topics and generate global summary (Call 1)
+    const topTopicsSchema = z.object({
+      summary: z.string().describe('此时间段内整体趋势演变的宏观摘要。'),
+      topTopics: z.array(z.object({
+        title: z.string(),
+        baseScore: z.number(),
+        relevantNewsIds: z.array(z.string())
+      })).max(10)
+    })
+
+    const { object: historicalSummary } = await withRetry(async () => {
+      try {
+        return await generateObject({
+          model: this.model,
+          schema: topTopicsSchema,
+          prompt: `基于以下时间段内抓取的原始话题数据，识别并整合出最重要的 5-10 个核心话题，并提供一段宏观摘要。
+        
+        时间范围：${timeRange.start.toISOString()} 至 ${timeRange.end.toISOString()}
+        模式：${timeRange.mode}
+        
+        原始话题：
+        ${JSON.stringify(rawTopics.map(t => ({ title: t.topic, score: t.heatScore, ids: t.newsIds })), null, 2)}
+        
+        要求：
+        1. 话题标题 (title) 字数严格限制在 6 字以内。
+        2. 摘要必须实事求是，仅概括此时间段内的整体趋势演变。
+        3. 使用中文返回结果。
+        `
+        })
+      } catch (error: any) {
+        if (error.text) {
+          logger.warn('Historical top topics generation failed to parse JSON, attempting repair...')
+          try {
+            const repaired = tryRepairJSON(error.text)
+            const parsed = JSON.parse(repaired)
+            return { object: topTopicsSchema.parse(parsed) }
+          } catch (repairError) {
+            logger.error('JSON repair failed for historical top topics.')
+            throw error
+          }
+        }
+        throw error
+      }
+    })
+
+    // 3. Step 2: For each top topic, generate detailed evolution and timeline (Call 2 loop)
+    const topics: HistoricalTopic[] = []
+    const detailedHistoricalTopicSchema = z.object({
+      evolution: z.string().describe('描述该话题在此期间的演变过程（例如：起源->爆发->现状）。'),
+      timeline: z.array(z.object({
+        date: z.string().describe('日期，格式为 YYYY-MM-DD。'),
+        event: z.string().describe('关键节点描述。'),
+        heatScore: z.number()
+      })).max(10),
+      selectedNews: z.array(z.object({
+        title: z.string(),
+        url: z.string(),
+        source: z.string()
+      })).max(5)
+    })
+
+    for (const item of historicalSummary.topTopics) {
+      logger.info(`[Historical Report] Analyzing topic details: "${item.title}"...`)
+      
+      // Get related raw topics for this title to help the LLM see the timeline
+      const relatedRaw = rawTopicsData.filter(rt => 
+        rt.topic.includes(item.title) || item.title.includes(rt.topic)
+      ).sort((a,b) => a.timestamp.localeCompare(b.timestamp))
+
+      // Get some news details
+      const relevantNews = item.relevantNewsIds
+        .map(id => newsMap[id])
+        .filter(n => n)
+        .slice(0, 15)
+
+      try {
+        const { object: detailedTopic } = await withRetry(async () => {
+          try {
+            return await generateObject({
+              model: this.model,
+              schema: detailedHistoricalTopicSchema,
+              prompt: `请针对话题 "${item.title}" 生成历史演变分析和时间轴。
+            
+            相关话题历史节点数据：
+            ${JSON.stringify(relatedRaw.map(r => ({ time: formatDate(new Date(r.timestamp)), score: r.heatScore })))}
+            
+            参考新闻列表：
+            ${JSON.stringify(relevantNews.map(n => ({ title: n.title, url: n.url, sources: n.sources })))}
+            
+            要求：
+            1. evolution: 描述该话题在 ${timeRange.start.toISOString()} 至 ${timeRange.end.toISOString()} 期间的起承转合，客观且精炼。
+            2. timeline: 记录关键的时间节点、对应的事件描述和热度。date 字段必须使用 YYYY-MM-DD 格式。
+            3. selectedNews: 从新闻列表中挑选最具代表性的 3-5 条。
+            4. 使用中文返回。
+            `
+            })
+          } catch (error: any) {
+            if (error.text) {
+              logger.warn(`Historical detailed analysis failed for topic "${item.title}", attempting repair...`)
+              try {
+                const repaired = tryRepairJSON(error.text)
+                const parsed = JSON.parse(repaired)
+                return { object: detailedHistoricalTopicSchema.parse(parsed) }
+              } catch (repairError) {
+                logger.error(`JSON repair failed for historical topic "${item.title}".`)
+                throw error
+              }
+            }
+            throw error
+          }
+        })
+
+        topics.push({
+          title: item.title,
+          score: item.baseScore,
+          evolution: detailedTopic.evolution,
+          timeline: detailedTopic.timeline,
+          news: detailedTopic.selectedNews
+        })
+        logger.success(`[Historical Report] Completed analysis for: "${item.title}"`)
+      } catch (error) {
+        logger.error(`[Historical Report] Failed to analyze topic "${item.title}" after retries. Skipping this topic.`)
+        // Skip this topic but continue with others
+      }
+    }
+
+    const sourceNames: Record<string, string> = {}
+    this.config.hotlist_sources.forEach(s => sourceNames[s.id] = s.name)
+    this.config.stream_sources.forEach(s => sourceNames[s.id] = s.name)
+
+    const reportData: HistoricalReportData = {
+      timeRange: {
+        start: timeRange.start.toLocaleString('zh-CN'),
+        end: timeRange.end.toLocaleString('zh-CN'),
+        mode: timeRange.mode
+      },
+      summary: historicalSummary.summary,
+      topics: topics.sort((a, b) => b.score - a.score),
+      sourceNames
+    }
+
+    return renderHistoricalReport(reportData)
   }
 
   aggregateToDaily(batches: HourlyBatchResult[], date: Date): DailyTrendSummary {

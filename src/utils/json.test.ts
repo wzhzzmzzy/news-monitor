@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tryRepairJSON, safeJSONParse } from './json'
+import { tryRepairJSON, safeJSONParse } from './json.js'
 
 describe('JSON Repair Utility', () => {
   it('should repair unescaped quotes inside string values', () => {

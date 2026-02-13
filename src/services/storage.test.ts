@@ -104,4 +104,65 @@ describe('StorageService', () => {
     const empty = await storage.getStreamItems(new Date('2026-02-01T11:00:00Z'))
     expect(empty).toHaveLength(0)
   })
+
+  it('should get batches in range across dates', async () => {
+    const d1 = new Date('2026-02-01T10:00:00Z')
+    const d2 = new Date('2026-02-02T10:00:00Z')
+    
+    const b1 = [{ timestamp: d1.toISOString(), summary: 'b1', keyInfo: [] }]
+    const b2 = [{ timestamp: d2.toISOString(), summary: 'b2', keyInfo: [] }]
+
+    await storage.saveJson('keywords.json', b1, d1)
+    await storage.saveJson('keywords.json', b2, d2)
+
+    const range = await storage.getBatchesInRange(
+      new Date('2026-02-01T00:00:00Z'),
+      new Date('2026-02-02T23:59:59Z')
+    )
+    expect(range).toHaveLength(2)
+    expect(range[0].summary).toBe('b1')
+    expect(range[1].summary).toBe('b2')
+  })
+
+  it('should filter batches within a day based on specific hours', async () => {
+    const day = new Date('2026-02-10')
+    const batches = [
+      { timestamp: '2026-02-10T08:00:00Z', summary: 'early', keyInfo: [] },
+      { timestamp: '2026-02-10T12:00:00Z', summary: 'middle', keyInfo: [] },
+      { timestamp: '2026-02-10T16:00:00Z', summary: 'late', keyInfo: [] },
+    ]
+
+    await storage.saveJson('keywords.json', batches, day)
+
+    // Range from 10:00 to 14:00 - should only pick 'middle'
+    const start = new Date('2026-02-10T10:00:00Z')
+    const end = new Date('2026-02-10T14:00:00Z')
+
+    const result = await storage.getBatchesInRange(start, end)
+    expect(result).toHaveLength(1)
+    expect(result[0].summary).toBe('middle')
+  })
+
+  it('should merge news index in range', async () => {
+    const d1 = new Date('2026-02-01')
+    const d2 = new Date('2026-02-02')
+    
+    const i1 = { 
+      'n1': { id: 'n1', title: 'News 1', url: 'u1', sources: ['s1'], firstSeen: '2026-02-01T10:00:00Z', lastSeen: '2026-02-01T10:00:00Z', maxRank: 5, occurrences: 1 } 
+    }
+    const i2 = { 
+      'n1': { id: 'n1', title: 'News 1', url: 'u1', sources: ['s1'], firstSeen: '2026-02-02T10:00:00Z', lastSeen: '2026-02-02T10:00:00Z', maxRank: 3, occurrences: 2 },
+      'n2': { id: 'n2', title: 'News 2', url: 'u2', sources: ['s2'], firstSeen: '2026-02-02T10:00:00Z', lastSeen: '2026-02-02T10:00:00Z', maxRank: 10, occurrences: 1 }
+    }
+
+    await storage.saveJson('index.json', i1, d1)
+    await storage.saveJson('index.json', i2, d2)
+
+    const merged = await storage.getNewsIndexInRange(d1, d2)
+    expect(Object.keys(merged)).toHaveLength(2)
+    expect(merged['n1'].occurrences).toBe(3)
+    expect(merged['n1'].maxRank).toBe(3)
+    expect(merged['n1'].firstSeen).toBe('2026-02-01T10:00:00Z')
+    expect(merged['n1'].lastSeen).toBe('2026-02-02T10:00:00Z')
+  })
 })
