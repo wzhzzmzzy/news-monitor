@@ -5,10 +5,8 @@
 ## 特性
 
 - **多维抓取**：支持“热榜 (Hotlist)”与“实时流 (Stream)”两种模式，集成 `newsnow.busiyi.world` API。
+- **双模汇报**：独立配置“当日简报”与“历史趋势报告”触发时间，灵活覆盖不同粒度的观察需求。
 - **智能分析**：利用 LLM 实现自动化新闻摘要、趋势聚类及跨周期（多日）深度分析。
-- **本地存储**：数据以 JSON 格式按日期存储在本地 `archive/` 目录，轻量高效。
-- **常驻服务**：支持 `serve` 模式，内置 Cron 调度器与 Hono 状态监控接口。
-- **类型安全**：全量 TypeScript 开发，使用 Zod 进行严格的配置校验与数据转换。
 
 ## 快速开始
 
@@ -38,10 +36,12 @@ stream_sources:
   - { id: jin10, name: "金十数据", type: api, url: "/api/s?id=jin10" }
 
 # 分析配置
-analysis_window_days: 7    # 多日分析的时间窗口
+analysis_window_days: 7    # 历史趋势报告的回溯天数
 enable_stream_analysis: true
-monitorCron: "*/30 * * * *" # 监控任务频率
-reportCron: "0 23 * * *"    # 日报生成时间
+
+monitorCron: "*/30 * * * *"          # 监控任务频率
+dailyReportCron: "0 10,17 * * *"     # 当日简报触发时间 (每天10点和17点)
+historicalReportCron: "0 9 * * 1"    # 历史报告触发时间 (每周一早9点)
 serverPort: 12440
 
 # LLM 配置 (支持 OpenAI, DeepSeek, Anthropic)
@@ -111,10 +111,11 @@ emailTo:
 ### 2. HTTP 监控接口 (Hono)
 常驻模式 (`serve`) 启动后，可通过 HTTP 访问以下接口：
 
-*   **GET `/`**：返回系统健康状态、运行时间 (Uptime) 及监控/报告任务的最近运行结果。
+*   **GET `/`**：返回系统健康状态、运行时间 (Uptime) 及监控/报告任务的最近运行结果（包含 `dailyReport` 和 `historicalReport`）。
 *   **GET `/run/monitor`**：手动触发一次抓取与分析任务。
-*   **GET `/run/report?start=26-02-10_10:00&end=26-02-13_18:00&id=0`**：手动触发一次报告生成与发送。
-支持通过 `start` 和 `end` 参数指定时间段，通过 `id` 参数指定收件人索引。
+*   **GET `/run/daily-report`**：手动触发生成当日简报。
+*   **GET `/run/historical-report`**：手动触发历史报告。不带参数时默认回溯 `analysis_window_days` 天；支持 `start` 和 `end` 参数自定义范围。
+*   **GET `/run/report?start=26-02-10_10:00&end=26-02-13_18:00&id=0`**：向后兼容接口。有时间参数走历史模式，无参数走日报模式。
 
 ### 3. 配置参数详解 (Zod Schema)
 
@@ -123,10 +124,10 @@ emailTo:
 | `newsApiBaseUrl` | String (URL) | 是 | 数据抓取 API 的基础地址。 |
 | `hotlist_sources` | Array<Object> | 是 | 热榜源配置。包含 `id`, `name`, `type` (api/rss/html), `url`。 |
 | `stream_sources` | Array<Object> | 否 | 实时流配置。结构同热榜源。 |
-| `report_window_days` | Number | 否 | 自动报告的时间窗口（默认 1）。设置为 3 则自动生成过去 3 天的趋势报告。 |
-| `analysis_window_days` | Number | 否 | 多日分析的回溯天数（默认 3）。 |
+| `analysis_window_days` | Number | 否 | 历史趋势报告默认的回溯天数（默认 3）。 |
 | `monitorCron` | String (Cron) | 否 | 抓取任务调度。默认 `*/30 * * * *`（每30分钟）。 |
-| `reportCron` | String (Cron) | 否 | 报告生成调度。默认 `0 23 * * *`（每天23:00）。 |
+| `dailyReportCron` | String (Cron) | 否 | 当日简报触发时间。默认 `0 23 * * *`。 |
+| `historicalReportCron` | String (Cron) | 否 | 历史周报/周期报告触发时间。默认每周一 10:00。 |
 | `llmProvider` | String | 是 | `openai`, `deepseek` 或 `anthropic`。 |
 | `llmApiKey` | String | 是 | 对应的 API Key。 |
 | `llmModel` | String | 是 | 模型名称（如 `deepseek-chat`）。 |

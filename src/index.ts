@@ -23,12 +23,14 @@ interface TaskStatus {
 
 interface RuntimeStatus {
   monitor: TaskStatus
-  report: TaskStatus
+  dailyReport: TaskStatus
+  historicalReport: TaskStatus
 }
 
 let status: RuntimeStatus = {
   monitor: { lastRun: null, lastStatus: 'idle', error: null },
-  report: { lastRun: null, lastStatus: 'idle', error: null },
+  dailyReport: { lastRun: null, lastStatus: 'idle', error: null },
+  historicalReport: { lastRun: null, lastStatus: 'idle', error: null },
 }
 
 const RUNTIME_STATE_FILE = 'runtime.json'
@@ -43,11 +45,27 @@ async function saveStatus(storage: StorageService) {
 
 async function loadStatus(storage: StorageService) {
   try {
-    const saved = await storage.loadRootJson<RuntimeStatus>(RUNTIME_STATE_FILE)
+    const saved = await storage.loadRootJson<any>(RUNTIME_STATE_FILE)
     if (saved) {
-      if (saved.monitor?.lastRun) saved.monitor.lastRun = new Date(saved.monitor.lastRun)
-      if (saved.report?.lastRun) saved.report.lastRun = new Date(saved.report.lastRun)
-      status = saved
+      // Safely restore monitor status
+      if (saved.monitor) {
+        status.monitor = { ...status.monitor, ...saved.monitor }
+        if (status.monitor.lastRun) status.monitor.lastRun = new Date(status.monitor.lastRun)
+      }
+      
+      // Restore daily report status (with migration from legacy 'report' key)
+      const dailySource = saved.dailyReport || saved.report
+      if (dailySource) {
+        status.dailyReport = { ...status.dailyReport, ...dailySource }
+        if (status.dailyReport.lastRun) status.dailyReport.lastRun = new Date(status.dailyReport.lastRun)
+      }
+
+      // Restore historical report status
+      if (saved.historicalReport) {
+        status.historicalReport = { ...status.historicalReport, ...saved.historicalReport }
+        if (status.historicalReport.lastRun) status.historicalReport.lastRun = new Date(status.historicalReport.lastRun)
+      }
+
       logger.info('Restored runtime status from ' + RUNTIME_STATE_FILE)
     }
   } catch (err) {
@@ -90,10 +108,13 @@ async function runMonitor(configPath: string) {
 }
 
 async function runHistoricalReport(configPath: string, startStr: string, endStr?: string, recipientIndex?: number) {
+  status.historicalReport.lastStatus = 'running'
   let storage: StorageService | undefined
   try {
     const config = loadConfig(configPath)
     storage = new StorageService(config.archiveDir)
+    await saveStatus(storage)
+    
     const analyzer = new AnalyzerService(config, storage)
     const notifier = new NotifierService(config)
     const reporter = new Reporter(storage, analyzer, notifier)
@@ -104,14 +125,21 @@ async function runHistoricalReport(configPath: string, startStr: string, endStr?
     await reporter.runHistoricalReport(range, recipientIndex)
     
     logger.success('Historical reporting task completed successfully.')
+    status.historicalReport.lastRun = new Date()
+    status.historicalReport.lastStatus = 'success'
+    status.historicalReport.error = null
+    await saveStatus(storage)
   } catch (error) {
     logger.error(error as any, 'Historical reporting task failed:')
+    status.historicalReport.lastStatus = 'failed'
+    status.historicalReport.error = error instanceof Error ? error.message : String(error)
+    if (storage) await saveStatus(storage)
     throw error
   }
 }
 
 async function runReport(configPath: string, dateStr?: string, recipientIndex?: number) {
-  status.report.lastStatus = 'running'
+  status.dailyReport.lastStatus = 'running'
   let storage: StorageService | undefined
   try {
     const config = loadConfig(configPath)
@@ -126,14 +154,14 @@ async function runReport(configPath: string, dateStr?: string, recipientIndex?: 
     logger.info(`Generating daily report for ${date.toISOString().split('T')[0]}...`)
     await reporter.runDailyReport(date, recipientIndex)
     logger.success('Reporting task completed successfully.')
-    status.report.lastRun = new Date()
-    status.report.lastStatus = 'success'
-    status.report.error = null
+    status.dailyReport.lastRun = new Date()
+    status.dailyReport.lastStatus = 'success'
+    status.dailyReport.error = null
     await saveStatus(storage)
   } catch (error) {
     logger.error(error as any, 'Reporting task failed:')
-    status.report.lastStatus = 'failed'
-    status.report.error = error instanceof Error ? error.message : String(error)
+    status.dailyReport.lastStatus = 'failed'
+    status.dailyReport.error = error instanceof Error ? error.message : String(error)
     if (storage) await saveStatus(storage)
     throw error
   }
@@ -193,29 +221,36 @@ cli
       }
     })
 
-    // Report
-    const reportJob = new CronJob(config.reportCron, async () => {
+    // Daily Report
+    const dailyReportJob = new CronJob(config.dailyReportCron, async () => {
       try {
-        if (config.report_window_days > 1) {
-          const now = new Date();
-          const start = new Date(now);
-          start.setDate(now.getDate() - (config.report_window_days - 1));
-          start.setHours(0, 0, 0, 0);
-          
-          const startStr = `${formatDate(start).slice(2)}_00:00`;
-          await runHistoricalReport(options.config, startStr);
-        } else {
-          await runReport(options.config);
-        }
+        await runReport(options.config)
       } catch (err) {
-        // Error already logged in run functions
+        // Error already logged
+      }
+    })
+
+    // Historical Report
+    const historicalReportJob = new CronJob(config.historicalReportCron, async () => {
+      try {
+        // By default, trigger for the analysis window
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - (config.analysis_window_days - 1));
+        start.setHours(0, 0, 0, 0);
+        
+        const startStr = `${formatDate(start).slice(2)} 00:00`;
+        await runHistoricalReport(options.config, startStr);
+      } catch (err) {
+        // Error already logged
       }
     })
 
     monitorJob.start()
-    reportJob.start()
+    dailyReportJob.start()
+    historicalReportJob.start()
 
-    logger.info(`Scheduler started: Monitor (${config.monitorCron}), Report (${config.reportCron})`)
+    logger.info(`Scheduler started: Monitor (${config.monitorCron}), Daily (${config.dailyReportCron}), Historical (${config.historicalReportCron})`)
 
     const app = new Hono()
     app.get('/', (c) => c.json({
@@ -232,35 +267,36 @@ cli
       const recipientIndex = id !== undefined ? parseInt(id, 10) : undefined
 
       if (task === 'monitor') {
-        runMonitor(options.config).catch(() => {})
+        runMonitor(options.config).catch((err) => logger.error(err, 'Manual monitor trigger failed'))
         return c.json({ message: 'Monitor task triggered' })
       }
-      if (task === 'report') {
-        if (start || end) {
-          const todayStr = formatDate(new Date()).slice(2)
-          const startStr = (start as string) || `${todayStr} 01:00`
-          runHistoricalReport(options.config, startStr, end as string, recipientIndex).catch(() => {})
-          return c.json({ message: 'Historical report task triggered', range: { start: startStr, end } })
-        }
+      
+      if (task === 'daily-report' || (task === 'report' && !start && !end)) {
+        runReport(options.config, undefined, recipientIndex).catch((err) => logger.error(err, 'Manual daily report trigger failed'))
+        return c.json({ message: 'Daily report task triggered' })
+      }
 
-        if (config.report_window_days > 1) {
+      if (task === 'historical-report' || (task === 'report' && (start || end))) {
+        let startStr = start as string
+        if (!startStr && !end) {
+          // Use default window from config if no params provided for historical-report
           const now = new Date();
           const startDate = new Date(now);
-          startDate.setDate(now.getDate() - (config.report_window_days - 1));
+          startDate.setDate(now.getDate() - (config.analysis_window_days - 1));
           startDate.setHours(0, 0, 0, 0);
-          
-          const startStr = `${formatDate(startDate).slice(2)} 00:00`;
-          runHistoricalReport(options.config, startStr, undefined, recipientIndex).catch(() => {})
-          return c.json({ 
-            message: 'Multi-day report task triggered (config)', 
-            window_days: config.report_window_days,
-            start: startStr 
-          })
+          startStr = `${formatDate(startDate).slice(2)} 00:00`;
+        } else if (!startStr) {
+          const todayStr = formatDate(new Date()).slice(2)
+          startStr = `${todayStr} 01:00`
         }
 
-        runReport(options.config, undefined, recipientIndex).catch(() => {})
-        return c.json({ message: 'Report task triggered' })
+        runHistoricalReport(options.config, startStr, end as string, recipientIndex).catch((err) => logger.error(err, 'Manual historical report trigger failed'))
+        return c.json({ 
+          message: 'Historical report task triggered', 
+          range: { start: startStr, end: end || 'now' } 
+        })
       }
+      
       return c.json({ error: 'Unknown task' }, 400)
     })
 

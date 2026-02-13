@@ -20,11 +20,11 @@ stream_sources:
 
 # 分析配置
 analysis_window_days: 7
-report_window_days: 3
 enable_stream_analysis: true
 
 monitorCron: "*/30 * * * *"
-reportCron: "0 13 * * *"
+dailyReportCron: "0 10 * * *"
+historicalReportCron: "0 15 * * *"
 serverPort: 12440
 
 # 存储配置
