@@ -29,6 +29,7 @@
     "date-fns": "^4.1.0",
     "hono": "^4.11.9",
     "js-yaml": "^4.1.0",
+    "jsonrepair": "^3.13.2",
     "nodemailer": "^6.10.0",
     "ofetch": "^1.4.1",
     "openai": "^4.82.0",
