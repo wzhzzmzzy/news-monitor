@@ -131,6 +131,7 @@ export interface DailyReportData {
   date: string;
   summary: string;
   topics: ReportTopic[];
+  orphans?: { title: string; score: number; sourceCount: number; maxRank: number; url?: string }[];
   sourceNames?: Record<string, string>;
 }
 

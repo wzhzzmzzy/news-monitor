@@ -52,15 +52,18 @@ ${JSON.stringify(relevantNews.map(n => ({ title: n.title, url: n.url, sources: n
 7. **重要：必须返回合法的 JSON。如果新闻标题中包含双引号，请务必将其转义（如 \"内容\"）或替换为中文引号（“”）。**
 `
 
-export const DAILY_SUMMARY_PROMPT = (topicTitles: string[]) => `基于以下今日的核心话题，写一段精炼的执行摘要（Executive Summary）。
+export const DAILY_SUMMARY_PROMPT = (topicTitles: string[], orphanNewsTitles: string[] = []) => `基于以下今日的核心话题${orphanNewsTitles.length > 0 ? '和补充的独立高热新闻' : ''}，写一段精炼的执行摘要（Executive Summary）。
 
 要求：
-1. 摘要必须实事求是，仅概括今日整体趋势走势。
+1. 摘要必须实事求是，优先概括核心话题的整体趋势走势。
 2. 严禁进行价值判断，不做任何主观评价。
-3. 字数严格控制在 150 字以内。
+3. 若存在独立新闻（未归类但高热度），请在摘要末尾简要提及，补充完整性。
+4. 字数严格控制在 150 字以内。
 
-今日话题：
+今日核心话题：
 ${topicTitles.map(t => `- ${t}`).join('\n')}
+
+${orphanNewsTitles.length > 0 ? `值得关注的独立新闻（未归类但高热度）：\n${orphanNewsTitles.map(t => `- ${t}`).join('\n')}` : ''}
 `
 
 export const HISTORICAL_TOP_TOPICS_PROMPT = (
@@ -99,4 +102,19 @@ ${JSON.stringify(relevantNews.map(n => ({ title: n.title, url: n.url, sources: n
 2. timeline: 记录关键的时间节点、对应的事件描述和热度。date 字段必须使用 YYYY-MM-DD 格式。
 3. selectedNews: 从新闻列表中挑选最具代表性的 3-5 条。
 4. 使用中文返回。
+`
+
+export const ORPHAN_SELECTION_PROMPT = (
+  candidates: { title: string; score: number; sourceCount: number; maxRank: number }[]
+) => `基于以下“未归入今日核心话题”的候选新闻列表，筛选出 3-5 条最值得关注的“遗珠新闻”。
+
+候选新闻列表 (按热度排序)：
+${JSON.stringify(candidates.map(c => ({ title: c.title, rank: c.maxRank, score: c.score, sources: c.sourceCount })), null, 2)}
+
+筛选标准：
+1. **独立价值高**：优先选择那些虽然没形成大话题簇，但本身事件重大（如突发灾难、重大政策、独家重磅）的新闻。
+2. **排除噪音**：剔除明星八卦、纯营销文案或琐碎的社会新闻，除非其热度极高 (Rank <= 3)。
+3. **补充视角**：选择那些能补充今日核心话题视角之外的内容。
+
+请返回 JSON 格式，包含 selectedTitles (选中的新闻原标题列表) 和 reasoning (整体选择理由的简述)。
 `
