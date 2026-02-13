@@ -12,7 +12,7 @@ import { Reporter } from './core/reporter.js'
 import logger from './utils/logger.js'
 import { createTimeRange, formatDate } from './utils/time.js'
 
-const cli = cac('trend-radar')
+const cli = cac('trend-analyzer')
 
 // Status tracking
 interface TaskStatus {
@@ -120,7 +120,7 @@ async function runHistoricalReport(configPath: string, startStr: string, endStr?
     const reporter = new Reporter(storage, analyzer, notifier)
 
     const range = createTimeRange(startStr, endStr)
-    logger.info(`Generating ${range.mode} report from ${range.start.toISOString()} to ${range.end.toISOString()}...`)
+    logger.info(`Generating ${range.mode === 'historical' ? '历史趋势报告' : '今日新闻总结'} from ${range.start.toLocaleString('zh-CN')} to ${range.end.toLocaleString('zh-CN')}...`)
     
     await reporter.runHistoricalReport(range, recipientIndex)
     
@@ -151,7 +151,7 @@ async function runReport(configPath: string, dateStr?: string, recipientIndex?: 
     const reporter = new Reporter(storage, analyzer, notifier)
 
     const date = dateStr ? new Date(dateStr) : new Date()
-    logger.info(`Generating daily report for ${date.toISOString().split('T')[0]}...`)
+    logger.info(`Generating daily report for ${date.toLocaleDateString('zh-CN')}...`)
     await reporter.runDailyReport(date, recipientIndex)
     logger.success('Reporting task completed successfully.')
     status.dailyReport.lastRun = new Date()
@@ -206,7 +206,7 @@ cli
   .option('-c, --config <file>', 'Path to config file', { default: 'config.yaml' })
   .action(async (options) => {
     const config = loadConfig(options.config)
-    logger.info('Starting TrendRadar daemon...')
+    logger.info('Starting Trend Analyzer daemon...')
 
     // Init storage and load status
     const storage = new StorageService(config.archiveDir)
@@ -312,7 +312,7 @@ cli
     try {
       const config = loadConfig(options.config)
       const notifier = new NotifierService(config)
-      await notifier.sendReport('TrendRadar SMTP Test', 'This is a test email from TrendRadar.')
+      await notifier.sendReport('SMTP 服务测试', '这是一封来自趋势分析器的测试邮件。')
       logger.success('Test email sent.')
     } catch (error) {
       logger.error(error as any, 'Email test failed:')

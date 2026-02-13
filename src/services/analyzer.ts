@@ -329,7 +329,7 @@ export class AnalyzerService {
   ): Promise<string> {
     if (batches.length === 0) return '指定时间范围内无有效分析数据。'
 
-    logger.info(`正在生成历史趋势报告 (${timeRange.start.toISOString()} 至 ${timeRange.end.toISOString()})...`)
+    logger.info(`正在生成历史趋势报告 (${timeRange.start.toLocaleString('zh-CN')} 至 ${timeRange.end.toLocaleString('zh-CN')})...`)
 
     const newsMap = newsIndex || {}
     
