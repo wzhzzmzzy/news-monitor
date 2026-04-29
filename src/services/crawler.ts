@@ -3,6 +3,20 @@ import { withRetry, type RetryOptions } from '../utils/retry.js'
 import logger from '../utils/logger.js'
 import type { RawNewsItem, SourceConfig, StreamItem } from '../types/index.js'
 
+export const DEFAULT_BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+
+export interface CrawlerHeaderConfig {
+  crawlerBrowserUserAgentEnabled: boolean
+  crawlerUserAgent: string
+}
+
+export function buildCrawlerHeaders(config: CrawlerHeaderConfig): Record<string, string> {
+  if (!config.crawlerBrowserUserAgentEnabled) return {}
+  return {
+    'User-Agent': config.crawlerUserAgent,
+  }
+}
+
 export interface CrawlerResponse {
   status: string
   id: string
@@ -13,10 +27,16 @@ export interface CrawlerResponse {
 export class CrawlerService {
   private baseUrl: string
   private retryOptions?: Partial<RetryOptions>
+  private defaultHeaders: Record<string, string>
 
-  constructor(baseUrl: string, retryOptions?: Partial<RetryOptions>) {
+  constructor(
+    baseUrl: string,
+    retryOptions?: Partial<RetryOptions>,
+    defaultHeaders: Record<string, string> = {}
+  ) {
     this.baseUrl = baseUrl
     this.retryOptions = retryOptions
+    this.defaultHeaders = defaultHeaders
   }
 
   async fetchSource(source: SourceConfig): Promise<RawNewsItem[]> {
@@ -38,7 +58,10 @@ export class CrawlerService {
 
       const response = await ofetch<CrawlerResponse>(fetchUrl, {
         query,
-        headers: source.headers,
+        headers: {
+          ...this.defaultHeaders,
+          ...source.headers,
+        },
       })
 
       if (response.status !== 'success' && response.status !== 'cache') {

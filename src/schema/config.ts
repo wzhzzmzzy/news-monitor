@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DEFAULT_BROWSER_USER_AGENT } from '../services/crawler.js'
 
 const sourceConfigSchema = z.object({
   id: z.string().min(1),
@@ -20,6 +21,9 @@ export const configSchema = z.preprocess(
         url,
       }))
     }
+    if (!data.llmStructuredOutputMode) {
+      data.llmStructuredOutputMode = data.llmProvider === 'deepseek' ? 'json' : 'auto'
+    }
     return data
   },
   z.object({
@@ -27,6 +31,8 @@ export const configSchema = z.preprocess(
     sources: z.array(z.string()).optional(), // Deprecated but kept for validation if passed
     hotlist_sources: z.array(sourceConfigSchema).min(1),
     stream_sources: z.array(sourceConfigSchema).default([]),
+    crawlerBrowserUserAgentEnabled: z.boolean().default(true),
+    crawlerUserAgent: z.string().min(1).default(DEFAULT_BROWSER_USER_AGENT),
     
     // Analysis settings
     analysis_window_days: z.number().int().min(1).default(3),
@@ -41,6 +47,7 @@ export const configSchema = z.preprocess(
     llmApiKey: z.string().min(1),
     llmBaseUrl: z.string().url().optional(),
     llmModel: z.string().min(1),
+    llmStructuredOutputMode: z.enum(['auto', 'json', 'tool']),
     smtpHost: z.string().optional(),
     smtpPort: z.number().int().positive().optional(),
     smtpUser: z.string().optional(),

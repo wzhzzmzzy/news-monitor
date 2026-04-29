@@ -25,6 +25,8 @@ pnpm install
 ```yaml
 # 抓取配置
 newsApiBaseUrl: "https://newsnow.busiyi.world"
+crawlerBrowserUserAgentEnabled: true
+crawlerUserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
 # 热榜源 (定期抓取并分析)
 hotlist_sources:
@@ -49,6 +51,7 @@ llmProvider: "deepseek"
 llmApiKey: "your-api-key"
 llmBaseUrl: "https://api.deepseek.com"
 llmModel: "deepseek-chat"
+llmStructuredOutputMode: "json" # DeepSeek thinking/reasoner-compatible models should avoid tool_choice.
 
 # 邮件通知配置 (SMTP)
 smtpPass: "your-app-password"
@@ -122,6 +125,8 @@ emailTo:
 | 键名 | 类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | `newsApiBaseUrl` | String (URL) | 是 | 数据抓取 API 的基础地址。 |
+| `crawlerBrowserUserAgentEnabled` | Boolean | 否 | 抓取 NewsNow 时是否默认发送浏览器风格 User-Agent（默认 `true`）。 |
+| `crawlerUserAgent` | String | 否 | 默认浏览器 User-Agent，可按部署环境覆盖。 |
 | `hotlist_sources` | Array<Object> | 是 | 热榜源配置。包含 `id`, `name`, `type` (api/rss/html), `url`。 |
 | `stream_sources` | Array<Object> | 否 | 实时流配置。结构同热榜源。 |
 | `analysis_window_days` | Number | 否 | 历史趋势报告默认的回溯天数（默认 3）。 |
@@ -131,6 +136,7 @@ emailTo:
 | `llmProvider` | String | 是 | `openai`, `deepseek` 或 `anthropic`。 |
 | `llmApiKey` | String | 是 | 对应的 API Key。 |
 | `llmModel` | String | 是 | 模型名称（如 `deepseek-chat`）。 |
+| `llmStructuredOutputMode` | String | 否 | 结构化输出模式：`auto`、`json` 或 `tool`。DeepSeek 默认 `json`，避免不支持 `tool_choice` 的模型报错。 |
 | `emailTo` | Array<String> | 是 | 接收报告的邮箱列表。 |
 
 ## 部署建议

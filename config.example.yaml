@@ -1,5 +1,7 @@
 # 抓取配置
 newsApiBaseUrl: "http://localhost:13000"
+crawlerBrowserUserAgentEnabled: true
+crawlerUserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
 # 热榜源 (每 2 小时分析一次)
 hotlist_sources:
@@ -30,6 +32,7 @@ llmProvider: "deepseek"
 llmApiKey: "YOUR_API_KEY"
 llmBaseUrl: "https://api.deepseek.com"
 llmModel: "deepseek-chat"
+llmStructuredOutputMode: "json" # DeepSeek thinking/reasoner-compatible models do not accept tool_choice.
 
 # 邮件通知配置 (SMTP)
 smtpPass: "YOUR_SMTP_PASS"

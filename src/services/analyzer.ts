@@ -46,6 +46,11 @@ export class AnalyzerService {
     this.model = openai(config.llmModel) as LanguageModelV1
   }
 
+  private getObjectGenerationMode(): 'auto' | 'json' | 'tool' {
+    return this.config.llmStructuredOutputMode
+      ?? (this.config.llmProvider === 'deepseek' ? 'json' : 'auto')
+  }
+
   async analyzeBatch(items: NewsIndexItem[]): Promise<HourlyBatchResult> {
     // 过滤掉已知存在安全风险的条目
     const validItems = items.filter(item => !item.isSafetyRisk)
@@ -72,6 +77,7 @@ export class AnalyzerService {
       const { object } = await withRetry(async () => {
         return await generateObject({
           model: this.model,
+          mode: this.getObjectGenerationMode(),
           schema: z.object({
             summary: z.string().describe('此批新闻主要主题的简明摘要。'),
             keyInfo: z.array(z.object({
@@ -212,6 +218,7 @@ export class AnalyzerService {
       try {
         return await generateObject({
           model: this.model,
+          mode: this.getObjectGenerationMode(),
           schema: topTopicsSchema,
           prompt: DAILY_TOP_TOPICS_PROMPT(richRawTopics, clusters)
         })
@@ -263,6 +270,7 @@ export class AnalyzerService {
         const { object: selection } = await withRetry(async () => {
           return await generateObject({
             model: this.model,
+            mode: this.getObjectGenerationMode(),
             schema: z.object({
               selectedTitles: z.array(z.string()).describe('The exact titles of the selected news items'),
               reasoning: z.string().optional()
@@ -311,6 +319,7 @@ export class AnalyzerService {
         try {
           return await generateObject({
             model: this.model,
+            mode: this.getObjectGenerationMode(),
             schema: detailedTopicSchema,
             prompt: TOPIC_DETAIL_PROMPT(top.title, relevantNews)
           })
@@ -427,6 +436,7 @@ export class AnalyzerService {
       try {
         return await generateObject({
           model: this.model,
+          mode: this.getObjectGenerationMode(),
           schema: topTopicsSchema,
           prompt: HISTORICAL_TOP_TOPICS_PROMPT({
             start: timeRange.start.toISOString(),
@@ -485,6 +495,7 @@ export class AnalyzerService {
           try {
             return await generateObject({
               model: this.model,
+              mode: this.getObjectGenerationMode(),
               schema: detailedHistoricalTopicSchema,
               prompt: HISTORICAL_TOPIC_EVOLUTION_PROMPT(
                 item.title,

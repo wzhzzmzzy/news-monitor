@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { CrawlerService } from './crawler.js'
+import { CrawlerService, buildCrawlerHeaders, DEFAULT_BROWSER_USER_AGENT } from './crawler.js'
 import { ofetch } from 'ofetch'
 import type { SourceConfig } from '../types/index.js'
 
@@ -40,6 +40,59 @@ describe('CrawlerService', () => {
       score: 100,
     })
     expect(vi.mocked(ofetch)).toHaveBeenCalledWith('http://test-api/api/weibo', expect.any(Object))
+  })
+
+  it('should send default crawler headers and allow source headers to override them', async () => {
+    crawler = new CrawlerService(baseUrl, { retries: 0 }, {
+      'User-Agent': DEFAULT_BROWSER_USER_AGENT,
+      Accept: 'application/json',
+    })
+    const source: SourceConfig = {
+      id: 'weibo',
+      name: '微博',
+      type: 'api',
+      url: '/api/s?id=weibo',
+      headers: {
+        'User-Agent': 'Custom Source UA',
+      },
+    }
+
+    vi.mocked(ofetch).mockResolvedValue({
+      status: 'success',
+      id: 'weibo',
+      items: [{ title: 'Topic', url: 'url' }],
+    })
+
+    await crawler.fetchSource(source)
+
+    expect(vi.mocked(ofetch)).toHaveBeenCalledWith('http://test-api/api/s?id=weibo', {
+      query: {},
+      headers: {
+        'User-Agent': 'Custom Source UA',
+        Accept: 'application/json',
+      },
+    })
+  })
+
+  it('should build crawler headers from config defaults, overrides, and disabled mode', () => {
+    expect(buildCrawlerHeaders({
+      crawlerBrowserUserAgentEnabled: true,
+      crawlerUserAgent: DEFAULT_BROWSER_USER_AGENT,
+    })).toEqual({
+      'User-Agent': DEFAULT_BROWSER_USER_AGENT,
+    })
+
+    expect(buildCrawlerHeaders({
+      crawlerBrowserUserAgentEnabled: true,
+      crawlerUserAgent: 'Custom UA',
+    })).toEqual({
+      'User-Agent': 'Custom UA',
+    })
+
+    expect(buildCrawlerHeaders({
+      crawlerBrowserUserAgentEnabled: false,
+      crawlerUserAgent: 'Custom UA',
+    })).toEqual({})
   })
 
   it('should handle source failure and continue in fetchHotlists', async () => {

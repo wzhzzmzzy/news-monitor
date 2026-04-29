@@ -14,6 +14,8 @@ export interface Config {
   sources?: string[];
   hotlist_sources: SourceConfig[];
   stream_sources: SourceConfig[];
+  crawlerBrowserUserAgentEnabled: boolean;
+  crawlerUserAgent: string;
   monitorCron: string;
   dailyReportCron: string;
   historicalReportCron: string;
@@ -31,6 +33,7 @@ export interface Config {
   llmApiKey: string;
   llmBaseUrl?: string;
   llmModel: string;
+  llmStructuredOutputMode: 'auto' | 'json' | 'tool';
 
   // Notification
   smtpHost?: string;

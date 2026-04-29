@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { serve as honoServe } from '@hono/node-server'
 import { loadConfig } from './core/config.js'
 import { StorageService } from './services/storage.js'
-import { CrawlerService } from './services/crawler.js'
+import { CrawlerService, buildCrawlerHeaders } from './services/crawler.js'
 import { Monitor } from './core/monitor.js'
 import { AnalyzerService } from './services/analyzer.js'
 import { NotifierService } from './services/notifier.js'
@@ -81,7 +81,7 @@ async function runMonitor(configPath: string) {
     storage = new StorageService(config.archiveDir)
     await saveStatus(storage)
 
-    const crawler = new CrawlerService(config.newsApiBaseUrl)
+    const crawler = new CrawlerService(config.newsApiBaseUrl, undefined, buildCrawlerHeaders(config))
     const analyzer = new AnalyzerService(config, storage)
     const notifier = new NotifierService(config)
     const reporter = new Reporter(storage, analyzer, notifier)

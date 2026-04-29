@@ -47,6 +47,30 @@ describe('AnalyzerService', () => {
     expect(generateObject).toHaveBeenCalled()
   })
 
+  it('should use JSON object generation mode for DeepSeek models', async () => {
+    const deepseekAnalyzer = new AnalyzerService({
+      ...mockConfig,
+      llmProvider: 'deepseek',
+      llmStructuredOutputMode: 'json',
+    } as any)
+    const items: NewsIndexItem[] = [
+      { id: '1', title: 'DeepSeek Topic', url: 'u1', sources: ['weibo'], firstSeen: '', lastSeen: '', maxRank: 1, occurrences: 1 },
+    ]
+
+    vi.mocked(generateObject).mockResolvedValue({
+      object: {
+        summary: 'DeepSeek summary.',
+        keyInfo: [],
+      },
+    } as any)
+
+    await deepseekAnalyzer.analyzeBatch(items)
+
+    expect(generateObject).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'json',
+    }))
+  })
+
   it('should return empty result for empty batch', async () => {
     const result = await analyzer.analyzeBatch([])
     expect(result.keyInfo).toHaveLength(0)
