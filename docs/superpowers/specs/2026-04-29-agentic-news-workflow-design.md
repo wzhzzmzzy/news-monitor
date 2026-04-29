@@ -165,6 +165,13 @@ This layer is deterministic where possible. It preserves raw facts and builds sm
 
 `buildTimeline` consumes both `newsIndex` and `HourlyBatchResult.keyInfo` so it can retain the current topic seeds while building factual windows.
 
+`buildTimeline` is also responsible for validating `keyInfo.newsIds` before any downstream node consumes topic seeds:
+
+- Every `keyInfo.newsIds` value must be checked against `WorkflowInput.newsIndex`.
+- Valid IDs are retained as factual links between topic seeds and raw news.
+- Missing IDs are removed from that seed and recorded in the timeline artifact as `qualityFlags`.
+- A topic seed with no valid `newsIds` may remain as a weak seed for compatibility, but it must be marked with a quality flag and cannot be used as sole evidence for a topic, claim, or sustained signal.
+
 ### Signal Preparation Layer
 
 Nodes:
@@ -176,10 +183,12 @@ Nodes:
 
 This layer reduces noise without deleting facts. It has conservative behavior:
 
-- Similar titles and URLs may be grouped as duplicate candidates.
+- Similar raw news items may be grouped as duplicate candidates.
 - Model annotations may label source bias risk, duplicate noise, cross-source signal, long-tail signal, or breaking signal.
 - Weight adjustments affect ranking and context budget, not existence.
 - Every annotation must reference input IDs and include confidence.
+
+`scanDuplicates` operates at the raw news item level, not the topic level. Its input is `TimelineSlice.items`; its output groups `newsIds` that appear to describe the same underlying item or near-identical repost. Topic-level consolidation belongs to `extractTopics` and `rankTopics`, where multiple raw duplicate groups may support the same broader topic without being collapsed into a single news item.
 
 `annotateSignals` runs on small windows. It must not receive a whole multi-day corpus as one prompt. `mergeSignalPacks` is a formal node that combines window-level signal packs, preserves each window's evidence chain, identifies sustained signals, and avoids pushing cross-window responsibilities into `extractTopics`.
 
@@ -200,6 +209,16 @@ This layer turns merged signal data and hourly seeds into topic candidates. Ever
 - retention reason when the topic is still important despite attention-risk signals
 
 `supportingNewsIds` must be a subset of input IDs. Invalid IDs are a schema or validation failure.
+
+`rankTopics` owns the topic score calculation. `baseScore` comes from deterministic inputs such as hourly `keyInfo.heatScore`, max rank, source count, occurrence count, and sustained window count. `adjustedScore` is derived from `baseScore` plus the aggregate of `SignalAnnotation.weightAdjustment` for the topic's `supportingNewsIds`.
+
+The aggregation rule should be deterministic and documented in code. Phase 1 should use a bounded additive adjustment:
+
+```txt
+adjustedScore = clamp(baseScore + sum(weightAdjustment for supportingNewsIds), 0, 100)
+```
+
+Duplicate groups should not multiply weight. When several supporting IDs are in the same duplicate group, `rankTopics` should count the representative item normally and treat the remaining duplicate members as corroborating links, not independent score boosts.
 
 ### Analysis Layer
 
