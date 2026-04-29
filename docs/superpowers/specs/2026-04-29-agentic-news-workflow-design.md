@@ -74,11 +74,24 @@ interface WorkflowInput {
     llmModel: string
     llmStructuredOutputMode: 'auto' | 'json' | 'tool'
     analysisWindowDays: number
+    dailyWindowHours: number
+    historicalWindowHours: number
+    maxItemsPerWindow: number
+    maxPromptNewsItems: number
   }
 }
 ```
 
 `batches` are not optional. Existing hourly `keyInfo` is a high-value seed signal and must remain part of topic construction. `newsIndex` provides the fact layer and links. A node may degrade if either input is sparse, but it must record that degradation in its artifact.
+
+Windowing defaults should be explicit so nodes do not invent their own context budgets:
+
+- `dailyWindowHours`: 4
+- `historicalWindowHours`: 12
+- `maxItemsPerWindow`: 80
+- `maxPromptNewsItems`: 40
+
+`maxItemsPerWindow` controls deterministic slicing and artifact size. `maxPromptNewsItems` controls how many representative items a model-backed node may receive from a slice after duplicate grouping and ranking. The omitted items remain in artifacts and may still support later evidence chains.
 
 ## Migration Boundary For Reporter
 
@@ -238,6 +251,7 @@ interface TimelineSlice {
     occurrences: number
   }>
   topicSeeds: Array<{
+    seedId: string
     topic: string
     heatScore: number
     newsIds: string[]
@@ -246,9 +260,25 @@ interface TimelineSlice {
 }
 ```
 
+`topicSeedIds` must be derived from `topicSeeds[].seedId`; it exists as a compact reference list for downstream artifacts and must not contain IDs absent from `topicSeeds`.
+
 ### SignalPack
 
 ```ts
+interface SignalAnnotation {
+  newsId: string
+  labels: Array<
+    | 'duplicate_noise'
+    | 'source_bias_risk'
+    | 'cross_source_signal'
+    | 'long_tail_signal'
+    | 'breaking_signal'
+  >
+  weightAdjustment: number
+  reason: string
+  confidence: number
+}
+
 interface SignalPack {
   windowStart: string
   windowEnd: string
@@ -259,19 +289,7 @@ interface SignalPack {
     reason: string
     confidence: number
   }>
-  annotations: Array<{
-    newsId: string
-    labels: Array<
-      | 'duplicate_noise'
-      | 'source_bias_risk'
-      | 'cross_source_signal'
-      | 'long_tail_signal'
-      | 'breaking_signal'
-    >
-    weightAdjustment: number
-    reason: string
-    confidence: number
-  }>
+  annotations: SignalAnnotation[]
   timelineNotes: Array<{
     time: string
     eventHint: string
@@ -296,7 +314,7 @@ interface MergedSignalPack {
     score: number
     reason: string
   }>
-  annotationsByNewsId: Record<string, SignalPack['annotations'][number]>
+  annotationsByNewsId: Record<string, Array<SignalAnnotation & { windowRef: string }>>
   qualityFlags: string[]
 }
 ```
@@ -322,7 +340,7 @@ interface TopicCandidate {
 Each workflow run writes artifacts under:
 
 ```txt
-workflow-runs/{runId}/
+archive/{anchorDate}/workflow-runs/{runId}/
   run.json
   01-input.json
   02-daily-summary.json
@@ -335,6 +353,8 @@ workflow-runs/{runId}/
   09-report-plan.json
   10-report.html
 ```
+
+`anchorDate` is the report date for daily workflows and the range end date for historical workflows, formatted as `yyyy-MM-dd`. This keeps artifacts inside the existing `archiveDir` daily directory model while allowing `StorageService` to add workflow-specific helpers without introducing a separate project-root persistence path.
 
 `run.json` contains:
 
