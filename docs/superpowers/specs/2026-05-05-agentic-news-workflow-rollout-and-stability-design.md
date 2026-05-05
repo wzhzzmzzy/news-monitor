@@ -9,8 +9,8 @@ This document extends `2026-04-29-agentic-news-workflow-design.md` with rollout,
 The additions focus on three goals:
 
 - Support A/B testing, shadow runs, and fast rollback to the existing report path.
-- Reduce model usage by batching by time window, limiting prompt inputs, caching model node results, and keeping low-value nodes deterministic.
-- Reduce uncontrolled model judgment in scoring and report construction by making rankings reproducible, schema-bound, and evidence-backed.
+- Reduce model usage by batching by time window, limiting prompt inputs, caching model node results, and reserving model calls for signal annotation, topic discovery, and evidence-backed claims.
+- Reduce uncontrolled model judgment in scoring and report construction by making topic discovery evidence-bound and final rankings formula-owned.
 
 ## Relationship To The Original Design
 
@@ -20,8 +20,8 @@ The original design introduces the agentic workflow. This document constrains ho
 
 - The legacy analyzer path must remain runnable while the workflow path is being validated.
 - The workflow path must be able to run as a non-delivering secondary path.
-- LLM-backed nodes must be limited to places where model judgment adds clear value.
-- Topic ranking must be explainable and reproducible without model calls.
+- LLM-backed nodes must be limited to places where model judgment adds clear value: signal annotation, topic discovery, and claim construction.
+- The model may own topic discovery, but it does not own factual authority or final topic ranking.
 - Each workflow run must expose usage, cache, comparison, and scoring metadata.
 
 ## Rollout Modes And A/B Testing
@@ -118,6 +118,8 @@ Initial daily settings:
 dailyWindowHours: 4
 maxItemsPerWindow: 80
 maxPromptNewsItems: 40
+maxTopicDiscoveryNewsItems: 120
+maxTopicCandidates: 12
 ```
 
 Rules:
@@ -125,7 +127,9 @@ Rules:
 - `dailyWindowHours: 4`: build one timeline window per 4-hour period.
 - `maxItemsPerWindow: 80`: if a window has more than 80 items, keep the 80 hottest items in the window artifact and record the truncation count.
 - `maxPromptNewsItems: 40`: send at most 40 representative items to model-backed nodes.
-- Items outside `maxPromptNewsItems` remain in deterministic processing. They are not deleted and may still contribute rank, source distribution, duplicate grouping, and evidence chains.
+- `maxTopicDiscoveryNewsItems: 120`: when `extractTopics` runs at report level, send at most 120 representative items across all windows after signal packs are merged.
+- `maxTopicCandidates: 12`: ask `extractTopics` for a bounded set of candidate topics before validation, merging, and ranking.
+- Items outside `maxPromptNewsItems` or `maxTopicDiscoveryNewsItems` remain in deterministic processing. They are not deleted and may still contribute rank, source distribution, duplicate grouping, and evidence chains.
 - The prompt input must be sorted deterministically before hashing or calling the model.
 
 Recommended deterministic sort before truncation:
@@ -143,11 +147,72 @@ The first implementation should use model calls only where they provide clear si
 | Node | Phase | Strategy |
 | --- | --- | --- |
 | `annotateSignals` | Phase 1 / MV | Use LLM. This is the core model-backed value: source-bias risk, duplicate noise hints, cross-source signal, long-tail signal, and breaking signal labels. |
-| `extractTopics` | Phase 2 | Do not require LLM initially. Reuse existing `keyInfo` and deterministic topic construction for Phase 1. Optional shadow-only topic extraction may be used for evaluation. |
-| `rankTopics` | Phase 1 | Do not use LLM. Use a documented deterministic formula. |
-| `buildClaims` | Phase 2 | Use LLM only for the top 6 topics after deterministic ranking. It should generate evidence-backed claims, not rerank topics. |
+| `extractTopics` | Phase 1 | Use LLM. This is the main topic discovery node. Existing `keyInfo` is an input seed and regression reference, not the only source of topics. |
+| `rankTopics` | Phase 1 | Do not call LLM. Use a documented formula that can consume validated model topic confidence as a bounded factor. |
+| `buildClaims` | Phase 1 | Use LLM for the top 6 topics after formula-owned ranking. It should generate evidence-backed claims, not rerank topics. |
 
 `buildClaims` may be implemented as a new analysis sub-node or as a constrained replacement for the claim-building part of `analyzeTopics`. Either way, the model should only receive already-selected top topics and their supporting evidence.
+
+Expected Phase 1 daily call shape:
+
+```txt
+annotateSignals: one call per 4-hour window, usually up to 6 calls per day
+extractTopics: one report-level call after signal packs are merged
+buildClaims: one batched call for the top 6 topics, or up to 6 per-topic calls if batching hurts schema quality
+rankTopics: zero model calls
+renderReport: zero model calls
+```
+
+This gives the model real control over topic discovery while keeping the number of calls bounded by report structure instead of raw news volume.
+
+### LLM-Led Topic Discovery
+
+`extractTopics` should be a first-phase model node. Its job is to discover the report's topic candidates from the prepared signal layer, not merely re-rank existing `keyInfo` topics.
+
+Inputs:
+
+- `MergedSignalPack`, including sustained signals, duplicate groups, and annotations by news ID.
+- Representative news items from the timeline, selected deterministically and capped by `maxTopicDiscoveryNewsItems`.
+- Validated hourly `keyInfo` seeds as hints and legacy comparison anchors.
+- Source names and source distribution summaries.
+- Quality flags from earlier nodes.
+
+`keyInfo` should influence topic discovery, but it must not constrain it. The model may:
+
+- merge several noisy `keyInfo` seeds into one broader topic
+- split one over-broad seed into multiple concrete topics
+- discover a topic that is absent from `keyInfo`
+- downplay a hot but low-substance repetition pattern
+- retain a long-tail topic when the evidence suggests importance despite lower heat
+
+Recommended output shape:
+
+```ts
+interface DiscoveredTopicCandidate {
+  title: string
+  summary: string
+  whyItMatters: string
+  supportingNewsIds: string[]
+  supportingWindowRefs: string[]
+  novelty: 'new' | 'continuing' | 'recurring'
+  attentionRisk: 'low' | 'medium' | 'high'
+  relationToKeyInfo: 'direct' | 'merged' | 'split' | 'absent'
+  confidence: number
+}
+```
+
+Model freedom is limited by evidence validation:
+
+- Every `supportingNewsIds` value must be a subset of the node input.
+- `supportingWindowRefs` must reference existing timeline windows.
+- Source distribution and time span should be recomputed by code from `supportingNewsIds`, not trusted from model prose.
+- A topic with no valid supporting IDs must be rejected.
+- Equivalent topics should be merged deterministically after validation.
+- If `extractTopics` fails validation or times out, fall back to deterministic topic construction from validated `keyInfo` and mark the node as degraded.
+
+The governing rule is:
+
+> LLM owns topic discovery, not factual authority. Every discovered topic must survive deterministic evidence validation before ranking or reporting.
 
 ### Model Node Defaults
 
@@ -203,9 +268,9 @@ interface ModelUsageMetadata {
 
 Cache reads are valid only when every cache key dimension matches. A prompt, schema, node, or model version change must produce a new cache key.
 
-## Stable Scoring And Deterministic Ranking
+## Stable Scoring And Formula-Owned Ranking
 
-`rankTopics` must remain deterministic. The model may annotate evidence but must not directly assign final topic scores.
+`rankTopics` must remain owned by code. The model may discover topics, annotate evidence, and provide confidence, but it must not directly assign final topic scores or final ordering.
 
 ### Replace Free-Form Weighting
 
@@ -242,12 +307,28 @@ breaking_signal: +6 when confidence >= 0.6
 
 The exact values can change with a `rankingFormulaVersion`, but the formula must be documented, tested, and captured in artifacts.
 
+### Bounded Topic Confidence
+
+`extractTopics` may output `confidence`, but this value is not a topic score. It can only affect ranking through a bounded formula-owned adjustment.
+
+Recommended Phase 1 rule:
+
+```txt
+topicConfidenceAdjustment = clamp(round((confidence - 0.5) * 10), -3, 5)
+```
+
+This gives the model a small voice in ranking without letting it dominate factual signals such as source count, sustained windows, rank, and occurrence count.
+
 ### Topic Score Formula
 
 `rankTopics` should calculate:
 
 ```txt
-adjustedScore = clamp(baseScore + deterministicSignalAdjustment, 0, 100)
+adjustedScore = clamp(
+  baseScore + deterministicSignalAdjustment + topicConfidenceAdjustment,
+  0,
+  100
+)
 ```
 
 `baseScore` is computed from deterministic facts:
@@ -261,6 +342,8 @@ adjustedScore = clamp(baseScore + deterministicSignalAdjustment, 0, 100)
 
 `deterministicSignalAdjustment` is computed from validated signal labels, confidence thresholds, duplicate groups, and source distribution. Duplicate groups must not multiply score boosts. When several supporting IDs are in the same duplicate group, count the representative item normally and treat the remaining members as corroborating links.
 
+`topicConfidenceAdjustment` is computed only from a validated `DiscoveredTopicCandidate.confidence`. If a topic comes from fallback `keyInfo` construction, use a neutral adjustment of `0`.
+
 ### Scoring Artifact
 
 Each topic candidate should include score explanation fields:
@@ -270,6 +353,7 @@ interface TopicScoreBreakdown {
   rankingFormulaVersion: string
   baseScore: number
   signalAdjustment: number
+  topicConfidenceAdjustment: number
   adjustedScore: number
   factors: {
     keyInfoHeatScore?: number
@@ -278,6 +362,7 @@ interface TopicScoreBreakdown {
     sourceCount?: number
     sustainedWindowCount?: number
     freshness?: number
+    modelTopicConfidence?: number
   }
   appliedSignalLabels: Array<{
     label: SignalAnnotation['labels'][number]
@@ -354,10 +439,13 @@ interface WorkflowRunMetadata {
 Add optional artifacts:
 
 ```txt
+07-topic-discovery-validation.json
 11-score-breakdown.json
 12-model-usage.json
 13-comparison.json
 ```
+
+`07-topic-discovery-validation.json` records rejected discovered topics, merged equivalent topics, invalid supporting IDs, fallback use, and the validated topic set passed to `rankTopics`.
 
 `12-model-usage.json` may duplicate the summarized `run.json` usage metadata with more detailed per-request information.
 
@@ -377,6 +465,8 @@ interface WorkflowStabilityConfig {
   dailyWindowHours: number
   maxItemsPerWindow: number
   maxPromptNewsItems: number
+  maxTopicDiscoveryNewsItems: number
+  maxTopicCandidates: number
   enableLlmAnnotateSignals: boolean
   enableLlmExtractTopics: boolean
   enableLlmBuildClaims: boolean
@@ -398,9 +488,11 @@ enableModelCache: true
 dailyWindowHours: 4
 maxItemsPerWindow: 80
 maxPromptNewsItems: 40
+maxTopicDiscoveryNewsItems: 120
+maxTopicCandidates: 12
 enableLlmAnnotateSignals: true
-enableLlmExtractTopics: false
-enableLlmBuildClaims: false
+enableLlmExtractTopics: true
+enableLlmBuildClaims: true
 buildClaimsTopTopicCount: 6
 rankingFormulaVersion: v1
 ```
@@ -413,9 +505,14 @@ Unit tests:
 - Cache keys change when node, prompt, schema, model, or canonical input changes.
 - Window batching creates 4-hour windows and respects `maxItemsPerWindow`.
 - Prompt item selection respects `maxPromptNewsItems` and deterministic hotness sorting.
-- `rankTopics` produces identical scores for identical inputs and does not call the LLM.
+- Topic discovery input selection respects `maxTopicDiscoveryNewsItems` and `maxTopicCandidates`.
+- `extractTopics` accepts topics absent from `keyInfo` when supporting evidence is valid.
+- `extractTopics` validators reject nonexistent `supportingNewsIds` and invalid `supportingWindowRefs`.
+- `extractTopics` fallback constructs topics from validated `keyInfo` when the model output fails validation.
+- `rankTopics` produces identical scores for identical validated topic inputs and does not call the LLM.
 - Duplicate groups do not multiply score boosts.
 - Signal labels are converted to bounded deterministic score adjustments.
+- Model topic confidence is converted to a bounded formula-owned adjustment.
 
 Workflow tests:
 
@@ -428,8 +525,8 @@ Workflow tests:
 
 Regression tests:
 
-- Phase 1 workflow can produce topic candidates using existing `keyInfo` without LLM topic extraction.
-- `annotateSignals` cache hits avoid repeated model calls for unchanged canonical inputs.
+- Phase 1 workflow can produce topic candidates through LLM-led topic discovery and fall back to existing `keyInfo` when needed.
+- `annotateSignals`, `extractTopics`, and `buildClaims` cache hits avoid repeated model calls for unchanged canonical inputs.
 - Comparison artifacts include Jaccard overlap, score delta, and claim count delta.
 
 ## Implementation Sequence
@@ -441,17 +538,20 @@ Regression tests:
 5. Implement canonical input hashing and model node cache keys.
 6. Add model usage metadata collection for `LLMClient`.
 7. Enforce 4-hour window batching, `maxItemsPerWindow`, and `maxPromptNewsItems`.
-8. Limit Phase 1 LLM usage to `annotateSignals`.
-9. Move `rankTopics` to a deterministic formula with score breakdown artifacts.
-10. Add comparison metrics: Jaccard overlap, score delta, and claim count delta.
-11. Add Phase 2 gates for `extractTopics` and `buildClaims`.
+8. Add Phase 1 LLM usage for `annotateSignals` and LLM-led `extractTopics`.
+9. Add topic discovery validation and fallback to validated `keyInfo`.
+10. Move `rankTopics` to a formula-owned ranking step with score breakdown artifacts.
+11. Add bounded `buildClaims` for the top 6 ranked topics.
+12. Add comparison metrics: Jaccard overlap, score delta, and claim count delta.
+13. Defer broader autonomous planning and free-form report generation to later phases.
 
 ## Success Criteria
 
 - Operators can switch from workflow delivery back to legacy delivery with one config change.
 - Shadow runs can compare workflow output against legacy output without changing delivered reports.
-- Phase 1 production model usage is limited to window-level `annotateSignals` calls.
+- Phase 1 production model usage is bounded to window-level `annotateSignals`, one report-level `extractTopics`, and top-topic `buildClaims`.
 - Repeated runs with unchanged canonical inputs reuse cached model outputs.
-- Topic scores are reproducible from artifacts without calling a model.
+- LLM-discovered topics can include topics absent from existing `keyInfo` when they pass evidence validation.
+- Topic scores are reproducible from validated artifacts without calling a model.
 - Version comparisons expose topic overlap, score movement, and claim count movement.
 - Workflow instability degrades to legacy delivery rather than blocking report delivery when fallback is enabled.
