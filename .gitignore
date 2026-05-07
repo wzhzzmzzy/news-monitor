@@ -1,3 +1,4 @@
 node_modules/
 dist/
 .hot-board/
+.superpowers/
