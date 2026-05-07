@@ -1,0 +1,8 @@
+[llm]
+url = "https://api.openai.com/v1"
+key = "sk-..."
+model = "gpt-4.1-mini"
+thinking = "low"
+
+[newsnow]
+url = "http://localhost:13000"

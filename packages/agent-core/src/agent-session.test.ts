@@ -48,4 +48,35 @@ describe("AgentSession", () => {
     expect(response.text).toContain("今天有什么热点");
     expect(response.citations).toEqual([{ artifactId: "reports-1", label: "日报" }]);
   });
+
+  it("模型支持 tool chat 时把注册工具暴露给模型", async () => {
+    const archive = new MemoryArchiveStore();
+    const tools = new ToolRegistry();
+    tools.register({
+      name: "list_reports",
+      description: "列出报告",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => [{ id: "reports-1" }]
+    });
+    const session = new AgentSession({
+      archive,
+      tools,
+      modelClient: {
+        generateStructured: async () => {
+          throw new Error("should not use structured fallback");
+        },
+        generateWithTools: async ({ tools: offeredTools, executeTool }) => {
+          expect(offeredTools.map((tool) => tool.name)).toContain("list_reports");
+          const result = await executeTool("list_reports", {});
+          expect(result).toEqual([{ id: "reports-1" }]);
+          return { text: "已查询报告列表。", citations: [] };
+        }
+      }
+    });
+
+    await expect(session.ask("有哪些报告？")).resolves.toEqual({
+      text: "已查询报告列表。",
+      citations: []
+    });
+  });
 });

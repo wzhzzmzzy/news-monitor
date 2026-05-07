@@ -2,10 +2,10 @@ import { z } from "zod";
 import type { NewsSourceConfig } from "../../config/src/index.js";
 
 const NewsNowItemSchema = z.object({
-  id: z.string(),
+  id: z.union([z.string(), z.number()]).transform((value) => String(value)),
   title: z.string(),
   url: z.string().url().optional(),
-  pubDate: z.number().optional(),
+  pubDate: z.union([z.number(), z.string()]).optional(),
   extra: z.record(z.string(), z.unknown()).optional()
 });
 
@@ -99,9 +99,10 @@ export class NewsNowAdapter {
   }
 }
 
-function normalizePublishedAt(pubDate: number | undefined, extraDate: unknown): string | undefined {
-  if (typeof pubDate === "number") {
-    return new Date(pubDate).toISOString();
+function normalizePublishedAt(pubDate: number | string | undefined, extraDate: unknown): string | undefined {
+  if (typeof pubDate === "number" || typeof pubDate === "string") {
+    const date = new Date(pubDate);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
   if (typeof extraDate === "number" || typeof extraDate === "string") {
     const date = new Date(extraDate);

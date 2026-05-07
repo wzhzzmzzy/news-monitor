@@ -2,3 +2,4 @@ node_modules/
 dist/
 .hot-board/
 .superpowers/
+config.dev.toml

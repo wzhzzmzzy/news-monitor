@@ -121,4 +121,60 @@ describe("WorkflowRunner", () => {
       items: [{ id: "n1", title: "新闻", annotations: { score: 0.9, topicIds: ["topic-1"], reason: "重要" } }]
     });
   });
+
+  it("LLM 缺少新闻 annotation 时标记 step 失败", async () => {
+    const archive = new MemoryArchiveStore();
+    const tools = new ToolRegistry();
+    tools.register({
+      name: "crawl_news",
+      description: "crawl",
+      inputSchema: {},
+      execute: async () => {
+        const artifactRef = await archive.writeArtifact({
+          type: "news.raw",
+          data: { items: [{ id: "n1", title: "新闻" }] }
+        });
+        return { artifactRef, itemCount: 1, sourceErrors: [] };
+      }
+    });
+
+    const runner = new WorkflowRunner({
+      archive,
+      tools,
+      skillLoader: new SkillLoader({ skillsDir: "packages/skills/skills" }),
+      analysisProfiles: [{ id: "default", focus: ["科技"], instruction: "关注科技。" }],
+      modelClient: {
+        generateStructured: async () => ({
+          annotations: [],
+          topics: []
+        })
+      },
+      now: () => new Date("2026-05-07T00:00:00.000Z"),
+      idFactory: () => "run-missing"
+    });
+
+    const record = await runner.run({
+      id: "daily_news_report",
+      defaultInput: { reportType: "daily", windowHours: 24, analysisProfileId: "default" },
+      steps: [
+        { id: "crawl_news", kind: "tool", uses: "crawl_news", output: "news.raw" },
+        {
+          id: "annotate_news",
+          kind: "llm",
+          skill: "analyze-hot-topics",
+          input: "news.raw",
+          output: ["news.annotated", "topics.index"],
+          outputSchema: "skills/analyze-hot-topics/output.schema.json"
+        }
+      ]
+    }, {});
+
+    expect(record.status).toBe("failed");
+    expect(record.steps[1]).toMatchObject({
+      id: "annotate_news",
+      status: "failed",
+      error: "LLM output missing annotations for news ids: n1"
+    });
+    expect(archive.refs.map((ref) => ref.type)).toEqual(["news.raw", "runs"]);
+  });
 });

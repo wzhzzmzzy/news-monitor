@@ -152,13 +152,15 @@ export class WorkflowRunner {
         const data = artifact.data as { items?: Array<Record<string, unknown>> };
         return data.items ?? [];
       });
+      const missingIds = rawItems
+        .map((item) => String(item.id ?? ""))
+        .filter((id) => id && !annotationById.has(id));
+      if (missingIds.length > 0) {
+        throw new Error(`LLM output missing annotations for news ids: ${missingIds.join(", ")}`);
+      }
       const annotatedItems = rawItems.map((item) => ({
         ...item,
-        annotations: annotationById.get(String(item.id)) ?? {
-          score: 0,
-          topicIds: [],
-          reason: "LLM 没有为这条新闻返回 annotation。"
-        }
+        annotations: annotationById.get(String(item.id))
       }));
       return Promise.all([
         this.archive.writeArtifact({ type: "news.annotated", data: { items: annotatedItems }, metadata: { skill: step.skill } }),

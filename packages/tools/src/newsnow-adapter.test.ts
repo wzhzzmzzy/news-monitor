@@ -17,10 +17,17 @@ describe("NewsNowAdapter", () => {
           extra: { mobileUrl: "https://m.example.com/news" }
         },
         {
-          id: "item-2",
+          id: 2,
           title: "补充新闻",
           url: "https://example.com/extra",
           extra: { date: "2026-05-06T23:30:00.000Z" }
+        },
+        {
+          id: "item-3",
+          title: "字符串时间新闻",
+          url: "https://example.com/string-date",
+          pubDate: "2026-05-06T22:00:00.000Z",
+          extra: {}
         }
       ]
     })));
@@ -67,7 +74,7 @@ describe("NewsNowAdapter", () => {
         }
       },
       {
-        id: "weibo:item-2",
+        id: "weibo:2",
         source: {
           id: "weibo",
           name: "微博热搜",
@@ -83,9 +90,32 @@ describe("NewsNowAdapter", () => {
         metadata: {
           rank: 2,
           newsnow: {
-            id: "item-2",
+            id: "2",
             updatedTime: 1778136000000,
             extra: { date: "2026-05-06T23:30:00.000Z" }
+          }
+        }
+      },
+      {
+        id: "weibo:item-3",
+        source: {
+          id: "weibo",
+          name: "微博热搜",
+          url: undefined,
+          type: "newsnow",
+          weight: 1
+        },
+        title: "字符串时间新闻",
+        url: "https://example.com/string-date",
+        content: "",
+        publishedAt: "2026-05-06T22:00:00.000Z",
+        fetchedAt: "2026-05-07T00:00:00.000Z",
+        metadata: {
+          rank: 3,
+          newsnow: {
+            id: "item-3",
+            updatedTime: 1778136000000,
+            extra: {}
           }
         }
       }

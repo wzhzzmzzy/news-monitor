@@ -3,10 +3,17 @@ import type { NewsSourceConfig } from "../../config/src/index.js";
 import type { NewsNowAdapter } from "./newsnow-adapter.js";
 import { ToolRegistry } from "./tool-registry.js";
 
+type WindowNewsItem = {
+  id?: unknown;
+  publishedAt?: unknown;
+  fetchedAt?: unknown;
+};
+
 export interface BuiltinToolsOptions {
   archive: ArchiveStore;
   sources: NewsSourceConfig[];
   newsFetcher: Pick<NewsNowAdapter, "fetchSource">;
+  now?: () => Date;
   workflowStatus?: (runId: string) => Promise<unknown>;
   workflowRun?: (workflowId: string, input: Record<string, unknown>) => Promise<unknown>;
 }
@@ -24,8 +31,13 @@ export function createBuiltinTools(options: BuiltinToolsOptions): ToolRegistry {
     },
     execute: async (input) => {
       const windowHours = (input as { windowHours?: number }).windowHours ?? 24;
+      const endedAt = options.now?.() ?? new Date();
+      const startedAt = new Date(endedAt.getTime() - windowHours * 60 * 60 * 1000);
       const sourceResults = await Promise.all(options.sources.map((source) => options.newsFetcher.fetchSource(source)));
-      const items = sourceResults.flatMap((result) => result.items);
+      const fetchedItems = sourceResults.flatMap((result) => result.items);
+      const archivedItems = await readArchivedRawNewsItems(options.archive);
+      const items = dedupeById([...fetchedItems, ...archivedItems])
+        .filter((item) => isInWindow(item, startedAt, endedAt));
       const sourceErrors = sourceResults
         .filter((result) => result.error)
         .map((result) => ({ sourceId: result.sourceId, error: result.error }));
@@ -33,7 +45,11 @@ export function createBuiltinTools(options: BuiltinToolsOptions): ToolRegistry {
         type: "news.raw",
         data: {
           windowHours,
-          fetchedAt: new Date().toISOString(),
+          window: {
+            startedAt: startedAt.toISOString(),
+            endedAt: endedAt.toISOString()
+          },
+          fetchedAt: endedAt.toISOString(),
           items,
           sourceErrors
         },
@@ -97,4 +113,39 @@ export function createBuiltinTools(options: BuiltinToolsOptions): ToolRegistry {
   });
 
   return registry;
+}
+
+async function readArchivedRawNewsItems(archive: ArchiveStore): Promise<WindowNewsItem[]> {
+  const refs = await archive.listArtifacts({ type: "news.raw" });
+  const artifacts = await Promise.all(refs.map((ref) => archive.readArtifact(ref)));
+  return artifacts.flatMap((artifact) => {
+    const data = artifact.data as { items?: WindowNewsItem[] };
+    return data.items ?? [];
+  });
+}
+
+function dedupeById<TItem extends WindowNewsItem>(items: TItem[]): TItem[] {
+  const seen = new Set<string>();
+  const deduped: TItem[] = [];
+  for (const item of items) {
+    const id = String(item.id ?? "");
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    deduped.push(item);
+  }
+  return deduped;
+}
+
+function isInWindow(item: WindowNewsItem, startedAt: Date, endedAt: Date): boolean {
+  const timestamp = typeof item.publishedAt === "string" ? item.publishedAt : item.fetchedAt;
+  if (typeof timestamp !== "string") {
+    return true;
+  }
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return true;
+  }
+  return date.getTime() >= startedAt.getTime() && date.getTime() <= endedAt.getTime();
 }
