@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "required": ["title", "summary", "window", "sections"],
+  "properties": {
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "window": {
+      "type": "object",
+      "required": ["startedAt", "endedAt", "hours"],
+      "properties": {
+        "startedAt": { "type": "string" },
+        "endedAt": { "type": "string" },
+        "hours": { "type": "number" }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["heading", "body", "topicIds", "newsRefs"],
+        "properties": {
+          "heading": { "type": "string" },
+          "body": { "type": "string" },
+          "topicIds": { "type": "array", "items": { "type": "string" } },
+          "newsRefs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": ["answer", "citations"],
+  "properties": {
+    "answer": { "type": "string" },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifactId", "label"],
+        "properties": {
+          "artifactId": { "type": "string" },
+          "label": { "type": "string" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
