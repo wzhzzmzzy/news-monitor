@@ -1,4 +1,4 @@
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import type { ArchiveStore, ArtifactRef, ArtifactType } from "../../archive/src/index.js";
 import type { AnalysisProfile } from "../../config/src/index.js";
 import type { SkillLoader } from "../../skills/src/index.js";

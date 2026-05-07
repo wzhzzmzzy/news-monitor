@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ArchiveStore, ArtifactRef } from "../../archive/src/index.js";
+import type { ArchiveStore, Artifact, ArtifactRef } from "../../archive/src/index.js";
 import { ToolRegistry } from "../../tools/src/index.js";
 import { AgentSession } from "./agent-session.js";
 
@@ -15,8 +15,12 @@ class MemoryArchiveStore implements ArchiveStore {
     throw new Error("未使用");
   }
 
-  async readArtifact(ref: ArtifactRef) {
-    return { ref, data: { title: "日报", summary: "今日科技热点升温。" }, metadata: {} };
+  async readArtifact<TData = unknown>(ref: ArtifactRef): Promise<Artifact<TData>> {
+    return {
+      ref,
+      data: { title: "日报", summary: "今日科技热点升温。" } as TData,
+      metadata: {}
+    };
   }
 
   async listArtifacts() {

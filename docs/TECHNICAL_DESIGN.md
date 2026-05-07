@@ -4,5 +4,8 @@
 
 - [Agent 与 Workflow Core 技术设计](./superpowers/specs/2026-05-07-agent-workflow-core-design.md)
 
-本文仅作为索引，避免保留多个互相冲突的技术方案版本。
+首版 Agent Core 与 Workflow Core 的实现方案位于：
 
+- [Agent Workflow Core 实现方案](./superpowers/plans/2026-05-07-agent-workflow-core.md)
+
+本文仅作为索引，避免保留多个互相冲突的技术方案版本。
