@@ -97,6 +97,33 @@ Tool 是稳定、可测试的代码能力。Tool 输入输出需要有 schema �
 
 `crawl_news` 不依赖 LLM 自由浏览。它作为稳定 script/tool，负责新闻抓取、基础清洗、去重、信源信息写入和 raw news 归档。
 
+首版 `crawl_news` 需要内置 NewsNow adapter。该 adapter 参考 `../news-monitor` 项目的 crawler 与 `vendor/newsnow` 服务形态：
+
+```text
+GET {newsApiBaseUrl}/api/s?id={sourceId}
+```
+
+NewsNow 响应形态：
+
+```json
+{
+  "status": "success",
+  "id": "weibo",
+  "updatedTime": 1778136000000,
+  "items": [
+    {
+      "id": "item-id",
+      "title": "...",
+      "url": "https://...",
+      "pubDate": 1778136000000,
+      "extra": {}
+    }
+  ]
+}
+```
+
+首版不要求自行维护完整新闻源抓取实现，而是把 NewsNow 服务作为默认新闻源提供方。`crawl_news` 负责把 NewsNow item 标准化为本项目的 raw news artifact。
+
 ### Skill
 
 Skill 不是 workflow node，也不拥有执行生命周期。Skill 只是给 LLM 的知识和约束。
@@ -189,6 +216,17 @@ WorkflowRunner 负责：
   "metadata": {}
 }
 ```
+
+从 NewsNow 导入时，字段映射如下：
+
+- `source.id` 来自配置中的 `sourceId` 或 NewsNow 响应 `id`。
+- `source.name` 来自本项目 `sources.json` 配置。
+- `title` 来自 NewsNow item `title`。
+- `url` 来自 NewsNow item `url`。
+- `publishedAt` 优先来自 NewsNow item `pubDate` 或 `extra.date`，缺失时可为空。
+- `fetchedAt` 使用当前抓取时间。
+- `metadata.rank` 保存 item 在 source 列表中的排名。
+- `metadata.newsnow` 保存 NewsNow 原始 item 的非核心字段摘要。
 
 不同信源可以配置权重：
 
@@ -384,6 +422,29 @@ Web action -> WorkflowRunner
 
 Gateway 使用 Hono 和 SSR JSX，但 UI 不是本设计重点。Gateway 不复制业务逻辑，只调用 agent core、workflow core 和 archive API。
 
+为了让 core 首版实现后立刻可用，首版必须包含最小 CLI adapter。该 CLI 不追求完整产品体验，只作为 core 的用户入口和验收入口。
+
+最小 CLI 命令：
+
+```text
+hot-board chat
+hot-board workflow run daily_news_report
+hot-board workflow run semiweekly_news_report
+hot-board workflow status <runId>
+hot-board report list
+hot-board report read <reportId>
+```
+
+这些命令需要能够：
+
+- 与 `AgentSession` 对话。
+- 手动触发 24 小时日报 workflow。
+- 手动触发 96 小时周报 workflow。
+- 查看 workflow run 状态。
+- 列出并读取报告 artifact。
+
+TUI 和 Web UI 可以后置。Gateway 生命周期命令仍属于产品目标，但不阻塞 Agent + Workflow Core 首版可用性。
+
 ## 10. 首版边界
 
 首版需要做到：
@@ -398,6 +459,8 @@ Gateway 使用 Hono 和 SSR JSX，但 UI 不是本设计重点。Gateway 不复�
 - `RunRecord`。
 - `daily_news_report` 和 `semiweekly_news_report` 工作流设计。
 - 新闻信源 meta、信源权重和 analysis profile 作为 workflow 输入。
+- NewsNow adapter，作为首版默认新闻源接入方式。
+- 最小 CLI adapter，作为 core 首版用户入口和验收入口。
 
 首版不做：
 
@@ -405,5 +468,6 @@ Gateway 使用 Hono 和 SSR JSX，但 UI 不是本设计重点。Gateway 不复�
 - 声明式 workflow 文件格式。
 - SQL 或 document db 存储实现。
 - 复杂 workflow resume。
+- 完整 TUI。
 - 复杂 Web UI workflow builder。
 - 多用户权限系统。
