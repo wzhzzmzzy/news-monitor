@@ -1029,7 +1029,7 @@ git commit -m "feat: stream agent chat events"
 - Test: `apps/gateway/src/markdown/render-markdown.test.ts`
 - Modify: `apps/cli/src/runtime.ts`
 
-- [ ] **Step 1: Write failing Markdown sanitizer tests**
+- [x] **Step 1: Write failing Markdown sanitizer tests**
 
 Create `apps/gateway/src/markdown/render-markdown.test.ts`:
 
@@ -1061,7 +1061,7 @@ pnpm test -- apps/gateway/src/markdown/render-markdown.test.ts
 
 Expected: FAIL because the markdown renderer does not exist.
 
-- [ ] **Step 2: Implement Markdown renderer**
+- [x] **Step 2: Implement Markdown renderer**
 
 Create `apps/gateway/src/markdown/render-markdown.ts`:
 
@@ -1087,7 +1087,7 @@ export function renderMarkdown(markdown: string): string {
 }
 ```
 
-- [ ] **Step 3: Write failing gateway API tests**
+- [x] **Step 3: Write failing gateway API tests**
 
 Create `apps/gateway/src/app.test.ts` with:
 
@@ -1160,7 +1160,7 @@ pnpm test -- apps/gateway/src/app.test.ts
 
 Expected: FAIL because the gateway app factory does not exist.
 
-- [ ] **Step 4: Write failing run registry replay tests**
+- [x] **Step 4: Write failing run registry replay tests**
 
 Create `apps/gateway/src/stream/run-registry.test.ts`:
 
@@ -1221,7 +1221,7 @@ pnpm test -- apps/gateway/src/stream/run-registry.test.ts
 
 Expected: FAIL because the run registry does not exist.
 
-- [ ] **Step 5: Implement app factory and API routes**
+- [x] **Step 5: Implement app factory and API routes**
 
 Create `apps/gateway/src/app.ts` exporting:
 
@@ -1270,7 +1270,7 @@ PUT  /api/settings
 6. Push every event to `RunRegistry`.
 7. Return `{ runId, sessionId, userMessageId, assistantMessageId }` with status 202.
 
-- [ ] **Step 6: Implement SSE run registry**
+- [x] **Step 6: Implement SSE run registry**
 
 Create `apps/gateway/src/stream/run-registry.ts`:
 
@@ -1305,7 +1305,7 @@ data: {"text":"..."}
 
 End the stream when the run is complete or a `run.failed` event is published.
 
-- [ ] **Step 7: Implement settings service**
+- [x] **Step 7: Implement settings service**
 
 Create `apps/gateway/src/settings/settings-service.ts` with:
 
@@ -1325,7 +1325,7 @@ export async function saveSettings(paths: AppPaths, input: {
 
 `saveSettings()` must write `config.toml`, `sources.json`, and `analysis-profiles.json` using two-space JSON formatting for JSON files.
 
-- [ ] **Step 8: Implement entrypoint**
+- [x] **Step 8: Implement entrypoint**
 
 Create `apps/gateway/src/index.ts`:
 
@@ -1353,7 +1353,7 @@ await writeFile(paths.gatewayStateFile, `${JSON.stringify({
 console.log(`Hot Board gateway listening on http://${config.gateway.host}:${config.gateway.port}`);
 ```
 
-- [ ] **Step 9: Verify gateway core**
+- [x] **Step 9: Verify gateway core**
 
 Run:
 
@@ -1364,7 +1364,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add package.json pnpm-lock.yaml apps/gateway/src apps/cli/src/runtime.ts
