@@ -98,4 +98,27 @@ describe("createRuntime", () => {
       }
     });
   });
+
+  it("preserves streaming model clients through the lazy runtime wrapper", async () => {
+    const runtime = await createRuntime({
+      paths: await tempPaths(),
+      newsApiBaseUrl: "https://news.example.test",
+      modelClient: {
+        generateStructured: async () => ({ answer: "fallback", citations: [] }),
+        generateWithToolsStream: async function* () {
+          yield { type: "assistant.created" as const, payload: {} };
+          yield { type: "assistant.delta" as const, payload: { text: "streamed" } };
+          yield { type: "assistant.completed" as const, payload: {} };
+        }
+      }
+    });
+
+    const events = [];
+    for await (const event of runtime.agent.streamAsk({ message: "测试 streaming" })) {
+      events.push(event);
+    }
+
+    expect(events).toContainEqual({ type: "assistant.delta", payload: { text: "streamed" } });
+    expect(events).not.toContainEqual({ type: "assistant.delta", payload: { text: "fallback" } });
+  });
 });

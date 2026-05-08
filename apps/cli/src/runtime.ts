@@ -79,6 +79,13 @@ function createLazyModelClient(initialClient: AgentModelClient | undefined, appC
         throw new Error("当前 model client 不支持 tool calling");
       }
       return activeClient.generateWithTools(input);
+    },
+    generateWithToolsStream: (input) => {
+      const activeClient = getClient();
+      if (!activeClient.generateWithToolsStream) {
+        throw new Error("当前 model client 不支持 streaming tool calling");
+      }
+      return activeClient.generateWithToolsStream(input);
     }
   };
 }

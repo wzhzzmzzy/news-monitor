@@ -166,6 +166,44 @@ describe("gateway app", () => {
     });
   });
 
+  it("refreshes gateway runtime after settings are saved", async () => {
+    const paths = await tempPaths();
+    const seenModels: Array<string | undefined> = [];
+    let runtimeFactoryCalls = 0;
+    const app = await createGatewayApp({
+      paths,
+      runtimeFactory: async () => {
+        runtimeFactoryCalls += 1;
+        return fakeRuntime({
+          llm: { model: runtimeFactoryCalls > 1 ? "configured-model" : undefined }
+        }, [], seenModels);
+      }
+    });
+    const current = await (await app.request("/api/settings")).json() as { config: RuntimeConfig; sources: unknown[]; analysisProfiles: unknown[] };
+    const saveResponse = await app.request("/api/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...current,
+        config: {
+          ...current.config,
+          llm: { ...current.config.llm, model: "configured-model" }
+        }
+      })
+    });
+    expect(saveResponse.status).toBe(200);
+    const session = await (await app.request("/api/sessions", { method: "POST" })).json() as { id: string };
+
+    await app.request(`/api/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "使用新模型" })
+    });
+    await waitForAssistantContent(app, session.id, "完成");
+
+    expect(seenModels).toEqual(["configured-model"]);
+  });
+
   it("keeps empty optional numbers undefined in settings client", async () => {
     const script = await readFile(join(process.cwd(), "apps/gateway/src/public/settings.js"), "utf8");
 
@@ -243,9 +281,18 @@ describe("gateway app", () => {
   });
 });
 
+type RuntimeConfigOverrides = Partial<Omit<RuntimeConfig, "llm" | "flash" | "newsnow" | "theme" | "gateway">> & {
+  llm?: Partial<RuntimeConfig["llm"]>;
+  flash?: Partial<RuntimeConfig["flash"]>;
+  newsnow?: Partial<RuntimeConfig["newsnow"]>;
+  theme?: Partial<RuntimeConfig["theme"]>;
+  gateway?: Partial<RuntimeConfig["gateway"]>;
+};
+
 function fakeRuntime(
-  overrides: Partial<RuntimeConfig> = {},
-  streamInputs: Array<{ message: string; history?: Array<{ role: string; content: string }> }> = []
+  overrides: RuntimeConfigOverrides = {},
+  streamInputs: Array<{ message: string; history?: Array<{ role: string; content: string }> }> = [],
+  seenModels: Array<string | undefined> = []
 ) {
   const appConfig: RuntimeConfig = {
     ...defaultRuntimeConfig,
@@ -262,6 +309,7 @@ function fakeRuntime(
     agent: {
       streamAsk: async function* (input: { message: string; history?: Array<{ role: string; content: string }> }) {
         streamInputs.push(input);
+        seenModels.push(appConfig.llm.model);
         yield { type: "assistant.created", payload: {} };
         yield { type: "assistant.delta", payload: { text: "完成" } };
         yield { type: "assistant.completed", payload: {} };

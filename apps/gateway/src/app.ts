@@ -16,12 +16,14 @@ import { RunRegistry } from "./stream/run-registry.js";
 export interface GatewayAppOptions {
   paths?: AppPaths;
   runtime?: Awaited<ReturnType<typeof createRuntime>>;
+  runtimeFactory?: () => Promise<Awaited<ReturnType<typeof createRuntime>>>;
   titleGenerator?: (input: { user: string; assistant: string }) => Promise<string>;
 }
 
 export async function createGatewayApp(options: GatewayAppOptions = {}) {
   const paths = options.paths ?? resolveAppPaths();
-  const runtime = options.runtime ?? await createRuntime({ paths });
+  const runtimeFactory = options.runtimeFactory ?? (() => createRuntime({ paths }));
+  let runtime = options.runtime ?? await runtimeFactory();
   const sessionStore = new SessionStore({ sessionsDir: paths.sessionsDir });
   const runRegistry = new RunRegistry();
   const app = new Hono();
@@ -143,6 +145,9 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
       return c.json({ error: "settings.validation_failed", fields }, 400);
     }
     await saveSettings(paths, body);
+    if (!options.runtime || options.runtimeFactory) {
+      runtime = await runtimeFactory();
+    }
     return c.json(await getSettings(paths));
   });
 
