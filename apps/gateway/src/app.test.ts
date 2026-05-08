@@ -85,6 +85,13 @@ describe("gateway app", () => {
     expect(script).toContain("payload.error");
   });
 
+  it("renders completed assistant messages through markdown after session refresh", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
+
+    expect(script).toContain("message.completedAt");
+    expect(script).toContain("renderCompletedMarkdown(content, message.content)");
+  });
+
   it("resynchronizes active path after edit-resend starts", async () => {
     const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
 

@@ -188,8 +188,12 @@ function renderMessage(message) {
   if (message.failedAt || message.error) {
     renderAssistantFailure(node, message.error ?? "运行失败");
   } else {
+    content.dataset.raw = message.content ?? "";
     content.textContent = message.content || "思考中";
     node.append(content);
+    if (message.completedAt && message.content) {
+      void renderCompletedMarkdown(content, message.content);
+    }
   }
   for (const toolCall of message.toolCalls ?? []) {
     renderToolStatus(node, toolCall, `tool.${toolCall.status}`);
