@@ -16,6 +16,7 @@ import { RunRegistry } from "./stream/run-registry.js";
 export interface GatewayAppOptions {
   paths?: AppPaths;
   runtime?: Awaited<ReturnType<typeof createRuntime>>;
+  titleGenerator?: (input: { user: string; assistant: string }) => Promise<string>;
 }
 
 export async function createGatewayApp(options: GatewayAppOptions = {}) {
@@ -55,7 +56,8 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
       sessionId,
       runtime,
       sessionStore,
-      runRegistry
+      runRegistry,
+      titleGenerator: options.titleGenerator
     });
     return c.json({ runId, sessionId, userMessageId: userMessage.id, assistantMessageId: assistantMessage.id }, 202);
   });
@@ -75,7 +77,8 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
       sessionId,
       runtime,
       sessionStore,
-      runRegistry
+      runRegistry,
+      titleGenerator: options.titleGenerator
     });
     return c.json({ runId, sessionId, userMessageId: userMessage.id, assistantMessageId: assistantMessage.id }, 202);
   });
@@ -123,6 +126,14 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
 
   app.get("/api/settings", async (c) => c.json(await getSettings(paths)));
 
+  app.put("/api/settings/theme-mode", async (c) => {
+    const body = await c.req.json<{ mode?: "light" | "dark" }>();
+    const settings = await getSettings(paths);
+    settings.config.theme.mode = body.mode === "dark" ? "dark" : "light";
+    await saveSettings(paths, settings);
+    return c.json(await getSettings(paths));
+  });
+
   app.put("/api/settings", async (c) => {
     const body = await c.req.json<Parameters<typeof saveSettings>[1]>();
     await saveSettings(paths, body);
@@ -150,6 +161,7 @@ async function streamAgentResponse(input: {
   runtime: Awaited<ReturnType<typeof createRuntime>>;
   sessionStore: SessionStore;
   runRegistry: RunRegistry;
+  titleGenerator?: (input: { user: string; assistant: string }) => Promise<string>;
 }): Promise<void> {
   try {
     for await (const event of input.runtime.agent.streamAsk({
@@ -157,6 +169,12 @@ async function streamAgentResponse(input: {
       maxToolIterations: input.runtime.appConfig.llm.maxToolIterations
     })) {
       await persistAgentEvent(input.sessionStore, input.sessionId, input.assistantMessageId, event);
+      if (event.type === "assistant.completed") {
+        const titleEvent = await maybeUpdateTitle(input);
+        if (titleEvent) {
+          input.runRegistry.publish(input.runId, titleEvent);
+        }
+      }
       input.runRegistry.publish(input.runId, event);
       if (event.type === "assistant.completed") {
         input.runRegistry.complete(input.runId);
@@ -168,6 +186,42 @@ async function streamAgentResponse(input: {
     input.runRegistry.publish(input.runId, { type: "run.failed", payload: { error: message } });
     input.runRegistry.complete(input.runId);
   }
+}
+
+async function maybeUpdateTitle(input: {
+  sessionId: string;
+  content: string;
+  sessionStore: SessionStore;
+  titleGenerator?: (titleInput: { user: string; assistant: string }) => Promise<string>;
+  runtime: Awaited<ReturnType<typeof createRuntime>>;
+}): Promise<AgentEvent | undefined> {
+  const session = await input.sessionStore.getSession(input.sessionId);
+  if (session.titleSource === "manual") {
+    return undefined;
+  }
+  const assistant = [...session.messages].reverse().find((message) => message.role === "assistant" && session.activePath.includes(message.id));
+  const flashConfigured = Boolean(input.runtime.appConfig.flash.baseUrl && input.runtime.appConfig.flash.apiKey && input.runtime.appConfig.flash.model);
+  const title = flashConfigured && input.titleGenerator
+    ? await input.titleGenerator({ user: input.content, assistant: assistant?.content ?? "" })
+    : deterministicTitleFromUserMessage(firstActiveUserMessage(session) ?? input.content);
+  const titleSource = flashConfigured && input.titleGenerator ? "flash" : "default";
+  await input.sessionStore.updateTitle(input.sessionId, { title, titleSource });
+  return { type: "title.updated", payload: { title, titleSource } };
+}
+
+function firstActiveUserMessage(session: Awaited<ReturnType<SessionStore["getSession"]>>): string | undefined {
+  for (const messageId of session.activePath) {
+    const message = session.messages.find((candidate) => candidate.id === messageId);
+    if (message?.role === "user") {
+      return message.content;
+    }
+  }
+  return undefined;
+}
+
+function deterministicTitleFromUserMessage(content: string): string {
+  const compact = content.trim().replace(/\s+/g, " ");
+  return compact ? compact.slice(0, 24) : "新会话";
 }
 
 async function persistAgentEvent(

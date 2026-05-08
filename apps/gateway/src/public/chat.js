@@ -186,6 +186,7 @@ async function renderCompletedMarkdown(messageElement, markdown) {
 }
 
 document.querySelector("[data-new-session]")?.addEventListener("click", () => void createSession());
+document.querySelector("[data-theme-toggle]")?.addEventListener("click", () => void toggleThemeMode());
 document.querySelector("[data-composer]")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const input = document.querySelector("[data-message-input]");
@@ -199,6 +200,17 @@ document.querySelector("[data-composer]")?.addEventListener("submit", (event) =>
 
 void loadSessions();
 
+async function toggleThemeMode() {
+  const html = document.documentElement;
+  const mode = html.dataset.themeMode === "dark" ? "light" : "dark";
+  html.dataset.themeMode = mode;
+  await fetch("/api/settings/theme-mode", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mode })
+  });
+}
+
 export {
   connectRun,
   createSession,
@@ -208,5 +220,6 @@ export {
   renderSession,
   renderToolStatus,
   sendMessage,
-  selectSession
+  selectSession,
+  toggleThemeMode
 };

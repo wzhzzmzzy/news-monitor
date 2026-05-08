@@ -1696,7 +1696,7 @@ git commit -m "feat: render chat and settings web ui"
 - Modify: `apps/cli/src/runtime.ts`
 - Test: `apps/gateway/src/app.test.ts`
 
-- [ ] **Step 1: Add title generation tests**
+- [x] **Step 1: Add title generation tests**
 
 Add a gateway API test where a fake runtime agent completes a first assistant reply and a fake flash title generator returns `"今日热点"`. Assert that:
 
@@ -1737,7 +1737,7 @@ pnpm test -- apps/gateway/src/app.test.ts
 
 Expected: FAIL until title generation is implemented.
 
-- [ ] **Step 2: Implement flash-only title generation**
+- [x] **Step 2: Implement flash-only title generation**
 
 After first assistant completion, and after an edit-resend regenerated assistant completion, run title generation only when the session `titleSource` is not `"manual"`. If `flash.baseUrl`, `flash.apiKey`, and `flash.model` are all configured, instantiate a flash `OpenAIModelClient` and ask for a concise title using the active branch's first user message and latest assistant response. If any flash field is missing, set a deterministic default title from the active branch's first user message:
 
@@ -1750,7 +1750,7 @@ function deterministicTitleFromUserMessage(content: string): string {
 
 Do not call the main LLM for title generation.
 
-- [ ] **Step 3: Implement theme toggle persistence**
+- [x] **Step 3: Implement theme toggle persistence**
 
 In `/api/settings`, support a small update for theme mode:
 
@@ -1763,7 +1763,7 @@ content-type: application/json
 
 In `chat.js`, the topbar theme icon toggles between `light` and `dark`, updates `document.documentElement.dataset.themeMode`, and persists the mode. The selected variant must come from configured `lightVariant` or `darkVariant`.
 
-- [ ] **Step 4: Verify gateway state file**
+- [x] **Step 4: Verify gateway state file**
 
 Add an `apps/gateway/src/app.test.ts` or targeted unit test that writes gateway state through a helper:
 
@@ -1776,7 +1776,7 @@ expect(JSON.parse(await readFile(paths.gatewayStateFile, "utf8"))).toMatchObject
 
 Keep `pid` and `startedAt` dynamic.
 
-- [ ] **Step 5: Verify behavior**
+- [x] **Step 5: Verify behavior**
 
 Run:
 
@@ -1787,7 +1787,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/gateway/src apps/cli/src/runtime.ts

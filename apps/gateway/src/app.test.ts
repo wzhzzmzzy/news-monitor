@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import { resolveAppPaths } from "../../../packages/app-paths/src/index.js";
+import { defaultRuntimeConfig, type RuntimeConfig } from "../../../packages/config/src/index.js";
 import { createGatewayApp } from "./app.js";
 
 const roots: string[] = [];
@@ -79,4 +80,75 @@ describe("gateway app", () => {
     expect(html).toContain("data-sources-editor");
     expect(html).toContain("data-profiles-editor");
   });
+
+  it("updates title and publishes title.updated after first assistant completion", async () => {
+    const paths = await tempPaths();
+    const app = await createGatewayApp({
+      paths,
+      runtime: fakeRuntime({ flash: { baseUrl: "https://flash.example.test", apiKey: "key", model: "flash-model", timeoutMs: 30000 } }),
+      titleGenerator: async () => "今日热点"
+    });
+    const session = await (await app.request("/api/sessions", { method: "POST" })).json() as { id: string };
+    const run = await (await app.request(`/api/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "生成今日热点" })
+    })).json() as { runId: string };
+
+    const loaded = await waitForSessionTitle(app, session.id, "今日热点");
+    const events = await (await app.request(`/api/runs/${run.runId}/events`)).text();
+
+    expect(loaded.title).toBe("今日热点");
+    expect(loaded.titleSource).toBe("flash");
+    expect(events).toContain("event: title.updated");
+  });
+
+  it("persists theme mode through a small settings endpoint", async () => {
+    const paths = await tempPaths();
+    const app = await createGatewayApp({ paths });
+
+    const response = await app.request("/api/settings/theme-mode", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "dark" })
+    });
+
+    expect(response.status).toBe(200);
+    const settings = await (await app.request("/api/settings")).json() as { config: RuntimeConfig };
+    expect(settings.config.theme.mode).toBe("dark");
+  });
 });
+
+function fakeRuntime(overrides: Partial<RuntimeConfig> = {}) {
+  const appConfig: RuntimeConfig = {
+    ...defaultRuntimeConfig,
+    ...overrides,
+    llm: { ...defaultRuntimeConfig.llm, ...overrides.llm },
+    flash: { ...defaultRuntimeConfig.flash, ...overrides.flash },
+    newsnow: { ...defaultRuntimeConfig.newsnow, ...overrides.newsnow },
+    theme: { ...defaultRuntimeConfig.theme, ...overrides.theme },
+    gateway: { ...defaultRuntimeConfig.gateway, ...overrides.gateway }
+  };
+  return {
+    appConfig,
+    config: { sources: [], analysisProfiles: [] },
+    agent: {
+      streamAsk: async function* () {
+        yield { type: "assistant.created", payload: {} };
+        yield { type: "assistant.delta", payload: { text: "完成" } };
+        yield { type: "assistant.completed", payload: {} };
+      }
+    }
+  } as never;
+}
+
+async function waitForSessionTitle(app: Awaited<ReturnType<typeof createGatewayApp>>, sessionId: string, title: string) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const session = await (await app.request(`/api/sessions/${sessionId}`)).json() as { title: string; titleSource: string };
+    if (session.title === title) {
+      return session;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  return await (await app.request(`/api/sessions/${sessionId}`)).json() as { title: string; titleSource: string };
+}
