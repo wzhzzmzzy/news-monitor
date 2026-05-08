@@ -625,7 +625,7 @@ git commit -m "feat: add shared catppuccin theme tokens"
 - Create: `packages/session-store/src/index.ts`
 - Test: `packages/session-store/src/session-store.test.ts`
 
-- [ ] **Step 1: Write failing session-store tests**
+- [x] **Step 1: Write failing session-store tests**
 
 Create `packages/session-store/src/session-store.test.ts` with tests for:
 
@@ -736,7 +736,7 @@ pnpm test -- packages/session-store/src/session-store.test.ts
 
 Expected: FAIL because the session store module does not exist.
 
-- [ ] **Step 2: Implement session types**
+- [x] **Step 2: Implement session types**
 
 Create `packages/session-store/src/types.ts`:
 
@@ -793,7 +793,7 @@ export interface SessionIndex {
 }
 ```
 
-- [ ] **Step 3: Implement store with atomic writes**
+- [x] **Step 3: Implement store with atomic writes**
 
 Create `packages/session-store/src/session-store.ts` with public methods:
 
@@ -827,7 +827,7 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
 
 `editAndResendUserMessage()` must set the new message `parentId` to the edited message's original `parentId`, preserve all old messages, and set `activePath` to the parent chain plus the new user message.
 
-- [ ] **Step 4: Export package**
+- [x] **Step 4: Export package**
 
 Create `packages/session-store/src/index.ts`:
 
@@ -836,7 +836,7 @@ export * from "./types.js";
 export * from "./session-store.js";
 ```
 
-- [ ] **Step 5: Verify session store**
+- [x] **Step 5: Verify session store**
 
 Run:
 
@@ -847,7 +847,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/session-store/src
