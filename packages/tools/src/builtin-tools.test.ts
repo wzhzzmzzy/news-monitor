@@ -51,7 +51,8 @@ describe("createBuiltinTools", () => {
             metadata: { rank: 1 }
           }]
         })
-      }
+      },
+      now: () => new Date("2026-05-07T00:00:00.000Z")
     });
 
     const output = await tools.execute("crawl_news", { windowHours: 24 });

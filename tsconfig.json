@@ -9,9 +9,11 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     "types": ["node", "vitest/globals"],
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["apps/**/*.ts", "packages/**/*.ts", "vitest.config.ts"]
+  "include": ["apps/**/*.ts", "apps/**/*.tsx", "packages/**/*.ts", "packages/**/*.tsx", "vitest.config.ts"]
 }

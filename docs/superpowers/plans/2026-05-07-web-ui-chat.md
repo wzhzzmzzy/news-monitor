@@ -70,18 +70,18 @@ The design requires Markdown sanitization without introducing a full frontend bu
 - Modify: `pnpm-lock.yaml`
 - Modify: `tsconfig.json`
 
-- [ ] **Step 1: Add package dependencies**
+- [x] **Step 1: Add package dependencies**
 
 Run:
 
 ```bash
-pnpm add hono @hono/node-server marked sanitize-html
-pnpm add -D @types/sanitize-html
+pnpm add -w hono @hono/node-server marked sanitize-html
+pnpm add -w -D @types/sanitize-html
 ```
 
 Expected: both commands exit with code 0 and `package.json` contains `hono`, `@hono/node-server`, `marked`, `sanitize-html`, and `@types/sanitize-html`.
 
-- [ ] **Step 2: Add gateway script and TSX support**
+- [x] **Step 2: Add gateway script and TSX support**
 
 Modify `package.json` scripts to include:
 
@@ -111,7 +111,7 @@ Modify `tsconfig.json` compiler options and include list:
 
 Keep all existing compiler options that are not shown in this snippet.
 
-- [ ] **Step 3: Verify dependency baseline**
+- [x] **Step 3: Verify dependency baseline**
 
 Run:
 
@@ -122,7 +122,7 @@ pnpm test
 
 Expected: existing code still typechecks and all current tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add package.json pnpm-lock.yaml tsconfig.json
