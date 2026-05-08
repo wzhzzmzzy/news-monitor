@@ -102,13 +102,14 @@ async function sendMessage(content) {
 }
 
 async function editAndResend(messageId, content) {
-  state.currentAssistantNode = appendAssistantPlaceholder();
   const response = await fetch(`/api/sessions/${state.currentSessionId}/messages/${messageId}/edit-resend`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content })
   });
   const run = await response.json();
+  await selectSession(state.currentSessionId);
+  state.currentAssistantNode = document.querySelector(`[data-message-id="${run.assistantMessageId}"]`);
   connectRun(run.runId, run.assistantMessageId);
 }
 
@@ -132,9 +133,12 @@ function connectRun(runId, assistantMessageId) {
     await renderCompletedMarkdown(content, content.dataset.raw ?? "");
     await selectSession(state.currentSessionId);
   });
-  events.addEventListener("run.failed", () => {
+  events.addEventListener("run.failed", async (event) => {
     events.close();
-    assistant.classList.add("failed");
+    const payload = JSON.parse(event.data);
+    renderAssistantFailure(assistant, payload.error ?? "运行失败");
+    state.currentAssistantNode = null;
+    await selectSession(state.currentSessionId);
   });
   assistant.dataset.messageId = assistantMessageId;
 }
@@ -181,8 +185,12 @@ function renderMessage(message) {
   node.dataset.messageId = message.id;
   const content = document.createElement("div");
   content.dataset.assistantContent = "";
-  content.textContent = message.content || "思考中";
-  node.append(content);
+  if (message.failedAt || message.error) {
+    renderAssistantFailure(node, message.error ?? "运行失败");
+  } else {
+    content.textContent = message.content || "思考中";
+    node.append(content);
+  }
   for (const toolCall of message.toolCalls ?? []) {
     renderToolStatus(node, toolCall, `tool.${toolCall.status}`);
   }
@@ -249,6 +257,23 @@ function renderToolStatus(container, toolCall, eventType) {
   row.textContent = `${toolCall.name ?? "tool"}: ${row.dataset.status}${toolCall.summary ? ` - ${toolCall.summary}` : ""}`;
 }
 
+function renderAssistantFailure(container, error) {
+  container.classList.add("failed");
+  let content = container.querySelector("[data-assistant-content]");
+  if (!content) {
+    content = document.createElement("div");
+    content.dataset.assistantContent = "";
+    container.prepend(content);
+  }
+  content.dataset.raw = "";
+  content.replaceChildren();
+  const title = document.createElement("strong");
+  title.textContent = "生成失败";
+  const detail = document.createElement("p");
+  detail.textContent = error;
+  content.append(title, detail);
+}
+
 async function renderCompletedMarkdown(messageElement, markdown) {
   const response = await fetch("/api/markdown", {
     method: "POST",
@@ -304,9 +329,21 @@ function applyThemeTokens(mode, theme = {}) {
   if (icon) {
     icon.dataset.iconMode = mode;
   }
+  updateThemeToggleIcon(mode);
+}
+
+function updateThemeToggleIcon(mode) {
   const toggle = document.querySelector("[data-theme-toggle]");
+  const icon = document.querySelector("[data-theme-icon]");
+  const nextLabel = mode === "dark" ? "切换到浅色" : "切换到深色";
   if (toggle) {
-    toggle.title = mode === "dark" ? "切换到浅色" : "切换到深色";
+    toggle.title = nextLabel;
+    toggle.setAttribute("aria-label", nextLabel);
+  }
+  if (icon) {
+    icon.innerHTML = mode === "dark"
+      ? '<svg class="icon" data-icon="IconSun" aria-label="浅色" role="img" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M4.9 4.9l1.4 1.4"></path><path d="M17.7 17.7l1.4 1.4"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M4.9 19.1l1.4-1.4"></path><path d="M17.7 6.3l1.4-1.4"></path></svg>'
+      : '<svg class="icon" data-icon="IconMoon" aria-label="深色" role="img" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6.5 6.5 0 1 0 8.7 8.7A8 8 0 1 1 12 3"></path></svg>';
   }
 }
 
@@ -341,6 +378,7 @@ export {
   applyThemeTokens,
   formatUpdatedAt,
   renderCompletedMarkdown,
+  renderAssistantFailure,
   renderSession,
   renderToolStatus,
   sendMessage,

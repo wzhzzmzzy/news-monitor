@@ -9,7 +9,7 @@ import { SessionStore, type ToolCallRecord } from "../../../packages/session-sto
 import { createRuntime } from "../../cli/src/runtime.js";
 import { renderMarkdown } from "./markdown/render-markdown.js";
 import { createPageRoutes } from "./routes/pages.js";
-import { getSettings, saveSettings } from "./settings/settings-service.js";
+import { getSettings, saveSettings, validateSettings } from "./settings/settings-service.js";
 import type { RunEvent } from "./stream/run-registry.js";
 import { RunRegistry } from "./stream/run-registry.js";
 
@@ -138,6 +138,10 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
 
   app.put("/api/settings", async (c) => {
     const body = await c.req.json<Parameters<typeof saveSettings>[1]>();
+    const fields = validateSettings(body);
+    if (Object.keys(fields).length) {
+      return c.json({ error: "settings.validation_failed", fields }, 400);
+    }
     await saveSettings(paths, body);
     return c.json(await getSettings(paths));
   });

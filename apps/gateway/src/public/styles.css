@@ -134,11 +134,11 @@ body {
 
 @media (max-width: 760px) {
   .hot-board-shell {
-    grid-template-columns: minmax(88px, 28vw) minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .sidebar {
-    padding: 10px 6px;
+    display: none;
   }
 
   .main-panel {

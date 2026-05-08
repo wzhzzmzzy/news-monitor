@@ -73,8 +73,23 @@ describe("gateway app", () => {
   it("keeps navigation reachable on narrow chat viewports", async () => {
     const css = await readFile(join(process.cwd(), "apps/gateway/src/public/styles.css"), "utf8");
 
-    expect(css).not.toContain(".sidebar {\n    display: none;");
+    expect(css).toContain(".sidebar {\n    display: none;");
     expect(css).toContain(".mobile-nav");
+  });
+
+  it("renders failed assistant messages and live run failures client-side", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
+
+    expect(script).toContain("renderAssistantFailure");
+    expect(script).toContain("message.failedAt");
+    expect(script).toContain("payload.error");
+  });
+
+  it("resynchronizes active path after edit-resend starts", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
+
+    expect(script).toContain("await selectSession(state.currentSessionId)");
+    expect(script).toContain("state.currentAssistantNode = null");
   });
 
   it("renders session summaries with status and updated time client-side", async () => {
@@ -89,6 +104,7 @@ describe("gateway app", () => {
 
     expect(script).toContain("THEME_TOKENS");
     expect(script).toContain("applyThemeTokens");
+    expect(script).toContain("updateThemeToggleIcon");
     expect(script).toContain("data-theme-icon");
   });
 
@@ -97,11 +113,45 @@ describe("gateway app", () => {
     const html = await (await app.request("/settings")).text();
 
     expect(html).toContain("name=\"llm.model\"");
+    expect(html).toContain("required");
     expect(html).toContain("name=\"flash.model\"");
     expect(html).toContain("name=\"newsnow.baseUrl\"");
     expect(html).toContain("name=\"theme.lightVariant\"");
+    expect(html).toContain("data-add-source");
+    expect(html).toContain("data-add-profile");
+    expect(html).toContain("data-settings-success");
     expect(html).toContain("data-sources-editor");
     expect(html).toContain("data-profiles-editor");
+  });
+
+  it("rejects settings saves without required llm model", async () => {
+    const paths = await tempPaths();
+    const app = await createGatewayApp({ paths });
+    const current = await (await app.request("/api/settings")).json() as { config: RuntimeConfig; sources: unknown[]; analysisProfiles: unknown[] };
+    const response = await app.request("/api/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...current,
+        config: {
+          ...current.config,
+          llm: { ...current.config.llm, model: undefined }
+        }
+      })
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "settings.validation_failed",
+      fields: { "llm.model": "请填写主模型名称" }
+    });
+  });
+
+  it("keeps empty optional numbers undefined in settings client", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/settings.js"), "utf8");
+
+    expect(script).toContain("optionalNumberValue");
+    expect(script).toContain("raw === undefined ? undefined : Number(raw)");
   });
 
   it("updates title and publishes title.updated after first assistant completion", async () => {
@@ -147,6 +197,7 @@ describe("gateway app", () => {
       body: JSON.stringify({ content: "第二问" })
     });
     await waitForStreamCount(streamInputs, 2);
+    await waitForAssistantContentCount(app, session.id, "完成", 2);
 
     expect(streamInputs[1]).toMatchObject({
       message: "第二问",
@@ -226,6 +277,22 @@ async function waitForStreamCount(inputs: unknown[], count: number) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     if (inputs.length >= count) {
       return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+async function waitForAssistantContentCount(
+  app: Awaited<ReturnType<typeof createGatewayApp>>,
+  sessionId: string,
+  content: string,
+  count: number
+) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const session = await (await app.request(`/api/sessions/${sessionId}`)).json() as { messages: Array<{ role: string; content: string }> };
+    const matches = session.messages.filter((message) => message.role === "assistant" && message.content === content);
+    if (matches.length >= count) {
+      return session;
     }
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
