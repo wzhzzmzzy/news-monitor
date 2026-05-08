@@ -109,4 +109,39 @@ describe("AgentSession", () => {
 
     expect(received).toEqual(events);
   });
+
+  it("passes active chat history to streaming model calls", async () => {
+    const archive = new MemoryArchiveStore();
+    const tools = new ToolRegistry();
+    const seenInputs: unknown[] = [];
+    const session = new AgentSession({
+      archive,
+      tools,
+      modelClient: {
+        generateStructured: async () => ({}),
+        generateWithToolsStream: async function* (input) {
+          seenInputs.push(input);
+          yield { type: "assistant.completed", payload: {} };
+        }
+      }
+    });
+
+    for await (const _event of session.streamAsk({
+      message: "继续分析",
+      history: [
+        { role: "user", content: "先看微博" },
+        { role: "assistant", content: "微博热点已整理。" }
+      ]
+    })) {
+      // drain stream
+    }
+
+    expect(seenInputs).toMatchObject([{
+      user: "继续分析",
+      history: [
+        { role: "user", content: "先看微博" },
+        { role: "assistant", content: "微博热点已整理。" }
+      ]
+    }]);
+  });
 });

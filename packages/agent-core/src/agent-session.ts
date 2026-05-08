@@ -5,6 +5,7 @@ import type { ModelClient } from "../../workflow-core/src/index.js";
 export interface ToolChatInput {
   system: string;
   user: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
   tools: ToolDefinition[];
   executeTool(name: string, input: unknown): Promise<unknown>;
 }
@@ -119,6 +120,7 @@ export class AgentSession {
     yield* this.modelClient.generateWithToolsStream({
       system: "你是 Hot Board Monitor 的主会话 agent。你可以使用已注册工具查询报告、读取归档、运行 workflow 或查询 workflow 状态。",
       user: input.message,
+      history: input.history,
       tools: this.tools.list(),
       executeTool: (name, toolInput) => this.tools.execute(name, toolInput),
       maxToolIterations: input.maxToolIterations

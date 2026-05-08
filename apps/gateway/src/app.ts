@@ -52,6 +52,7 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
     void streamAgentResponse({
       runId,
       content: userMessage.content,
+      userMessageId: userMessage.id,
       assistantMessageId: assistantMessage.id,
       sessionId,
       runtime,
@@ -73,6 +74,7 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
     void streamAgentResponse({
       runId,
       content: userMessage.content,
+      userMessageId: userMessage.id,
       assistantMessageId: assistantMessage.id,
       sessionId,
       runtime,
@@ -156,6 +158,7 @@ function contentTypeFor(file: string): string {
 async function streamAgentResponse(input: {
   runId: string;
   content: string;
+  userMessageId: string;
   assistantMessageId: string;
   sessionId: string;
   runtime: Awaited<ReturnType<typeof createRuntime>>;
@@ -164,8 +167,10 @@ async function streamAgentResponse(input: {
   titleGenerator?: (input: { user: string; assistant: string }) => Promise<string>;
 }): Promise<void> {
   try {
+    const history = await activeHistoryBefore(input.sessionStore, input.sessionId, input.userMessageId);
     for await (const event of input.runtime.agent.streamAsk({
       message: input.content,
+      history,
       maxToolIterations: input.runtime.appConfig.llm.maxToolIterations
     })) {
       await persistAgentEvent(input.sessionStore, input.sessionId, input.assistantMessageId, event);
@@ -186,6 +191,27 @@ async function streamAgentResponse(input: {
     input.runRegistry.publish(input.runId, { type: "run.failed", payload: { error: message } });
     input.runRegistry.complete(input.runId);
   }
+}
+
+async function activeHistoryBefore(
+  sessionStore: SessionStore,
+  sessionId: string,
+  messageId: string
+): Promise<Array<{ role: "user" | "assistant"; content: string }>> {
+  const session = await sessionStore.getSession(sessionId);
+  const messagesById = new Map(session.messages.map((message) => [message.id, message]));
+  const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+  for (const activeMessageId of session.activePath) {
+    if (activeMessageId === messageId) {
+      break;
+    }
+    const message = messagesById.get(activeMessageId);
+    if (!message || !message.content) {
+      continue;
+    }
+    history.push({ role: message.role, content: message.content });
+  }
+  return history;
 }
 
 async function maybeUpdateTitle(input: {

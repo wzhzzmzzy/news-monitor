@@ -108,4 +108,40 @@ describe("createBuiltinTools", () => {
     });
     expect(artifact.data.items.map((item) => item.id)).toEqual(["fresh", "old-inside"]);
   });
+
+  it("skips disabled sources when crawling news", async () => {
+    const archive = new MemoryArchiveStore();
+    const fetchedSourceIds: string[] = [];
+    const tools = createBuiltinTools({
+      archive,
+      sources: [
+        { id: "weibo", name: "微博热搜", type: "newsnow", sourceId: "weibo", weight: 1, enabled: true },
+        { id: "zhihu", name: "知乎热榜", type: "newsnow", sourceId: "zhihu", weight: 1, enabled: false }
+      ],
+      newsFetcher: {
+        fetchSource: async (source): Promise<FetchSourceResult> => {
+          fetchedSourceIds.push(source.id);
+          return {
+            sourceId: source.id,
+            items: [{
+              id: `${source.id}:item-1`,
+              source: { id: source.id, name: source.name, type: "newsnow", weight: source.weight },
+              title: source.name,
+              content: "",
+              fetchedAt: "2026-05-07T00:00:00.000Z",
+              metadata: { rank: 1 }
+            }]
+          };
+        }
+      },
+      now: () => new Date("2026-05-07T00:00:00.000Z")
+    });
+
+    const output = await tools.execute<{ artifactRef: ArtifactRef; itemCount: number }>("crawl_news", { windowHours: 24 });
+    const artifact = await archive.readArtifact<unknown>(output.artifactRef);
+
+    expect(fetchedSourceIds).toEqual(["weibo"]);
+    expect(output.itemCount).toBe(1);
+    expect(artifact.metadata.sourceCount).toBe(1);
+  });
 });

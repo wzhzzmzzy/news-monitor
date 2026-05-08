@@ -2,6 +2,17 @@ import OpenAI from "openai";
 import type { AgentEvent, ToolChatInput, ToolChatOutput } from "./agent-session.js";
 import type { ModelClient } from "../../workflow-core/src/index.js";
 
+type ChatMessage = Record<string, unknown>;
+
+interface PendingToolCall {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export interface OpenAIModelClientOptions {
   apiKey?: string;
   model?: string;
@@ -53,10 +64,7 @@ export class OpenAIModelClient implements ModelClient {
   }
 
   async generateWithTools(input: ToolChatInput): Promise<ToolChatOutput> {
-    const messages: Array<Record<string, unknown>> = [
-      { role: "system", content: input.system },
-      { role: "user", content: input.user }
-    ];
+    const messages = createMessages(input);
     const tools = input.tools.map((tool) => ({
       type: "function" as const,
       function: {
@@ -105,10 +113,7 @@ export class OpenAIModelClient implements ModelClient {
   async *generateWithToolsStream(input: ToolChatInput & { maxToolIterations?: number }): AsyncIterable<AgentEvent> {
     yield { type: "assistant.thinking", payload: {} };
 
-    const messages: Array<Record<string, unknown>> = [
-      { role: "system", content: input.system },
-      { role: "user", content: input.user }
-    ];
+    const messages = createMessages(input);
     const tools = input.tools.map((tool) => ({
       type: "function" as const,
       function: {
@@ -124,16 +129,58 @@ export class OpenAIModelClient implements ModelClient {
         ...this.reasoningOptions(),
         messages: messages as never,
         tools,
-        tool_choice: "auto"
+        tool_choice: "auto",
+        stream: true
       });
-      const message = response.choices[0]?.message;
-      if (!message) {
-        throw new Error("OpenAI chat completion 没有返回 message");
-      }
-      messages.push(message as unknown as Record<string, unknown>);
 
-      if (message.tool_calls?.length) {
-        for (const toolCall of message.tool_calls) {
+      let assistantCreated = false;
+      let assistantText = "";
+      const toolCalls: PendingToolCall[] = [];
+      for await (const chunk of response as AsyncIterable<Record<string, unknown>>) {
+        const choice = (chunk.choices as Array<Record<string, unknown>> | undefined)?.[0];
+        const delta = choice?.delta as Record<string, unknown> | undefined;
+        if (!delta) {
+          continue;
+        }
+        const content = delta.content;
+        if (typeof content === "string" && content.length > 0) {
+          if (!assistantCreated) {
+            assistantCreated = true;
+            yield { type: "assistant.created", payload: {} };
+          }
+          assistantText += content;
+          yield { type: "assistant.delta", payload: { text: content } };
+        }
+        const deltaToolCalls = delta.tool_calls as Array<Record<string, unknown>> | undefined;
+        for (const deltaToolCall of deltaToolCalls ?? []) {
+          const index = typeof deltaToolCall.index === "number" ? deltaToolCall.index : toolCalls.length;
+          const existing = toolCalls[index] ?? {
+            id: "",
+            type: "function" as const,
+            function: { name: "", arguments: "" }
+          };
+          if (typeof deltaToolCall.id === "string") {
+            existing.id = deltaToolCall.id;
+          }
+          const fn = deltaToolCall.function as Record<string, unknown> | undefined;
+          if (typeof fn?.name === "string") {
+            existing.function.name = fn.name;
+          }
+          if (typeof fn?.arguments === "string") {
+            existing.function.arguments += fn.arguments;
+          }
+          toolCalls[index] = existing;
+        }
+      }
+
+      if (toolCalls.length) {
+        const assistantMessage = {
+          role: "assistant",
+          content: assistantText || null,
+          tool_calls: toolCalls
+        };
+        messages.push(assistantMessage);
+        for (const toolCall of toolCalls) {
           if (toolCall.type !== "function") {
             continue;
           }
@@ -173,10 +220,10 @@ export class OpenAIModelClient implements ModelClient {
         continue;
       }
 
-      yield { type: "assistant.created", payload: {} };
-      if (message.content) {
-        yield { type: "assistant.delta", payload: { text: message.content } };
+      if (!assistantCreated) {
+        yield { type: "assistant.created", payload: {} };
       }
+      messages.push({ role: "assistant", content: assistantText });
       yield { type: "assistant.completed", payload: {} };
       return;
     }
@@ -187,6 +234,14 @@ export class OpenAIModelClient implements ModelClient {
   private reasoningOptions(): Record<string, unknown> {
     return this.thinking ? { reasoning_effort: this.thinking } : {};
   }
+}
+
+function createMessages(input: ToolChatInput): ChatMessage[] {
+  return [
+    { role: "system", content: input.system },
+    ...(input.history ?? []).map((message) => ({ role: message.role, content: message.content })),
+    { role: "user", content: input.user }
+  ];
 }
 
 function summarizeToolResult(result: unknown): string {

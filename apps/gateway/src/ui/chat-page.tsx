@@ -4,13 +4,21 @@ import {
   IconArrowUp,
   IconLayoutSidebarLeftCollapse,
   IconMoon,
+  IconPlus,
   IconSettings
 } from "./icons.js";
 
 export function ChatPage(props: { config: RuntimeConfig }) {
   const variant = props.config.theme.mode === "dark" ? props.config.theme.darkVariant : props.config.theme.lightVariant;
   return (
-    <HtmlDocument title="Hot Board Chat" variant={variant} mode={props.config.theme.mode} script="/assets/chat.js">
+    <HtmlDocument
+      title="Hot Board Chat"
+      variant={variant}
+      mode={props.config.theme.mode}
+      lightVariant={props.config.theme.lightVariant}
+      darkVariant={props.config.theme.darkVariant}
+      script="/assets/chat.js"
+    >
       <div class="hot-board-shell" data-page="chat">
         <aside class="sidebar" data-sidebar>
           <div class="brand">Hot Board</div>
@@ -29,8 +37,18 @@ export function ChatPage(props: { config: RuntimeConfig }) {
               <h1 data-session-title>新会话</h1>
               <p data-session-subtitle>Agent chat</p>
             </div>
+            <nav class="mobile-nav" aria-label="移动导航">
+              <button class="icon-button" data-new-session type="button" title="新会话">
+                <IconPlus />
+              </button>
+              <a class="icon-button" data-mobile-settings href="/settings" title="设置">
+                <IconSettings />
+              </a>
+            </nav>
             <button class="icon-button" data-theme-toggle title="切换主题" type="button">
-              <IconMoon />
+              <span data-theme-icon>
+                <IconMoon />
+              </span>
             </button>
           </header>
           <section class="message-list" data-message-list></section>

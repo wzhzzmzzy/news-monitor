@@ -33,7 +33,8 @@ export function createBuiltinTools(options: BuiltinToolsOptions): ToolRegistry {
       const windowHours = (input as { windowHours?: number }).windowHours ?? 24;
       const endedAt = options.now?.() ?? new Date();
       const startedAt = new Date(endedAt.getTime() - windowHours * 60 * 60 * 1000);
-      const sourceResults = await Promise.all(options.sources.map((source) => options.newsFetcher.fetchSource(source)));
+      const enabledSources = options.sources.filter((source) => source.enabled);
+      const sourceResults = await Promise.all(enabledSources.map((source) => options.newsFetcher.fetchSource(source)));
       const fetchedItems = sourceResults.flatMap((result) => result.items);
       const archivedItems = await readArchivedRawNewsItems(options.archive);
       const items = dedupeById([...fetchedItems, ...archivedItems])
@@ -53,7 +54,7 @@ export function createBuiltinTools(options: BuiltinToolsOptions): ToolRegistry {
           items,
           sourceErrors
         },
-        metadata: { itemCount: items.length, sourceCount: options.sources.length }
+        metadata: { itemCount: items.length, sourceCount: enabledSources.length }
       });
       return { artifactRef, itemCount: items.length, sourceErrors };
     }

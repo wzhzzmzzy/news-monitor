@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
@@ -66,7 +66,30 @@ describe("gateway app", () => {
     expect(html).toContain("data-message-list");
     expect(html).toContain("data-message-input");
     expect(html).toContain("data-theme-toggle");
+    expect(html).toContain("data-mobile-settings");
     expect(html).toContain("IconSettings");
+  });
+
+  it("keeps navigation reachable on narrow chat viewports", async () => {
+    const css = await readFile(join(process.cwd(), "apps/gateway/src/public/styles.css"), "utf8");
+
+    expect(css).not.toContain(".sidebar {\n    display: none;");
+    expect(css).toContain(".mobile-nav");
+  });
+
+  it("renders session summaries with status and updated time client-side", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
+
+    expect(script).toContain("data-session-status");
+    expect(script).toContain("formatUpdatedAt");
+  });
+
+  it("applies theme tokens immediately when toggling theme mode", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
+
+    expect(script).toContain("THEME_TOKENS");
+    expect(script).toContain("applyThemeTokens");
+    expect(script).toContain("data-theme-icon");
   });
 
   it("renders settings form fields", async () => {
@@ -103,6 +126,37 @@ describe("gateway app", () => {
     expect(events).toContain("event: title.updated");
   });
 
+  it("streams with the active session history before the latest user message", async () => {
+    const paths = await tempPaths();
+    const streamInputs: Array<{ message: string; history?: Array<{ role: string; content: string }> }> = [];
+    const app = await createGatewayApp({
+      paths,
+      runtime: fakeRuntime({}, streamInputs)
+    });
+    const session = await (await app.request("/api/sessions", { method: "POST" })).json() as { id: string };
+
+    await app.request(`/api/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "第一问" })
+    });
+    await waitForAssistantContent(app, session.id, "完成");
+    await app.request(`/api/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "第二问" })
+    });
+    await waitForStreamCount(streamInputs, 2);
+
+    expect(streamInputs[1]).toMatchObject({
+      message: "第二问",
+      history: [
+        { role: "user", content: "第一问" },
+        { role: "assistant", content: "完成" }
+      ]
+    });
+  });
+
   it("persists theme mode through a small settings endpoint", async () => {
     const paths = await tempPaths();
     const app = await createGatewayApp({ paths });
@@ -119,7 +173,10 @@ describe("gateway app", () => {
   });
 });
 
-function fakeRuntime(overrides: Partial<RuntimeConfig> = {}) {
+function fakeRuntime(
+  overrides: Partial<RuntimeConfig> = {},
+  streamInputs: Array<{ message: string; history?: Array<{ role: string; content: string }> }> = []
+) {
   const appConfig: RuntimeConfig = {
     ...defaultRuntimeConfig,
     ...overrides,
@@ -133,7 +190,8 @@ function fakeRuntime(overrides: Partial<RuntimeConfig> = {}) {
     appConfig,
     config: { sources: [], analysisProfiles: [] },
     agent: {
-      streamAsk: async function* () {
+      streamAsk: async function* (input: { message: string; history?: Array<{ role: string; content: string }> }) {
+        streamInputs.push(input);
         yield { type: "assistant.created", payload: {} };
         yield { type: "assistant.delta", payload: { text: "完成" } };
         yield { type: "assistant.completed", payload: {} };
@@ -151,4 +209,24 @@ async function waitForSessionTitle(app: Awaited<ReturnType<typeof createGatewayA
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   return await (await app.request(`/api/sessions/${sessionId}`)).json() as { title: string; titleSource: string };
+}
+
+async function waitForAssistantContent(app: Awaited<ReturnType<typeof createGatewayApp>>, sessionId: string, content: string) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const session = await (await app.request(`/api/sessions/${sessionId}`)).json() as { messages: Array<{ role: string; content: string }> };
+    if (session.messages.some((message) => message.role === "assistant" && message.content === content)) {
+      return session;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  return await (await app.request(`/api/sessions/${sessionId}`)).json();
+}
+
+async function waitForStreamCount(inputs: unknown[], count: number) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (inputs.length >= count) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
 }

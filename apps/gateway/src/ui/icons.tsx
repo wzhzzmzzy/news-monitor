@@ -10,6 +10,10 @@ export function IconPencil() {
   return <Icon name="IconPencil" label="编辑"><path d="M4 20h4l10.5-10.5a2.8 2.8 0 0 0-4-4L4 16v4" /><path d="M13.5 6.5l4 4" /></Icon>;
 }
 
+export function IconPlus() {
+  return <Icon name="IconPlus" label="新会话"><path d="M12 5v14" /><path d="M5 12h14" /></Icon>;
+}
+
 export function IconSettings() {
   return <Icon name="IconSettings" label="设置"><path d="M10.3 4.3l.4-1.3h2.6l.4 1.3a2 2 0 0 0 2.4 1.3l1.3-.4 1.3 2.2-1 1a2 2 0 0 0 0 2.8l1 1-1.3 2.2-1.3-.4a2 2 0 0 0-2.4 1.3l-.4 1.3h-2.6l-.4-1.3A2 2 0 0 0 8 14l-1.3.4-1.3-2.2 1-1a2 2 0 0 0 0-2.8l-1-1 1.3-2.2 1.3.4a2 2 0 0 0 2.4-1.3" /><circle cx="12" cy="12" r="3" /></Icon>;
 }

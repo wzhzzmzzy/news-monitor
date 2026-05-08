@@ -3,6 +3,65 @@ const state = {
   currentAssistantNode: null
 };
 
+const THEME_TOKENS = {
+  latte: {
+    base: "#eff1f5",
+    mantle: "#e6e9ef",
+    crust: "#dce0e8",
+    surface0: "#ccd0da",
+    surface1: "#bcc0cc",
+    text: "#4c4f69",
+    subtext0: "#6c6f85",
+    green: "#40a02b",
+    yellow: "#df8e1d",
+    red: "#d20f39",
+    blue: "#1e66f5",
+    mauve: "#8839ef"
+  },
+  frappe: {
+    base: "#303446",
+    mantle: "#292c3c",
+    crust: "#232634",
+    surface0: "#414559",
+    surface1: "#51576d",
+    text: "#c6d0f5",
+    subtext0: "#a5adce",
+    green: "#a6d189",
+    yellow: "#e5c890",
+    red: "#e78284",
+    blue: "#8caaee",
+    mauve: "#ca9ee6"
+  },
+  macchiato: {
+    base: "#24273a",
+    mantle: "#1e2030",
+    crust: "#181926",
+    surface0: "#363a4f",
+    surface1: "#494d64",
+    text: "#cad3f5",
+    subtext0: "#a5adcb",
+    green: "#a6da95",
+    yellow: "#eed49f",
+    red: "#ed8796",
+    blue: "#8aadf4",
+    mauve: "#c6a0f6"
+  },
+  mocha: {
+    base: "#1e1e2e",
+    mantle: "#181825",
+    crust: "#11111b",
+    surface0: "#313244",
+    surface1: "#45475a",
+    text: "#cdd6f4",
+    subtext0: "#a6adc8",
+    green: "#a6e3a1",
+    yellow: "#f9e2af",
+    red: "#f38ba8",
+    blue: "#89b4fa",
+    mauve: "#cba6f7"
+  }
+};
+
 async function loadSessions() {
   const response = await fetch("/api/sessions");
   const { sessions } = await response.json();
@@ -92,7 +151,22 @@ function renderSessionList(sessions) {
   list.replaceChildren(...sessions.map((session) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = session.title;
+    button.className = "session-list-item";
+    button.dataset.sessionId = session.id;
+    button.setAttribute("aria-current", session.id === state.currentSessionId ? "page" : "false");
+    const title = document.createElement("span");
+    title.className = "session-list-title";
+    title.textContent = session.title;
+    const meta = document.createElement("span");
+    meta.className = "session-list-meta";
+    const status = document.createElement("span");
+    status.setAttribute("data-session-status", session.status);
+    status.textContent = statusLabel(session.status);
+    const updated = document.createElement("time");
+    updated.dateTime = session.updatedAt;
+    updated.textContent = formatUpdatedAt(session.updatedAt);
+    meta.append(status, updated);
+    button.append(title, meta);
     button.addEventListener("click", () => void selectSession(session.id));
     return button;
   }));
@@ -185,7 +259,9 @@ async function renderCompletedMarkdown(messageElement, markdown) {
   messageElement.innerHTML = html;
 }
 
-document.querySelector("[data-new-session]")?.addEventListener("click", () => void createSession());
+for (const button of document.querySelectorAll("[data-new-session]")) {
+  button.addEventListener("click", () => void createSession());
+}
 document.querySelector("[data-theme-toggle]")?.addEventListener("click", () => void toggleThemeMode());
 document.querySelector("[data-composer]")?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -203,12 +279,58 @@ void loadSessions();
 async function toggleThemeMode() {
   const html = document.documentElement;
   const mode = html.dataset.themeMode === "dark" ? "light" : "dark";
-  html.dataset.themeMode = mode;
-  await fetch("/api/settings/theme-mode", {
+  applyThemeTokens(mode);
+  const response = await fetch("/api/settings/theme-mode", {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ mode })
   });
+  const settings = await response.json();
+  applyThemeTokens(settings.config.theme.mode, settings.config.theme);
+}
+
+function applyThemeTokens(mode, theme = {}) {
+  const html = document.documentElement;
+  const variant = mode === "dark"
+    ? theme.darkVariant ?? html.dataset.themeDarkVariant ?? "mocha"
+    : theme.lightVariant ?? html.dataset.themeLightVariant ?? "latte";
+  const tokens = THEME_TOKENS[variant] ?? THEME_TOKENS.latte;
+  html.dataset.themeMode = mode;
+  html.dataset.themeVariant = variant;
+  for (const [name, value] of Object.entries(tokens)) {
+    html.style.setProperty(`--${name}`, value);
+  }
+  const icon = document.querySelector("[data-theme-icon]");
+  if (icon) {
+    icon.dataset.iconMode = mode;
+  }
+  const toggle = document.querySelector("[data-theme-toggle]");
+  if (toggle) {
+    toggle.title = mode === "dark" ? "切换到浅色" : "切换到深色";
+  }
+}
+
+function statusLabel(status) {
+  if (status === "running") {
+    return "生成中";
+  }
+  if (status === "failed") {
+    return "失败";
+  }
+  return "空闲";
+}
+
+function formatUpdatedAt(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
 
 export {
@@ -216,6 +338,8 @@ export {
   createSession,
   editAndResend,
   loadSessions,
+  applyThemeTokens,
+  formatUpdatedAt,
   renderCompletedMarkdown,
   renderSession,
   renderToolStatus,
