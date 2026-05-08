@@ -46,8 +46,7 @@ The design requires Markdown sanitization without introducing a full frontend bu
 - Create `apps/cli/src/gateway-process.ts`: gateway process lifecycle helpers using XDG state.
 - Create `apps/cli/src/gateway-process.test.ts`: start/status/stop/restart behavior with injected process operations.
 - Create `apps/gateway/src/index.ts`: Hono app entrypoint and server start.
-- Create `apps/gateway/src/app.ts`: Hono app factory, dependencies, static routes.
-- Create `apps/gateway/src/routes/api.ts`: session, run events, settings, Markdown API routes.
+- Create `apps/gateway/src/app.ts`: Hono app factory, dependencies, static routes, session/run/settings/Markdown API routes.
 - Create `apps/gateway/src/routes/pages.tsx`: `/chat`, `/settings`, and `/` redirect/page rendering.
 - Create `apps/gateway/src/ui/layout.tsx`: shared HTML document, theme attributes, asset links.
 - Create `apps/gateway/src/ui/chat-page.tsx`: chat page SSR shell.
@@ -70,7 +69,7 @@ The design requires Markdown sanitization without introducing a full frontend bu
 - Modify: `pnpm-lock.yaml`
 - Modify: `tsconfig.json`
 
-- [x] **Step 1: Add package dependencies**
+- [ ] **Step 1: Add package dependencies**
 
 Run:
 
@@ -81,7 +80,7 @@ pnpm add -w -D @types/sanitize-html
 
 Expected: both commands exit with code 0 and `package.json` contains `hono`, `@hono/node-server`, `marked`, `sanitize-html`, and `@types/sanitize-html`.
 
-- [x] **Step 2: Add gateway script and TSX support**
+- [ ] **Step 2: Add gateway script and TSX support**
 
 Modify `package.json` scripts to include:
 
@@ -111,7 +110,7 @@ Modify `tsconfig.json` compiler options and include list:
 
 Keep all existing compiler options that are not shown in this snippet.
 
-- [x] **Step 3: Verify dependency baseline**
+- [ ] **Step 3: Verify dependency baseline**
 
 Run:
 
@@ -122,7 +121,7 @@ pnpm test
 
 Expected: existing code still typechecks and all current tests pass.
 
-- [x] **Step 4: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add package.json pnpm-lock.yaml tsconfig.json
@@ -143,7 +142,7 @@ git commit -m "chore: add web gateway dependencies"
 - Modify: `apps/cli/src/index.ts`
 - Test: `apps/cli/src/runtime.test.ts`
 
-- [x] **Step 1: Write failing XDG path tests**
+- [ ] **Step 1: Write failing XDG path tests**
 
 Create `packages/app-paths/src/index.test.ts`:
 
@@ -191,7 +190,7 @@ pnpm test -- packages/app-paths/src/index.test.ts
 
 Expected: FAIL because `packages/app-paths/src/index.ts` does not exist.
 
-- [x] **Step 2: Implement XDG resolver**
+- [ ] **Step 2: Implement XDG resolver**
 
 Create `packages/app-paths/src/index.ts`:
 
@@ -251,7 +250,7 @@ export function resolveAppPaths(options: ResolveAppPathsOptions = {}): AppPaths 
 }
 ```
 
-- [x] **Step 3: Expand config schemas and tests**
+- [ ] **Step 3: Expand config schemas and tests**
 
 Update `packages/config/src/types.ts` so `HotBoardConfig` includes:
 
@@ -330,7 +329,7 @@ pnpm test -- packages/config/src/app-config.test.ts packages/config/src/config-l
 
 Expected: FAIL because the schemas and loader still use the old minimal format.
 
-- [x] **Step 4: Implement XDG config load/save**
+- [ ] **Step 4: Implement XDG config load/save**
 
 Replace cwd probing in `packages/config/src/app-config.ts` with explicit `configFile` loading. Export:
 
@@ -394,7 +393,7 @@ export const defaultRuntimeConfig: RuntimeConfig = {
 };
 ```
 
-- [x] **Step 5: Update ConfigLoader to use config file paths**
+- [ ] **Step 5: Update ConfigLoader to use config file paths**
 
 Change `ConfigLoaderOptions`:
 
@@ -434,7 +433,7 @@ Default `analysis-profiles.json`:
 ]
 ```
 
-- [x] **Step 6: Update CLI runtime and remove public config option**
+- [ ] **Step 6: Update CLI runtime and remove public config option**
 
 In `apps/cli/src/runtime.ts`, construct:
 
@@ -450,7 +449,7 @@ const config = await new ConfigLoader({
 
 Keep test injection through `RuntimeOptions.paths?: AppPaths`. Remove `--config <path>` and `runtimeOptions()` from `apps/cli/src/index.ts`.
 
-- [x] **Step 7: Verify path/config migration**
+- [ ] **Step 7: Verify path/config migration**
 
 Run:
 
@@ -461,7 +460,7 @@ pnpm run typecheck
 
 Expected: all selected tests pass and TypeScript has no errors.
 
-- [x] **Step 8: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add packages/app-paths/src packages/config/src apps/cli/src
@@ -474,7 +473,7 @@ git commit -m "feat: resolve hot board paths from xdg directories"
 - Create: `packages/theme/src/index.ts`
 - Test: `packages/theme/src/index.test.ts`
 
-- [x] **Step 1: Write failing theme tests**
+- [ ] **Step 1: Write failing theme tests**
 
 Create `packages/theme/src/index.test.ts`:
 
@@ -506,7 +505,7 @@ pnpm test -- packages/theme/src/index.test.ts
 
 Expected: FAIL because `packages/theme/src/index.ts` does not exist.
 
-- [x] **Step 2: Implement Catppuccin tokens**
+- [ ] **Step 2: Implement Catppuccin tokens**
 
 Create `packages/theme/src/index.ts`:
 
@@ -599,7 +598,7 @@ export function themeToCssVariables(tokens: ThemeTokens): string {
 }
 ```
 
-- [x] **Step 3: Verify theme package**
+- [ ] **Step 3: Verify theme package**
 
 Run:
 
@@ -610,7 +609,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [x] **Step 4: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add packages/theme/src
@@ -625,7 +624,7 @@ git commit -m "feat: add shared catppuccin theme tokens"
 - Create: `packages/session-store/src/index.ts`
 - Test: `packages/session-store/src/session-store.test.ts`
 
-- [x] **Step 1: Write failing session-store tests**
+- [ ] **Step 1: Write failing session-store tests**
 
 Create `packages/session-store/src/session-store.test.ts` with tests for:
 
@@ -736,7 +735,7 @@ pnpm test -- packages/session-store/src/session-store.test.ts
 
 Expected: FAIL because the session store module does not exist.
 
-- [x] **Step 2: Implement session types**
+- [ ] **Step 2: Implement session types**
 
 Create `packages/session-store/src/types.ts`:
 
@@ -793,7 +792,7 @@ export interface SessionIndex {
 }
 ```
 
-- [x] **Step 3: Implement store with atomic writes**
+- [ ] **Step 3: Implement store with atomic writes**
 
 Create `packages/session-store/src/session-store.ts` with public methods:
 
@@ -827,7 +826,7 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
 
 `editAndResendUserMessage()` must set the new message `parentId` to the edited message's original `parentId`, preserve all old messages, and set `activePath` to the parent chain plus the new user message.
 
-- [x] **Step 4: Export package**
+- [ ] **Step 4: Export package**
 
 Create `packages/session-store/src/index.ts`:
 
@@ -836,7 +835,7 @@ export * from "./types.js";
 export * from "./session-store.js";
 ```
 
-- [x] **Step 5: Verify session store**
+- [ ] **Step 5: Verify session store**
 
 Run:
 
@@ -847,7 +846,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add packages/session-store/src
@@ -862,7 +861,7 @@ git commit -m "feat: add json chat session store"
 - Modify: `packages/agent-core/src/index.ts`
 - Test: `packages/agent-core/src/agent-session.test.ts`
 
-- [x] **Step 1: Add failing streamAsk tests**
+- [ ] **Step 1: Add failing streamAsk tests**
 
 Extend `packages/agent-core/src/agent-session.test.ts` with:
 
@@ -904,7 +903,7 @@ pnpm test -- packages/agent-core/src/agent-session.test.ts
 
 Expected: FAIL because `streamAsk()` and `generateWithToolsStream` are not defined.
 
-- [x] **Step 2: Add event contracts**
+- [ ] **Step 2: Add event contracts**
 
 In `packages/agent-core/src/agent-session.ts`, add:
 
@@ -960,7 +959,7 @@ async *streamAsk(input: StreamAskInput): AsyncIterable<AgentEvent> {
 }
 ```
 
-- [x] **Step 3: Implement OpenAI stream adapter**
+- [ ] **Step 3: Implement OpenAI stream adapter**
 
 In `packages/agent-core/src/openai-model-client.ts`, implement `generateWithToolsStream()` as an async generator. It should:
 
@@ -996,7 +995,7 @@ yield { type: "assistant.completed", payload: {} };
 
 Use `input.maxToolIterations ?? 8` instead of a hard-coded loop limit.
 
-- [x] **Step 4: Verify streaming core**
+- [ ] **Step 4: Verify streaming core**
 
 Run:
 
@@ -1007,7 +1006,7 @@ pnpm run typecheck
 
 Expected: streaming tests pass and TypeScript has no errors.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add packages/agent-core/src
@@ -1019,7 +1018,6 @@ git commit -m "feat: stream agent chat events"
 **Files:**
 - Create: `apps/gateway/src/index.ts`
 - Create: `apps/gateway/src/app.ts`
-- Create: `apps/gateway/src/routes/api.ts`
 - Create: `apps/gateway/src/routes/pages.tsx`
 - Create: `apps/gateway/src/stream/run-registry.ts`
 - Test: `apps/gateway/src/stream/run-registry.test.ts`
@@ -1029,7 +1027,7 @@ git commit -m "feat: stream agent chat events"
 - Test: `apps/gateway/src/markdown/render-markdown.test.ts`
 - Modify: `apps/cli/src/runtime.ts`
 
-- [x] **Step 1: Write failing Markdown sanitizer tests**
+- [ ] **Step 1: Write failing Markdown sanitizer tests**
 
 Create `apps/gateway/src/markdown/render-markdown.test.ts`:
 
@@ -1061,7 +1059,7 @@ pnpm test -- apps/gateway/src/markdown/render-markdown.test.ts
 
 Expected: FAIL because the markdown renderer does not exist.
 
-- [x] **Step 2: Implement Markdown renderer**
+- [ ] **Step 2: Implement Markdown renderer**
 
 Create `apps/gateway/src/markdown/render-markdown.ts`:
 
@@ -1087,7 +1085,7 @@ export function renderMarkdown(markdown: string): string {
 }
 ```
 
-- [x] **Step 3: Write failing gateway API tests**
+- [ ] **Step 3: Write failing gateway API tests**
 
 Create `apps/gateway/src/app.test.ts` with:
 
@@ -1160,7 +1158,7 @@ pnpm test -- apps/gateway/src/app.test.ts
 
 Expected: FAIL because the gateway app factory does not exist.
 
-- [x] **Step 4: Write failing run registry replay tests**
+- [ ] **Step 4: Write failing run registry replay tests**
 
 Create `apps/gateway/src/stream/run-registry.test.ts`:
 
@@ -1221,7 +1219,7 @@ pnpm test -- apps/gateway/src/stream/run-registry.test.ts
 
 Expected: FAIL because the run registry does not exist.
 
-- [x] **Step 5: Implement app factory and API routes**
+- [ ] **Step 5: Implement app factory and API routes**
 
 Create `apps/gateway/src/app.ts` exporting:
 
@@ -1237,16 +1235,25 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
   const sessionStore = new SessionStore({ sessionsDir: paths.sessionsDir });
   const runRegistry = new RunRegistry();
   const app = new Hono();
+  const deps = { paths, runtime, sessionStore, runRegistry };
 
   app.route("/", createPageRoutes({ paths, runtime }));
-  app.route("/api", createApiRoutes({ paths, runtime, sessionStore, runRegistry }));
   app.get("/assets/*", serveStaticAssets);
+  app.post("/api/sessions", (context) => createSessionRoute(context, deps));
+  app.get("/api/sessions", (context) => listSessionsRoute(context, deps));
+  app.get("/api/sessions/:sessionId", (context) => getSessionRoute(context, deps));
+  app.post("/api/sessions/:sessionId/messages", (context) => postMessageRoute(context, deps));
+  app.post("/api/sessions/:sessionId/messages/:messageId/edit-resend", (context) => editResendRoute(context, deps));
+  app.get("/api/runs/:runId/events", (context) => runEventsRoute(context, deps));
+  app.post("/api/markdown", (context) => markdownRoute(context));
+  app.get("/api/settings", (context) => getSettingsRoute(context, deps));
+  app.put("/api/settings", (context) => putSettingsRoute(context, deps));
 
   return app;
 }
 ```
 
-Create API routes:
+Implement the route helpers in `apps/gateway/src/app.ts` and register these API routes there:
 
 ```text
 POST /api/sessions
@@ -1270,7 +1277,7 @@ PUT  /api/settings
 6. Push every event to `RunRegistry`.
 7. Return `{ runId, sessionId, userMessageId, assistantMessageId }` with status 202.
 
-- [x] **Step 6: Implement SSE run registry**
+- [ ] **Step 6: Implement SSE run registry**
 
 Create `apps/gateway/src/stream/run-registry.ts`:
 
@@ -1305,7 +1312,7 @@ data: {"text":"..."}
 
 End the stream when the run is complete or a `run.failed` event is published.
 
-- [x] **Step 7: Implement settings service**
+- [ ] **Step 7: Implement settings service**
 
 Create `apps/gateway/src/settings/settings-service.ts` with:
 
@@ -1325,7 +1332,7 @@ export async function saveSettings(paths: AppPaths, input: {
 
 `saveSettings()` must write `config.toml`, `sources.json`, and `analysis-profiles.json` using two-space JSON formatting for JSON files.
 
-- [x] **Step 8: Implement entrypoint**
+- [ ] **Step 8: Implement entrypoint**
 
 Create `apps/gateway/src/index.ts`:
 
@@ -1353,7 +1360,7 @@ await writeFile(paths.gatewayStateFile, `${JSON.stringify({
 console.log(`Hot Board gateway listening on http://${config.gateway.host}:${config.gateway.port}`);
 ```
 
-- [x] **Step 9: Verify gateway core**
+- [ ] **Step 9: Verify gateway core**
 
 Run:
 
@@ -1364,7 +1371,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [x] **Step 10: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add package.json pnpm-lock.yaml apps/gateway/src apps/cli/src/runtime.ts
@@ -1384,7 +1391,7 @@ git commit -m "feat: add hono gateway api"
 - Create: `apps/gateway/src/public/settings.js`
 - Test: `apps/gateway/src/app.test.ts`
 
-- [x] **Step 1: Extend page rendering tests**
+- [ ] **Step 1: Extend page rendering tests**
 
 Add assertions to `apps/gateway/src/app.test.ts`:
 
@@ -1422,7 +1429,7 @@ pnpm test -- apps/gateway/src/app.test.ts
 
 Expected: FAIL until SSR UI files are implemented.
 
-- [x] **Step 2: Implement shared layout**
+- [ ] **Step 2: Implement shared layout**
 
 Create `apps/gateway/src/ui/layout.tsx`:
 
@@ -1452,7 +1459,7 @@ export function HtmlDocument(props: {
 }
 ```
 
-- [x] **Step 3: Implement Tabler icon helper**
+- [ ] **Step 3: Implement Tabler icon helper**
 
 Create `apps/gateway/src/ui/icons.tsx` with a single helper:
 
@@ -1468,7 +1475,7 @@ function Icon(props: { name: string; label: string; children: unknown }) {
 
 Export the required Tabler icons as functions named `IconPencil`, `IconSettings`, `IconArrowUp`, `IconArrowLeft`, `IconMoon`, `IconSun`, `IconLayoutSidebarLeftCollapse`, and `IconLayoutSidebarLeftExpand`. Use Tabler-compatible `viewBox="0 0 24 24"`, no fill, 2px stroke. Each function must include `data-icon="IconName"` so tests and browser inspection can confirm the intended icon is rendered.
 
-- [x] **Step 4: Implement chat page SSR**
+- [ ] **Step 4: Implement chat page SSR**
 
 Create `apps/gateway/src/ui/chat-page.tsx` that renders:
 
@@ -1500,7 +1507,7 @@ Create `apps/gateway/src/ui/chat-page.tsx` that renders:
 
 Do not add a Chat/Settings text nav in the topbar.
 
-- [x] **Step 5: Implement settings page SSR**
+- [ ] **Step 5: Implement settings page SSR**
 
 Create `apps/gateway/src/ui/settings-page.tsx` with a form containing exact input names:
 
@@ -1535,7 +1542,7 @@ Include a top-left icon link:
 
 Render source rows under `[data-sources-editor]` and profile rows under `[data-profiles-editor]`.
 
-- [x] **Step 6: Implement page routes**
+- [ ] **Step 6: Implement page routes**
 
 Create `apps/gateway/src/routes/pages.tsx`:
 
@@ -1551,7 +1558,7 @@ export function createPageRoutes(deps: { paths: AppPaths; runtime: Runtime }) {
 
 Use Hono JSX rendering from `hono/jsx/dom/server`.
 
-- [x] **Step 7: Implement CSS layout**
+- [ ] **Step 7: Implement CSS layout**
 
 Create `apps/gateway/src/public/styles.css` with these constraints:
 
@@ -1619,7 +1626,7 @@ body {
 
 Extend this base with stable dimensions for icon buttons, message list scrolling, composer textarea resizing, settings grid, status rows, and edit form controls.
 
-- [x] **Step 8: Implement chat browser module**
+- [ ] **Step 8: Implement chat browser module**
 
 Create `apps/gateway/src/public/chat.js` with functions:
 
@@ -1647,7 +1654,7 @@ Required behavior:
 8. On `assistant.completed`, call `/api/markdown` and replace assistant content with sanitized HTML.
 9. For edit-resend, swap the selected user message into a textarea with cancel and icon send controls, then call `/api/sessions/:sessionId/messages/:messageId/edit-resend`.
 
-- [x] **Step 9: Implement settings browser module**
+- [ ] **Step 9: Implement settings browser module**
 
 Create `apps/gateway/src/public/settings.js` with functions:
 
@@ -1668,7 +1675,7 @@ Required behavior:
 5. Save all data with `PUT /api/settings`.
 6. Keep form values on save failure and render an error message in `[data-settings-error]`.
 
-- [x] **Step 10: Verify SSR and static client**
+- [ ] **Step 10: Verify SSR and static client**
 
 Run:
 
@@ -1679,7 +1686,7 @@ pnpm run typecheck
 
 Expected: route rendering tests pass and TypeScript has no errors.
 
-- [x] **Step 11: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add apps/gateway/src
@@ -1689,14 +1696,14 @@ git commit -m "feat: render chat and settings web ui"
 ## Task 8: Title Generation, Theme Toggle, And Gateway State
 
 **Files:**
-- Modify: `apps/gateway/src/routes/api.ts`
+- Modify: `apps/gateway/src/app.ts`
 - Modify: `apps/gateway/src/public/chat.js`
 - Modify: `apps/gateway/src/public/settings.js`
 - Modify: `apps/gateway/src/index.ts`
 - Modify: `apps/cli/src/runtime.ts`
 - Test: `apps/gateway/src/app.test.ts`
 
-- [x] **Step 1: Add title generation tests**
+- [ ] **Step 1: Add title generation tests**
 
 Add a gateway API test where a fake runtime agent completes a first assistant reply and a fake flash title generator returns `"今日热点"`. Assert that:
 
@@ -1737,7 +1744,7 @@ pnpm test -- apps/gateway/src/app.test.ts
 
 Expected: FAIL until title generation is implemented.
 
-- [x] **Step 2: Implement flash-only title generation**
+- [ ] **Step 2: Implement flash-only title generation**
 
 After first assistant completion, and after an edit-resend regenerated assistant completion, run title generation only when the session `titleSource` is not `"manual"`. If `flash.baseUrl`, `flash.apiKey`, and `flash.model` are all configured, instantiate a flash `OpenAIModelClient` and ask for a concise title using the active branch's first user message and latest assistant response. If any flash field is missing, set a deterministic default title from the active branch's first user message:
 
@@ -1750,7 +1757,7 @@ function deterministicTitleFromUserMessage(content: string): string {
 
 Do not call the main LLM for title generation.
 
-- [x] **Step 3: Implement theme toggle persistence**
+- [ ] **Step 3: Implement theme toggle persistence**
 
 In `/api/settings`, support a small update for theme mode:
 
@@ -1763,7 +1770,7 @@ content-type: application/json
 
 In `chat.js`, the topbar theme icon toggles between `light` and `dark`, updates `document.documentElement.dataset.themeMode`, and persists the mode. The selected variant must come from configured `lightVariant` or `darkVariant`.
 
-- [x] **Step 4: Verify gateway state file**
+- [ ] **Step 4: Verify gateway state file**
 
 Add an `apps/gateway/src/app.test.ts` or targeted unit test that writes gateway state through a helper:
 
@@ -1776,7 +1783,7 @@ expect(JSON.parse(await readFile(paths.gatewayStateFile, "utf8"))).toMatchObject
 
 Keep `pid` and `startedAt` dynamic.
 
-- [x] **Step 5: Verify behavior**
+- [ ] **Step 5: Verify behavior**
 
 Run:
 
@@ -1787,7 +1794,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add apps/gateway/src apps/cli/src/runtime.ts
@@ -1802,7 +1809,7 @@ git commit -m "feat: persist web theme and generated session titles"
 - Modify: `apps/cli/src/index.ts`
 - Modify: `apps/cli/src/runtime.ts`
 
-- [x] **Step 1: Write failing gateway process tests**
+- [ ] **Step 1: Write failing gateway process tests**
 
 Create `apps/cli/src/gateway-process.test.ts`:
 
@@ -1931,7 +1938,7 @@ pnpm test -- apps/cli/src/gateway-process.test.ts
 
 Expected: FAIL because `apps/cli/src/gateway-process.ts` does not exist.
 
-- [x] **Step 2: Implement gateway process helpers**
+- [ ] **Step 2: Implement gateway process helpers**
 
 Create `apps/cli/src/gateway-process.ts`:
 
@@ -2007,7 +2014,7 @@ Set environment variables for the child from the resolved paths:
 
 After spawning, write `paths.gatewayStateFile` with `pid`, `host`, `port`, and `startedAt`. `stopGateway()` must read the state file, send `SIGTERM` through `terminateProcess()`, remove `gateway.json`, and return `{ state: "stopped" }`. If the state file is missing, it must return `{ state: "stopped" }`.
 
-- [x] **Step 3: Add CLI commands**
+- [ ] **Step 3: Add CLI commands**
 
 Modify `apps/cli/src/index.ts`:
 
@@ -2043,7 +2050,7 @@ gateway.command("restart").description("重启 gateway").action(async () => {
 
 Modify `apps/cli/src/runtime.ts` return value so `createRuntime()` includes `paths`.
 
-- [x] **Step 4: Verify gateway lifecycle**
+- [ ] **Step 4: Verify gateway lifecycle**
 
 Run:
 
@@ -2054,7 +2061,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add apps/cli/src

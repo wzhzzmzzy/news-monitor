@@ -12,18 +12,12 @@
 
 ## Scope
 
-This is the third Web UI execution plan. It records the hardening work performed after the initial Web UI implementation plan:
+This is the third Web UI execution plan. Execute it after the initial workflow-core and Web UI plans:
 
 - `docs/superpowers/plans/2026-05-07-agent-workflow-core.md`
 - `docs/superpowers/plans/2026-05-07-web-ui-chat.md`
-- `docs/superpowers/plans/2026-05-08-web-ui-chat-hardening.md`
 
-The plan covers fixes already implemented on branch `codex/web-ui-chat` in these commits:
-
-- `477b60a fix: close web chat review gaps`
-- `0ff9165 fix: improve gateway interaction errors`
-- `2a25334 fix: polish chat composer interactions`
-- `1d3ca91 fix: refresh gateway runtime after settings save`
+This plan hardens the first Web UI implementation by closing review gaps, browser-walkthrough failures, composer interaction issues, and runtime configuration refresh behavior.
 
 ## File Structure
 
@@ -63,7 +57,7 @@ The plan covers fixes already implemented on branch `codex/web-ui-chat` in these
 - Modify: `apps/gateway/src/ui/icons.tsx`
 - Modify: `apps/gateway/src/ui/layout.tsx`
 
-- [x] **Step 1: Write failing tests for active chat history**
+- [ ] **Step 1: Write failing tests for active chat history**
 
 Add a gateway test proving the second streamed turn receives the active-path history:
 
@@ -79,7 +73,7 @@ expect(streamInputs[1]).toMatchObject({
 
 Add an agent-core test proving `AgentSession.streamAsk()` forwards `history` into `generateWithToolsStream()`.
 
-- [x] **Step 2: Implement active-path history propagation**
+- [ ] **Step 2: Implement active-path history propagation**
 
 In `apps/gateway/src/app.ts`, compute history from `session.activePath` before the latest user message:
 
@@ -96,7 +90,7 @@ for await (const event of input.runtime.agent.streamAsk({
 
 In `packages/agent-core/src/agent-session.ts`, pass `input.history` into `generateWithToolsStream()`.
 
-- [x] **Step 3: Write failing tests for token streaming**
+- [ ] **Step 3: Write failing tests for token streaming**
 
 Create `packages/agent-core/src/openai-model-client.test.ts` with a mocked OpenAI client that yields chunks:
 
@@ -120,7 +114,7 @@ Expected events:
 ]
 ```
 
-- [x] **Step 4: Implement real OpenAI streaming**
+- [ ] **Step 4: Implement real OpenAI streaming**
 
 In `packages/agent-core/src/openai-model-client.ts`, call:
 
@@ -137,7 +131,7 @@ await this.client.chat.completions.create({
 
 Accumulate streamed text and tool-call deltas, emitting each content chunk as an `assistant.delta` event.
 
-- [x] **Step 5: Write failing tests for disabled sources**
+- [ ] **Step 5: Write failing tests for disabled sources**
 
 Add a `crawl_news` test with one enabled source and one disabled source, asserting:
 
@@ -147,7 +141,7 @@ expect(output.itemCount).toBe(1);
 expect(artifact.metadata.sourceCount).toBe(1);
 ```
 
-- [x] **Step 6: Filter disabled sources**
+- [ ] **Step 6: Filter disabled sources**
 
 In `packages/tools/src/builtin-tools.ts`, fetch only:
 
@@ -157,7 +151,7 @@ const enabledSources = options.sources.filter((source) => source.enabled);
 
 Use `enabledSources.length` for `metadata.sourceCount`.
 
-- [x] **Step 7: Add client contracts for session status, mobile navigation, and theme tokens**
+- [ ] **Step 7: Add client contracts for session status, mobile navigation, and theme tokens**
 
 Add tests in `apps/gateway/src/app.test.ts` that assert:
 
@@ -169,11 +163,11 @@ expect(script).toContain("applyThemeTokens");
 expect(html).toContain("data-mobile-settings");
 ```
 
-- [x] **Step 8: Implement UI contracts**
+- [ ] **Step 8: Implement UI contracts**
 
 Update `chat.js`, `styles.css`, `chat-page.tsx`, `icons.tsx`, and `layout.tsx` so session list items show title/status/time, mobile has a visible settings path, and theme toggle applies token variables immediately.
 
-- [x] **Step 9: Verify and commit**
+- [ ] **Step 9: Verify and commit**
 
 Run:
 
@@ -193,8 +187,6 @@ git add apps/gateway/src packages/agent-core/src packages/tools/src
 git commit -m "fix: close web chat review gaps"
 ```
 
-Actual commit: `477b60a`.
-
 ## Task 2: Improve Interaction Errors And Settings Validation
 
 **Files:**
@@ -206,7 +198,7 @@ Actual commit: `477b60a`.
 - Modify: `apps/gateway/src/settings/settings-service.ts`
 - Modify: `apps/gateway/src/ui/settings-page.tsx`
 
-- [x] **Step 1: Write failing tests for failed assistant rendering**
+- [ ] **Step 1: Write failing tests for failed assistant rendering**
 
 Add client contract tests:
 
@@ -216,7 +208,7 @@ expect(script).toContain("message.failedAt");
 expect(script).toContain("payload.error");
 ```
 
-- [x] **Step 2: Render live and persisted assistant failures**
+- [ ] **Step 2: Render live and persisted assistant failures**
 
 In `chat.js`, make `run.failed` call:
 
@@ -228,7 +220,7 @@ await selectSession(state.currentSessionId);
 
 In persisted render, use `message.failedAt || message.error` to show "生成失败" plus the stored error.
 
-- [x] **Step 3: Write failing tests for edit-resend DOM synchronization**
+- [ ] **Step 3: Write failing tests for edit-resend DOM synchronization**
 
 Add a client contract test asserting:
 
@@ -237,7 +229,7 @@ expect(script).toContain("await selectSession(state.currentSessionId)");
 expect(script).toContain("state.currentAssistantNode = null");
 ```
 
-- [x] **Step 4: Synchronize edit-resend from server state**
+- [ ] **Step 4: Synchronize edit-resend from server state**
 
 In `chat.js`, after edit-resend returns:
 
@@ -249,7 +241,7 @@ connectRun(run.runId, run.assistantMessageId);
 
 This removes stale edit forms and duplicate pending assistant placeholders.
 
-- [x] **Step 5: Write failing tests for settings validation**
+- [ ] **Step 5: Write failing tests for settings validation**
 
 Add a gateway route test:
 
@@ -261,7 +253,7 @@ await expect(response.json()).resolves.toEqual({
 });
 ```
 
-- [x] **Step 6: Validate settings on the server**
+- [ ] **Step 6: Validate settings on the server**
 
 In `settings-service.ts`, add `validateSettings()` that requires:
 
@@ -275,7 +267,7 @@ In `settings-service.ts`, add `validateSettings()` that requires:
 
 In `app.ts`, reject invalid settings with HTTP 400 before writing config files.
 
-- [x] **Step 7: Improve settings UI feedback and dynamic editors**
+- [ ] **Step 7: Improve settings UI feedback and dynamic editors**
 
 In `settings-page.tsx`, add:
 
@@ -295,7 +287,7 @@ In `settings.js`, add:
 - labeled dynamic inputs
 - `optionalNumberValue()` so blank numeric fields do not become `0`
 
-- [x] **Step 8: Fix narrow viewport navigation**
+- [ ] **Step 8: Fix narrow viewport navigation**
 
 In `styles.css`, make narrow viewports use:
 
@@ -313,7 +305,7 @@ In `styles.css`, make narrow viewports use:
 }
 ```
 
-- [x] **Step 9: Verify in tests and browser**
+- [ ] **Step 9: Verify in tests and browser**
 
 Run:
 
@@ -328,7 +320,7 @@ Then restart gateway and verify:
 
 - `/chat` renders failed messages as "生成失败".
 - `/settings` shows required model, add-source, and add-profile controls.
-- Browser console has zero errors.
+- Browser console reports zero errors.
 
 Commit:
 
@@ -337,8 +329,6 @@ git add apps/gateway/src
 git commit -m "fix: improve gateway interaction errors"
 ```
 
-Actual commit: `0ff9165`.
-
 ## Task 3: Polish Chat Composer Interactions
 
 **Files:**
@@ -346,7 +336,7 @@ Actual commit: `0ff9165`.
 - Modify: `apps/gateway/src/public/chat.js`
 - Modify: `apps/gateway/src/public/styles.css`
 
-- [x] **Step 1: Write failing tests for keyboard behavior**
+- [ ] **Step 1: Write failing tests for keyboard behavior**
 
 Add client contract assertions:
 
@@ -357,7 +347,7 @@ expect(script).toContain("event.metaKey");
 expect(script).toContain("insertTextAtCursor(input, \"\\n\")");
 ```
 
-- [x] **Step 2: Write failing tests for theme-aware composer styling**
+- [ ] **Step 2: Write failing tests for theme-aware composer styling**
 
 Add CSS contract assertions:
 
@@ -369,7 +359,7 @@ expect(css).toContain("caret-color: var(--blue)");
 expect(css).toContain(".composer textarea:focus");
 ```
 
-- [x] **Step 3: Implement keyboard handling**
+- [ ] **Step 3: Implement keyboard handling**
 
 In `chat.js`, add:
 
@@ -391,7 +381,7 @@ function handleComposerKeydown(event) {
 
 Use `Enter` to send, and `Command+Enter` to insert a newline at the cursor.
 
-- [x] **Step 4: Theme the composer textarea**
+- [ ] **Step 4: Theme the composer textarea**
 
 In `styles.css`, make `.composer textarea` use:
 
@@ -404,7 +394,7 @@ border: 1px solid var(--surface0);
 
 Add a focus state with `border-color: var(--blue)` and an outline derived from `var(--blue)`.
 
-- [x] **Step 5: Verify in tests and browser**
+- [ ] **Step 5: Verify in tests and browser**
 
 Run:
 
@@ -428,8 +418,6 @@ git add apps/gateway/src/app.test.ts apps/gateway/src/public/chat.js apps/gatewa
 git commit -m "fix: polish chat composer interactions"
 ```
 
-Actual commit: `2a25334`.
-
 ## Task 4: Refresh Runtime After Settings Save
 
 **Files:**
@@ -438,16 +426,16 @@ Actual commit: `2a25334`.
 - Modify: `apps/cli/src/runtime.ts`
 - Test: `apps/cli/src/runtime.test.ts`
 
-- [x] **Step 1: Gather runtime/config evidence**
+- [ ] **Step 1: Reproduce and document runtime/config evidence**
 
-Confirm via local gateway API that saved settings contain model config:
+Confirm via local gateway API that saved settings contain model config without printing the secret API key:
 
 ```json
 {
   "llm": {
     "baseUrlSet": true,
     "apiKeySet": true,
-    "model": "mimo-v2.5-pro",
+    "model": "configured-model",
     "thinking": "high",
     "timeoutMs": 120000,
     "maxToolIterations": 8
@@ -455,7 +443,7 @@ Confirm via local gateway API that saved settings contain model config:
 }
 ```
 
-Confirm recent failed session still reported:
+Before the fix, reproduce that the next chat still reports the stale-runtime error even after settings save:
 
 ```text
 必须提供 OpenAI model。请传入 model 或设置 OPENAI_MODEL。
@@ -463,7 +451,7 @@ Confirm recent failed session still reported:
 
 Root cause: settings were persisted to XDG config, but the gateway kept using the `runtime` created at process start.
 
-- [x] **Step 2: Write failing test for runtime refresh**
+- [ ] **Step 2: Write failing test for runtime refresh**
 
 Add `apps/gateway/src/app.test.ts` coverage that creates a gateway with `runtimeFactory`, saves settings with `llm.model = "configured-model"`, sends a message, and asserts the streamed runtime saw:
 
@@ -471,7 +459,7 @@ Add `apps/gateway/src/app.test.ts` coverage that creates a gateway with `runtime
 expect(seenModels).toEqual(["configured-model"]);
 ```
 
-- [x] **Step 3: Add runtime factory support to gateway**
+- [ ] **Step 3: Add runtime factory support to gateway**
 
 In `apps/gateway/src/app.ts`, allow:
 
@@ -494,7 +482,7 @@ if (!options.runtime || options.runtimeFactory) {
 }
 ```
 
-- [x] **Step 4: Write failing test for streaming wrapper preservation**
+- [ ] **Step 4: Write failing test for streaming wrapper preservation**
 
 Add `apps/cli/src/runtime.test.ts` coverage that injects a `modelClient.generateWithToolsStream()` and expects `runtime.agent.streamAsk()` to emit:
 
@@ -504,7 +492,7 @@ Add `apps/cli/src/runtime.test.ts` coverage that injects a `modelClient.generate
 
 and not fall back to structured output.
 
-- [x] **Step 5: Preserve streaming in lazy runtime wrapper**
+- [ ] **Step 5: Preserve streaming in lazy runtime wrapper**
 
 In `apps/cli/src/runtime.ts`, add:
 
@@ -518,7 +506,7 @@ generateWithToolsStream: (input) => {
 }
 ```
 
-- [x] **Step 6: Verify and restart gateway**
+- [ ] **Step 6: Verify and restart gateway**
 
 Run:
 
@@ -547,21 +535,18 @@ git add apps/cli/src/runtime.ts apps/cli/src/runtime.test.ts apps/gateway/src/ap
 git commit -m "fix: refresh gateway runtime after settings save"
 ```
 
-Actual commit: `1d3ca91`.
-
 ## Final Verification
 
-- [x] `pnpm test` passed with 65 tests.
-- [x] `pnpm run typecheck` passed.
-- [x] `pnpm run build` passed.
-- [x] Local gateway restarted.
-- [x] In-app browser loaded `http://127.0.0.1:14577/chat`.
-- [x] Browser console errors were zero after final reload.
-- [x] Gateway settings summary showed saved model/baseUrl/apiKey were present without printing the secret API key.
+- [ ] Run `pnpm test` and confirm all tests pass.
+- [ ] Run `pnpm run typecheck` and confirm it passes.
+- [ ] Run `pnpm run build` and confirm it passes.
+- [ ] Restart the local gateway.
+- [ ] Load `http://127.0.0.1:14577/chat` in the in-app browser.
+- [ ] Confirm browser console errors are zero after final reload.
+- [ ] Confirm gateway settings summary shows model/baseUrl/apiKey are present without printing the secret API key.
 
 ## Self-Review
 
-- [x] Spec coverage: all review and browser-walkthrough issues addressed by Tasks 1-4.
-- [x] Placeholder scan: no placeholder markers or unspecified implementation steps remain.
-- [x] Type consistency: `RuntimeConfigOverrides`, `runtimeFactory`, `generateWithToolsStream`, `activeHistoryBefore`, `renderAssistantFailure`, and composer helper names match implemented code.
-- [x] Execution trace: each task includes the verification command and the actual commit hash.
+- [ ] Spec coverage: all review and browser-walkthrough issues are addressed by Tasks 1-4.
+- [ ] Placeholder scan: no placeholder markers or unspecified implementation steps remain.
+- [ ] Type consistency: `RuntimeConfigOverrides`, `runtimeFactory`, `generateWithToolsStream`, `activeHistoryBefore`, `renderAssistantFailure`, and composer helper names match implemented code.
