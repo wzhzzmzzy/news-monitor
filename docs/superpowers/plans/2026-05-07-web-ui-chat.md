@@ -862,7 +862,7 @@ git commit -m "feat: add json chat session store"
 - Modify: `packages/agent-core/src/index.ts`
 - Test: `packages/agent-core/src/agent-session.test.ts`
 
-- [ ] **Step 1: Add failing streamAsk tests**
+- [x] **Step 1: Add failing streamAsk tests**
 
 Extend `packages/agent-core/src/agent-session.test.ts` with:
 
@@ -904,7 +904,7 @@ pnpm test -- packages/agent-core/src/agent-session.test.ts
 
 Expected: FAIL because `streamAsk()` and `generateWithToolsStream` are not defined.
 
-- [ ] **Step 2: Add event contracts**
+- [x] **Step 2: Add event contracts**
 
 In `packages/agent-core/src/agent-session.ts`, add:
 
@@ -960,7 +960,7 @@ async *streamAsk(input: StreamAskInput): AsyncIterable<AgentEvent> {
 }
 ```
 
-- [ ] **Step 3: Implement OpenAI stream adapter**
+- [x] **Step 3: Implement OpenAI stream adapter**
 
 In `packages/agent-core/src/openai-model-client.ts`, implement `generateWithToolsStream()` as an async generator. It should:
 
@@ -996,7 +996,7 @@ yield { type: "assistant.completed", payload: {} };
 
 Use `input.maxToolIterations ?? 8` instead of a hard-coded loop limit.
 
-- [ ] **Step 4: Verify streaming core**
+- [x] **Step 4: Verify streaming core**
 
 Run:
 
@@ -1007,7 +1007,7 @@ pnpm run typecheck
 
 Expected: streaming tests pass and TypeScript has no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/agent-core/src

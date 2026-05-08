@@ -14,8 +14,31 @@ export interface ToolChatOutput {
   citations?: Array<{ artifactId: string; label: string }>;
 }
 
+export type AgentEventType =
+  | "assistant.thinking"
+  | "assistant.created"
+  | "assistant.delta"
+  | "tool.started"
+  | "tool.succeeded"
+  | "tool.failed"
+  | "assistant.completed"
+  | "title.updated"
+  | "run.failed";
+
+export interface AgentEvent<TPayload = unknown> {
+  type: AgentEventType;
+  payload: TPayload;
+}
+
+export interface StreamAskInput {
+  message: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
+  maxToolIterations?: number;
+}
+
 export interface AgentModelClient extends ModelClient {
   generateWithTools?(input: ToolChatInput): Promise<ToolChatOutput>;
+  generateWithToolsStream?(input: ToolChatInput & { maxToolIterations?: number }): AsyncIterable<AgentEvent>;
 }
 
 export interface AgentSessionOptions {
@@ -82,5 +105,23 @@ export class AgentSession {
 
   async runTool<TOutput = unknown>(name: string, input: unknown): Promise<TOutput> {
     return this.tools.execute<TOutput>(name, input);
+  }
+
+  async *streamAsk(input: StreamAskInput): AsyncIterable<AgentEvent> {
+    if (!this.modelClient.generateWithToolsStream) {
+      const response = await this.ask(input.message);
+      yield { type: "assistant.created", payload: {} };
+      yield { type: "assistant.delta", payload: { text: response.text } };
+      yield { type: "assistant.completed", payload: { citations: response.citations } };
+      return;
+    }
+
+    yield* this.modelClient.generateWithToolsStream({
+      system: "你是 Hot Board Monitor 的主会话 agent。你可以使用已注册工具查询报告、读取归档、运行 workflow 或查询 workflow 状态。",
+      user: input.message,
+      tools: this.tools.list(),
+      executeTool: (name, toolInput) => this.tools.execute(name, toolInput),
+      maxToolIterations: input.maxToolIterations
+    });
   }
 }

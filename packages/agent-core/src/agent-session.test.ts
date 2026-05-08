@@ -79,4 +79,34 @@ describe("AgentSession", () => {
       citations: []
     });
   });
+
+  it("streams assistant and tool events", async () => {
+    const archive = new MemoryArchiveStore();
+    const tools = new ToolRegistry();
+    const events = [
+      { type: "assistant.thinking" as const, payload: {} },
+      { type: "tool.started" as const, payload: { id: "toolcall_01", name: "crawl_news" } },
+      { type: "tool.succeeded" as const, payload: { id: "toolcall_01", name: "crawl_news", summary: "抓取 3 个信源" } },
+      { type: "assistant.created" as const, payload: {} },
+      { type: "assistant.delta" as const, payload: { text: "完成" } },
+      { type: "assistant.completed" as const, payload: {} }
+    ];
+    const session = new AgentSession({
+      archive,
+      tools,
+      modelClient: {
+        generateStructured: async () => ({}),
+        generateWithToolsStream: async function* () {
+          yield* events;
+        }
+      }
+    });
+
+    const received = [];
+    for await (const event of session.streamAsk({ message: "生成热点" })) {
+      received.push(event);
+    }
+
+    expect(received).toEqual(events);
+  });
 });
