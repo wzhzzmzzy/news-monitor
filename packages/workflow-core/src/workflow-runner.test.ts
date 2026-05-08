@@ -36,8 +36,10 @@ describe("WorkflowRunner", () => {
     const archive = new MemoryArchiveStore();
     const analysisProfiles: AnalysisProfile[] = [{
       id: "default",
+      name: "默认",
       focus: ["科技热点"],
-      instruction: "更关注技术产业变化。"
+      instruction: "更关注技术产业变化。",
+      default: true
     }];
     const tools = new ToolRegistry();
     tools.register({
@@ -142,7 +144,7 @@ describe("WorkflowRunner", () => {
       archive,
       tools,
       skillLoader: new SkillLoader({ skillsDir: "packages/skills/skills" }),
-      analysisProfiles: [{ id: "default", focus: ["科技"], instruction: "关注科技。" }],
+      analysisProfiles: [{ id: "default", name: "默认", focus: ["科技"], instruction: "关注科技。", default: true }],
       modelClient: {
         generateStructured: async () => ({
           annotations: [],

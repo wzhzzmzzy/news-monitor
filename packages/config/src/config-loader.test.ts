@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
@@ -17,37 +17,48 @@ afterEach(async () => {
 });
 
 describe("ConfigLoader", () => {
-  it("创建默认信源和 analysis profile 文件", async () => {
-    const loader = new ConfigLoader({ rootDir: await tempRoot() });
+  it("creates default sources and analysis profile files at explicit paths", async () => {
+    const root = await tempRoot();
+    const sourcesFile = join(root, "config", "sources.json");
+    const analysisProfilesFile = join(root, "config", "analysis-profiles.json");
+    const loader = new ConfigLoader({ sourcesFile, analysisProfilesFile });
     const config = await loader.load();
 
     expect(config.sources[0]).toMatchObject({
       id: "weibo",
       name: "微博热搜",
       type: "newsnow",
-      weight: 1
+      sourceId: "weibo",
+      weight: 1,
+      enabled: true
     });
     expect(config.analysisProfiles[0]).toMatchObject({
       id: "default",
-      focus: ["民生", "国际大事", "经济", "军事", "科技热点"]
+      name: "默认",
+      focus: ["民生", "国际大事", "经济", "军事", "科技热点"],
+      default: true
     });
+    expect(JSON.parse(await readFile(sourcesFile, "utf8"))[0].enabled).toBe(true);
+    expect(JSON.parse(await readFile(analysisProfilesFile, "utf8"))[0].default).toBe(true);
   });
 
-  it("加载已配置的信源和 profile", async () => {
+  it("loads configured sources and profiles from explicit paths", async () => {
     const root = await tempRoot();
-    await mkdir(join(root, "config"), { recursive: true });
-    await writeFile(join(root, "config", "sources.json"), JSON.stringify([
-      { id: "custom", name: "自定义", type: "newsnow", sourceId: "weibo", weight: 0.7 }
+    const sourcesFile = join(root, "xdg-config", "sources.json");
+    const analysisProfilesFile = join(root, "xdg-config", "analysis-profiles.json");
+    await mkdir(join(root, "xdg-config"), { recursive: true });
+    await writeFile(sourcesFile, JSON.stringify([
+      { id: "custom", name: "自定义", type: "newsnow", sourceId: "weibo", weight: 0.7, enabled: false }
     ]));
-    await writeFile(join(root, "config", "analysis-profiles.json"), JSON.stringify([
-      { id: "ops", focus: ["科技"], instruction: "更关注技术产业变化。" }
+    await writeFile(analysisProfilesFile, JSON.stringify([
+      { id: "ops", name: "运营", focus: ["科技"], instruction: "更关注技术产业变化。", default: true }
     ]));
 
-    const loader = new ConfigLoader({ rootDir: root });
+    const loader = new ConfigLoader({ sourcesFile, analysisProfilesFile });
     const config = await loader.load();
 
     expect(config.sources).toHaveLength(1);
-    expect(config.sources[0]?.sourceId).toBe("weibo");
-    expect(config.analysisProfiles[0]?.id).toBe("ops");
+    expect(config.sources[0]).toMatchObject({ sourceId: "weibo", enabled: false });
+    expect(config.analysisProfiles[0]).toMatchObject({ id: "ops", name: "运营", default: true });
   });
 });

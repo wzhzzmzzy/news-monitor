@@ -1,15 +1,24 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
+import { resolveAppPaths } from "../../../packages/app-paths/src/index.js";
 import { createRuntime } from "./runtime.js";
 
 const roots: string[] = [];
 
-async function tempRoot() {
+async function tempPaths() {
   const root = await mkdtemp(join(tmpdir(), "hot-board-cli-"));
   roots.push(root);
-  return root;
+  return resolveAppPaths({
+    homeDir: join(root, "home"),
+    env: {
+      XDG_CONFIG_HOME: join(root, "config"),
+      XDG_DATA_HOME: join(root, "data"),
+      XDG_CACHE_HOME: join(root, "cache"),
+      XDG_STATE_HOME: join(root, "state")
+    }
+  });
 }
 
 afterEach(async () => {
@@ -18,12 +27,14 @@ afterEach(async () => {
 
 describe("createRuntime", () => {
   it("创建 archive、config、tools、workflows 和 agent session", async () => {
+    const paths = await tempPaths();
     const runtime = await createRuntime({
-      hotBoardDir: await tempRoot(),
+      paths,
       newsApiBaseUrl: "https://news.example.test",
       modelClient: { generateStructured: async () => ({ answer: "ok", citations: [] }) }
     });
 
+    expect(runtime.paths).toBe(paths);
     expect(runtime.config.sources[0]?.id).toBe("weibo");
     expect(runtime.workflows.daily_news_report.id).toBe("daily_news_report");
     expect(runtime.tools.list().map((tool) => tool.name)).toContain("crawl_news");
@@ -34,7 +45,7 @@ describe("createRuntime", () => {
     delete process.env.OPENAI_MODEL;
     try {
       const runtime = await createRuntime({
-        hotBoardDir: await tempRoot(),
+        paths: await tempPaths(),
         newsApiBaseUrl: "https://news.example.test"
       });
 
@@ -48,35 +59,42 @@ describe("createRuntime", () => {
     }
   });
 
-  it("从显式 TOML 配置读取 NewsNow 和 LLM 设置", async () => {
-    const root = await tempRoot();
-    const configPath = join(root, "config.local.toml");
-    await writeFile(configPath, [
+  it("从 XDG config.toml 读取 NewsNow 和 LLM 设置", async () => {
+    const paths = await tempPaths();
+    await mkdir(dirname(paths.configFile), { recursive: true });
+    await writeFile(paths.configFile, [
       "[llm]",
-      "url = \"https://llm.example.test/v1\"",
-      "key = \"test-key\"",
+      "baseUrl = \"https://llm.example.test/v1\"",
+      "apiKey = \"test-key\"",
       "model = \"test-model\"",
       "thinking = \"low\"",
+      "timeoutMs = 90000",
+      "maxToolIterations = 6",
       "",
       "[newsnow]",
-      "url = \"http://newsnow.example.test\""
+      "baseUrl = \"http://newsnow.example.test\"",
+      "timeoutMs = 7000",
+      "maxItemsPerSource = 25"
     ].join("\n"));
 
     const runtime = await createRuntime({
-      hotBoardDir: root,
-      configPath,
+      paths,
       modelClient: { generateStructured: async () => ({ answer: "ok", citations: [] }) }
     });
 
-    expect(runtime.appConfig).toEqual({
+    expect(runtime.appConfig).toMatchObject({
       llm: {
         baseUrl: "https://llm.example.test/v1",
         apiKey: "test-key",
         model: "test-model",
-        thinking: "low"
+        thinking: "low",
+        timeoutMs: 90000,
+        maxToolIterations: 6
       },
       newsnow: {
-        baseUrl: "http://newsnow.example.test"
+        baseUrl: "http://newsnow.example.test",
+        timeoutMs: 7000,
+        maxItemsPerSource: 25
       }
     });
   });

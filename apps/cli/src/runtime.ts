@@ -1,23 +1,26 @@
 import { join } from "node:path";
 import { FileArchiveStore } from "../../../packages/archive/src/index.js";
 import { AgentSession, OpenAIModelClient, type AgentModelClient, type ToolChatInput } from "../../../packages/agent-core/src/index.js";
-import { ConfigLoader, loadAppConfig, type AppConfig } from "../../../packages/config/src/index.js";
+import { resolveAppPaths, type AppPaths } from "../../../packages/app-paths/src/index.js";
+import { ConfigLoader, loadAppConfig, type RuntimeConfig } from "../../../packages/config/src/index.js";
 import { SkillLoader } from "../../../packages/skills/src/index.js";
 import { createBuiltinTools, NewsNowAdapter, type ToolRegistry } from "../../../packages/tools/src/index.js";
 import { builtinWorkflows, WorkflowRunner } from "../../../packages/workflow-core/src/index.js";
 
 export interface RuntimeOptions {
-  hotBoardDir?: string;
+  paths?: AppPaths;
   newsApiBaseUrl?: string;
-  configPath?: string;
   modelClient?: AgentModelClient;
 }
 
 export async function createRuntime(options: RuntimeOptions = {}) {
-  const hotBoardDir = options.hotBoardDir ?? join(process.cwd(), ".hot-board");
-  const appConfig = await loadAppConfig({ cwd: process.cwd(), configPath: options.configPath });
-  const archive = new FileArchiveStore({ rootDir: hotBoardDir });
-  const config = await new ConfigLoader({ rootDir: hotBoardDir }).load();
+  const paths = options.paths ?? resolveAppPaths();
+  const appConfig = await loadAppConfig({ configFile: paths.configFile });
+  const archive = new FileArchiveStore({ rootDir: paths.dataDir });
+  const config = await new ConfigLoader({
+    sourcesFile: paths.sourcesFile,
+    analysisProfilesFile: paths.analysisProfilesFile
+  }).load();
   const modelClient = createLazyModelClient(options.modelClient, appConfig);
   const newsFetcher = new NewsNowAdapter({
     newsApiBaseUrl: options.newsApiBaseUrl ?? appConfig.newsnow.baseUrl ?? process.env.NEWS_API_BASE_URL ?? "http://localhost:13000"
@@ -53,10 +56,10 @@ export async function createRuntime(options: RuntimeOptions = {}) {
   });
 
   const agent = new AgentSession({ archive, tools, modelClient });
-  return { archive, appConfig, config, tools, workflows: builtinWorkflows, runner, agent };
+  return { paths, archive, appConfig, config, tools, workflows: builtinWorkflows, runner, agent };
 }
 
-function createLazyModelClient(initialClient: AgentModelClient | undefined, appConfig: AppConfig): AgentModelClient {
+function createLazyModelClient(initialClient: AgentModelClient | undefined, appConfig: RuntimeConfig): AgentModelClient {
   let client = initialClient;
   const getClient = () => {
     client ??= new OpenAIModelClient({

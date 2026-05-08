@@ -1,71 +1,150 @@
-import { access, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { z } from "zod";
-
-const ThinkingSchema = z.enum(["minimal", "low", "medium", "high"]).optional();
+import {
+  ThemeModeSchema,
+  ThemeVariantSchema,
+  ThinkingSchema,
+  type RuntimeConfig
+} from "./types.js";
 
 const RawAppConfigSchema = z.object({
   llm: z.object({
-    url: z.string().url().optional(),
     baseUrl: z.string().url().optional(),
-    key: z.string().min(1).optional(),
     apiKey: z.string().min(1).optional(),
     model: z.string().min(1).optional(),
-    thinking: ThinkingSchema
+    thinking: ThinkingSchema.optional(),
+    timeoutMs: z.number().int().positive().optional(),
+    maxToolIterations: z.number().int().positive().optional()
+  }).optional(),
+  flash: z.object({
+    baseUrl: z.string().url().optional(),
+    apiKey: z.string().min(1).optional(),
+    model: z.string().min(1).optional(),
+    thinking: ThinkingSchema.optional(),
+    timeoutMs: z.number().int().positive().optional()
   }).optional(),
   newsnow: z.object({
-    url: z.string().url().optional(),
-    baseUrl: z.string().url().optional()
+    baseUrl: z.string().url().optional(),
+    timeoutMs: z.number().int().positive().optional(),
+    maxItemsPerSource: z.number().int().positive().optional()
+  }).optional(),
+  theme: z.object({
+    mode: ThemeModeSchema.optional(),
+    lightVariant: ThemeVariantSchema.optional(),
+    darkVariant: ThemeVariantSchema.optional()
+  }).optional(),
+  gateway: z.object({
+    host: z.string().min(1).optional(),
+    port: z.number().int().min(1).max(65535).optional(),
+    openBrowserOnStart: z.boolean().optional()
   }).optional()
 });
 
-export type ThinkingEffort = z.infer<typeof ThinkingSchema>;
-
-export interface AppConfig {
-  llm: {
-    baseUrl?: string;
-    apiKey?: string;
-    model?: string;
-    thinking?: ThinkingEffort;
-  };
-  newsnow: {
-    baseUrl?: string;
-  };
-}
+export const defaultRuntimeConfig: RuntimeConfig = {
+  llm: { timeoutMs: 120000, maxToolIterations: 8 },
+  flash: { timeoutMs: 30000 },
+  newsnow: { timeoutMs: 15000, maxItemsPerSource: 50 },
+  theme: { mode: "light", lightVariant: "latte", darkVariant: "mocha" },
+  gateway: { host: "127.0.0.1", port: 14577, openBrowserOnStart: true }
+};
 
 export interface LoadAppConfigOptions {
-  cwd: string;
-  configPath?: string;
+  configFile: string;
 }
 
-export async function loadAppConfig(options: LoadAppConfigOptions): Promise<AppConfig> {
-  const path = options.configPath ?? await findDefaultConfig(options.cwd);
-  if (!path) {
-    return { llm: {}, newsnow: {} };
+export interface SaveAppConfigOptions {
+  configFile: string;
+  config: RuntimeConfig;
+}
+
+export async function loadAppConfig(options: LoadAppConfigOptions): Promise<RuntimeConfig> {
+  try {
+    const raw = await readFile(options.configFile, "utf8");
+    const parsed = RawAppConfigSchema.parse(parseSimpleToml(raw));
+    return mergeRuntimeConfig(parsed);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return cloneDefaultRuntimeConfig();
+    }
+    throw error;
   }
-  const raw = await readFile(path, "utf8");
-  const parsed = RawAppConfigSchema.parse(parseSimpleToml(raw));
+}
+
+export async function saveAppConfig(options: SaveAppConfigOptions): Promise<void> {
+  await mkdir(dirname(options.configFile), { recursive: true });
+  await writeFile(options.configFile, serializeRuntimeConfig(options.config), "utf8");
+}
+
+function mergeRuntimeConfig(parsed: z.infer<typeof RawAppConfigSchema>): RuntimeConfig {
   return {
     llm: {
-      baseUrl: parsed.llm?.baseUrl ?? parsed.llm?.url,
-      apiKey: parsed.llm?.apiKey ?? parsed.llm?.key,
-      model: parsed.llm?.model,
-      thinking: parsed.llm?.thinking
+      ...defaultRuntimeConfig.llm,
+      ...parsed.llm
+    },
+    flash: {
+      ...defaultRuntimeConfig.flash,
+      ...parsed.flash
     },
     newsnow: {
-      baseUrl: parsed.newsnow?.baseUrl ?? parsed.newsnow?.url
+      ...defaultRuntimeConfig.newsnow,
+      ...parsed.newsnow
+    },
+    theme: {
+      ...defaultRuntimeConfig.theme,
+      ...parsed.theme
+    },
+    gateway: {
+      ...defaultRuntimeConfig.gateway,
+      ...parsed.gateway
     }
   };
 }
 
-async function findDefaultConfig(cwd: string): Promise<string | undefined> {
-  const path = join(cwd, "config.dev.toml");
-  try {
-    await access(path);
-    return path;
-  } catch {
-    return undefined;
+function cloneDefaultRuntimeConfig(): RuntimeConfig {
+  return {
+    llm: { ...defaultRuntimeConfig.llm },
+    flash: { ...defaultRuntimeConfig.flash },
+    newsnow: { ...defaultRuntimeConfig.newsnow },
+    theme: { ...defaultRuntimeConfig.theme },
+    gateway: { ...defaultRuntimeConfig.gateway }
+  };
+}
+
+function serializeRuntimeConfig(config: RuntimeConfig): string {
+  return [
+    "[llm]",
+    ...serializeSection(config.llm),
+    "",
+    "[flash]",
+    ...serializeSection(config.flash),
+    "",
+    "[newsnow]",
+    ...serializeSection(config.newsnow),
+    "",
+    "[theme]",
+    ...serializeSection(config.theme),
+    "",
+    "[gateway]",
+    ...serializeSection(config.gateway),
+    ""
+  ].join("\n");
+}
+
+function serializeSection(section: Record<string, unknown>): string[] {
+  return Object.entries(section)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${key} = ${serializeTomlValue(value)}`);
+}
+
+function serializeTomlValue(value: unknown): string {
+  if (typeof value === "string") {
+    return `"${value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
   }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  throw new Error(`Unsupported TOML value type: ${typeof value}`);
 }
 
 function parseSimpleToml(input: string): Record<string, unknown> {
@@ -112,7 +191,7 @@ function stripComment(line: string): string {
 
 function parseTomlValue(raw: string): unknown {
   if (raw.startsWith("\"") && raw.endsWith("\"")) {
-    return raw.slice(1, -1).replace(/\\"/g, "\"").replace(/\\n/g, "\n");
+    return raw.slice(1, -1).replace(/\\"/g, "\"").replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
   }
   if (raw === "true") {
     return true;

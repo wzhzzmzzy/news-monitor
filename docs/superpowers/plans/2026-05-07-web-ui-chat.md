@@ -143,7 +143,7 @@ git commit -m "chore: add web gateway dependencies"
 - Modify: `apps/cli/src/index.ts`
 - Test: `apps/cli/src/runtime.test.ts`
 
-- [ ] **Step 1: Write failing XDG path tests**
+- [x] **Step 1: Write failing XDG path tests**
 
 Create `packages/app-paths/src/index.test.ts`:
 
@@ -191,7 +191,7 @@ pnpm test -- packages/app-paths/src/index.test.ts
 
 Expected: FAIL because `packages/app-paths/src/index.ts` does not exist.
 
-- [ ] **Step 2: Implement XDG resolver**
+- [x] **Step 2: Implement XDG resolver**
 
 Create `packages/app-paths/src/index.ts`:
 
@@ -251,7 +251,7 @@ export function resolveAppPaths(options: ResolveAppPathsOptions = {}): AppPaths 
 }
 ```
 
-- [ ] **Step 3: Expand config schemas and tests**
+- [x] **Step 3: Expand config schemas and tests**
 
 Update `packages/config/src/types.ts` so `HotBoardConfig` includes:
 
@@ -330,7 +330,7 @@ pnpm test -- packages/config/src/app-config.test.ts packages/config/src/config-l
 
 Expected: FAIL because the schemas and loader still use the old minimal format.
 
-- [ ] **Step 4: Implement XDG config load/save**
+- [x] **Step 4: Implement XDG config load/save**
 
 Replace cwd probing in `packages/config/src/app-config.ts` with explicit `configFile` loading. Export:
 
@@ -394,7 +394,7 @@ export const defaultRuntimeConfig: RuntimeConfig = {
 };
 ```
 
-- [ ] **Step 5: Update ConfigLoader to use config file paths**
+- [x] **Step 5: Update ConfigLoader to use config file paths**
 
 Change `ConfigLoaderOptions`:
 
@@ -434,7 +434,7 @@ Default `analysis-profiles.json`:
 ]
 ```
 
-- [ ] **Step 6: Update CLI runtime and remove public config option**
+- [x] **Step 6: Update CLI runtime and remove public config option**
 
 In `apps/cli/src/runtime.ts`, construct:
 
@@ -450,7 +450,7 @@ const config = await new ConfigLoader({
 
 Keep test injection through `RuntimeOptions.paths?: AppPaths`. Remove `--config <path>` and `runtimeOptions()` from `apps/cli/src/index.ts`.
 
-- [ ] **Step 7: Verify path/config migration**
+- [x] **Step 7: Verify path/config migration**
 
 Run:
 
@@ -461,7 +461,7 @@ pnpm run typecheck
 
 Expected: all selected tests pass and TypeScript has no errors.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/app-paths/src packages/config/src apps/cli/src

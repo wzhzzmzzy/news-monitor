@@ -73,7 +73,6 @@ export class NewsNowAdapter {
         source: {
           id: source.id,
           name: source.name,
-          url: source.url,
           type: source.type,
           weight: source.weight
         },

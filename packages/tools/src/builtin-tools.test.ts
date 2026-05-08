@@ -33,7 +33,7 @@ describe("createBuiltinTools", () => {
   it("爬取已配置信源并写入 raw news artifact", async () => {
     const archive = new MemoryArchiveStore();
     const sources: NewsSourceConfig[] = [
-      { id: "weibo", name: "微博热搜", type: "newsnow", sourceId: "weibo", weight: 1 }
+      { id: "weibo", name: "微博热搜", type: "newsnow", sourceId: "weibo", weight: 1, enabled: true }
     ];
 
     const tools = createBuiltinTools({
@@ -79,7 +79,7 @@ describe("createBuiltinTools", () => {
 
     const tools = createBuiltinTools({
       archive,
-      sources: [{ id: "weibo", name: "微博热搜", type: "newsnow", sourceId: "weibo", weight: 1 }],
+      sources: [{ id: "weibo", name: "微博热搜", type: "newsnow", sourceId: "weibo", weight: 1, enabled: true }],
       newsFetcher: {
         fetchSource: async (): Promise<FetchSourceResult> => ({
           sourceId: "weibo",

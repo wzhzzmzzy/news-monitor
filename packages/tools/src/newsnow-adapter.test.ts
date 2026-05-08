@@ -37,7 +37,8 @@ describe("NewsNowAdapter", () => {
       name: "微博热搜",
       type: "newsnow",
       sourceId: "weibo",
-      weight: 1
+      weight: 1,
+      enabled: true
     };
 
     const adapter = new NewsNowAdapter({
@@ -55,7 +56,6 @@ describe("NewsNowAdapter", () => {
         source: {
           id: "weibo",
           name: "微博热搜",
-          url: undefined,
           type: "newsnow",
           weight: 1
         },
@@ -78,7 +78,6 @@ describe("NewsNowAdapter", () => {
         source: {
           id: "weibo",
           name: "微博热搜",
-          url: undefined,
           type: "newsnow",
           weight: 1
         },
@@ -101,7 +100,6 @@ describe("NewsNowAdapter", () => {
         source: {
           id: "weibo",
           name: "微博热搜",
-          url: undefined,
           type: "newsnow",
           weight: 1
         },
@@ -134,7 +132,8 @@ describe("NewsNowAdapter", () => {
       name: "微博热搜",
       type: "newsnow",
       sourceId: "weibo",
-      weight: 1
+      weight: 1,
+      enabled: true
     });
 
     expect(result.items).toEqual([]);
