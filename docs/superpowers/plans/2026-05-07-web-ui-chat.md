@@ -1384,7 +1384,7 @@ git commit -m "feat: add hono gateway api"
 - Create: `apps/gateway/src/public/settings.js`
 - Test: `apps/gateway/src/app.test.ts`
 
-- [ ] **Step 1: Extend page rendering tests**
+- [x] **Step 1: Extend page rendering tests**
 
 Add assertions to `apps/gateway/src/app.test.ts`:
 
@@ -1422,7 +1422,7 @@ pnpm test -- apps/gateway/src/app.test.ts
 
 Expected: FAIL until SSR UI files are implemented.
 
-- [ ] **Step 2: Implement shared layout**
+- [x] **Step 2: Implement shared layout**
 
 Create `apps/gateway/src/ui/layout.tsx`:
 
@@ -1452,7 +1452,7 @@ export function HtmlDocument(props: {
 }
 ```
 
-- [ ] **Step 3: Implement Tabler icon helper**
+- [x] **Step 3: Implement Tabler icon helper**
 
 Create `apps/gateway/src/ui/icons.tsx` with a single helper:
 
@@ -1468,7 +1468,7 @@ function Icon(props: { name: string; label: string; children: unknown }) {
 
 Export the required Tabler icons as functions named `IconPencil`, `IconSettings`, `IconArrowUp`, `IconArrowLeft`, `IconMoon`, `IconSun`, `IconLayoutSidebarLeftCollapse`, and `IconLayoutSidebarLeftExpand`. Use Tabler-compatible `viewBox="0 0 24 24"`, no fill, 2px stroke. Each function must include `data-icon="IconName"` so tests and browser inspection can confirm the intended icon is rendered.
 
-- [ ] **Step 4: Implement chat page SSR**
+- [x] **Step 4: Implement chat page SSR**
 
 Create `apps/gateway/src/ui/chat-page.tsx` that renders:
 
@@ -1500,7 +1500,7 @@ Create `apps/gateway/src/ui/chat-page.tsx` that renders:
 
 Do not add a Chat/Settings text nav in the topbar.
 
-- [ ] **Step 5: Implement settings page SSR**
+- [x] **Step 5: Implement settings page SSR**
 
 Create `apps/gateway/src/ui/settings-page.tsx` with a form containing exact input names:
 
@@ -1535,7 +1535,7 @@ Include a top-left icon link:
 
 Render source rows under `[data-sources-editor]` and profile rows under `[data-profiles-editor]`.
 
-- [ ] **Step 6: Implement page routes**
+- [x] **Step 6: Implement page routes**
 
 Create `apps/gateway/src/routes/pages.tsx`:
 
@@ -1551,7 +1551,7 @@ export function createPageRoutes(deps: { paths: AppPaths; runtime: Runtime }) {
 
 Use Hono JSX rendering from `hono/jsx/dom/server`.
 
-- [ ] **Step 7: Implement CSS layout**
+- [x] **Step 7: Implement CSS layout**
 
 Create `apps/gateway/src/public/styles.css` with these constraints:
 
@@ -1619,7 +1619,7 @@ body {
 
 Extend this base with stable dimensions for icon buttons, message list scrolling, composer textarea resizing, settings grid, status rows, and edit form controls.
 
-- [ ] **Step 8: Implement chat browser module**
+- [x] **Step 8: Implement chat browser module**
 
 Create `apps/gateway/src/public/chat.js` with functions:
 
@@ -1647,7 +1647,7 @@ Required behavior:
 8. On `assistant.completed`, call `/api/markdown` and replace assistant content with sanitized HTML.
 9. For edit-resend, swap the selected user message into a textarea with cancel and icon send controls, then call `/api/sessions/:sessionId/messages/:messageId/edit-resend`.
 
-- [ ] **Step 9: Implement settings browser module**
+- [x] **Step 9: Implement settings browser module**
 
 Create `apps/gateway/src/public/settings.js` with functions:
 
@@ -1668,7 +1668,7 @@ Required behavior:
 5. Save all data with `PUT /api/settings`.
 6. Keep form values on save failure and render an error message in `[data-settings-error]`.
 
-- [ ] **Step 10: Verify SSR and static client**
+- [x] **Step 10: Verify SSR and static client**
 
 Run:
 
@@ -1679,7 +1679,7 @@ pnpm run typecheck
 
 Expected: route rendering tests pass and TypeScript has no errors.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add apps/gateway/src

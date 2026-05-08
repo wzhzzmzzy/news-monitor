@@ -55,4 +55,28 @@ describe("gateway app", () => {
     expect(body.html).toContain("<h1>");
     expect(body.html).not.toContain("<script");
   });
+
+  it("renders chat layout controls", async () => {
+    const app = await createGatewayApp({ paths: await tempPaths() });
+    const html = await (await app.request("/chat")).text();
+
+    expect(html).toContain("data-session-list");
+    expect(html).toContain("data-new-session");
+    expect(html).toContain("data-message-list");
+    expect(html).toContain("data-message-input");
+    expect(html).toContain("data-theme-toggle");
+    expect(html).toContain("IconSettings");
+  });
+
+  it("renders settings form fields", async () => {
+    const app = await createGatewayApp({ paths: await tempPaths() });
+    const html = await (await app.request("/settings")).text();
+
+    expect(html).toContain("name=\"llm.model\"");
+    expect(html).toContain("name=\"flash.model\"");
+    expect(html).toContain("name=\"newsnow.baseUrl\"");
+    expect(html).toContain("name=\"theme.lightVariant\"");
+    expect(html).toContain("data-sources-editor");
+    expect(html).toContain("data-profiles-editor");
+  });
 });

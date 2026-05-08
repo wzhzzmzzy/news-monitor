@@ -1,11 +1,14 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { AgentEvent } from "../../../packages/agent-core/src/index.js";
 import type { AppPaths } from "../../../packages/app-paths/src/index.js";
 import { resolveAppPaths } from "../../../packages/app-paths/src/index.js";
 import { SessionStore, type ToolCallRecord } from "../../../packages/session-store/src/index.js";
 import { createRuntime } from "../../cli/src/runtime.js";
 import { renderMarkdown } from "./markdown/render-markdown.js";
+import { createPageRoutes } from "./routes/pages.js";
 import { getSettings, saveSettings } from "./settings/settings-service.js";
 import type { RunEvent } from "./stream/run-registry.js";
 import { RunRegistry } from "./stream/run-registry.js";
@@ -22,9 +25,12 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
   const runRegistry = new RunRegistry();
   const app = new Hono();
 
-  app.get("/", (c) => c.redirect("/chat"));
-  app.get("/chat", (c) => c.html(renderChatShell()));
-  app.get("/settings", (c) => c.html(renderSettingsShell()));
+  app.route("/", createPageRoutes({ paths }));
+  app.get("/assets/:file", async (c) => {
+    const file = c.req.param("file");
+    const content = await readFile(join(process.cwd(), "apps/gateway/src/public", file), "utf8");
+    return c.body(content, 200, { "content-type": contentTypeFor(file) });
+  });
 
   app.post("/api/sessions", async (c) => {
     const session = await sessionStore.createSession();
@@ -126,6 +132,16 @@ export async function createGatewayApp(options: GatewayAppOptions = {}) {
   return app;
 }
 
+function contentTypeFor(file: string): string {
+  if (file.endsWith(".css")) {
+    return "text/css; charset=utf-8";
+  }
+  if (file.endsWith(".js")) {
+    return "text/javascript; charset=utf-8";
+  }
+  return "text/plain; charset=utf-8";
+}
+
 async function streamAgentResponse(input: {
   runId: string;
   content: string;
@@ -203,12 +219,4 @@ function toToolCallRecord(event: AgentEvent): ToolCallRecord {
     finishedAt: now,
     error: payload.error ?? "Tool failed"
   };
-}
-
-function renderChatShell(): string {
-  return "<!doctype html><html><body><div class=\"hot-board-shell\" data-page=\"chat\"></div></body></html>";
-}
-
-function renderSettingsShell(): string {
-  return "<!doctype html><html><body><form class=\"settings-form\" data-page=\"settings\"></form></body></html>";
 }
