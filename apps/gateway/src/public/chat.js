@@ -291,15 +291,43 @@ document.querySelector("[data-theme-toggle]")?.addEventListener("click", () => v
 document.querySelector("[data-composer]")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const input = document.querySelector("[data-message-input]");
+  submitComposer(input);
+});
+document.querySelector("[data-message-input]")?.addEventListener("keydown", handleComposerKeydown);
+
+void loadSessions();
+
+function handleComposerKeydown(event) {
+  if (!(event.key === "Enter") || event.isComposing) {
+    return;
+  }
+  const input = event.currentTarget;
+  if (event.metaKey) {
+    event.preventDefault();
+    insertTextAtCursor(input, "\n");
+    return;
+  }
+  event.preventDefault();
+  submitComposer(input);
+}
+
+function submitComposer(input) {
   const content = input.value.trim();
   if (!content) {
     return;
   }
   input.value = "";
   void sendMessage(content);
-});
+}
 
-void loadSessions();
+function insertTextAtCursor(input, text) {
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  input.value = `${input.value.slice(0, start)}${text}${input.value.slice(end)}`;
+  const nextPosition = start + text.length;
+  input.selectionStart = nextPosition;
+  input.selectionEnd = nextPosition;
+}
 
 async function toggleThemeMode() {
   const html = document.documentElement;
@@ -377,6 +405,8 @@ export {
   loadSessions,
   applyThemeTokens,
   formatUpdatedAt,
+  handleComposerKeydown,
+  insertTextAtCursor,
   renderCompletedMarkdown,
   renderAssistantFailure,
   renderSession,

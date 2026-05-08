@@ -108,6 +108,25 @@ describe("gateway app", () => {
     expect(script).toContain("data-theme-icon");
   });
 
+  it("supports enter to send and command enter to insert newline", async () => {
+    const script = await readFile(join(process.cwd(), "apps/gateway/src/public/chat.js"), "utf8");
+
+    expect(script).toContain("handleComposerKeydown");
+    expect(script).toContain("event.key === \"Enter\"");
+    expect(script).toContain("event.metaKey");
+    expect(script).toContain("insertTextAtCursor(input, \"\\n\")");
+  });
+
+  it("themes the chat input with palette variables", async () => {
+    const css = await readFile(join(process.cwd(), "apps/gateway/src/public/styles.css"), "utf8");
+
+    expect(css).toContain(".composer textarea");
+    expect(css).toContain("background: var(--base)");
+    expect(css).toContain("color: var(--text)");
+    expect(css).toContain("caret-color: var(--blue)");
+    expect(css).toContain(".composer textarea:focus");
+  });
+
   it("renders settings form fields", async () => {
     const app = await createGatewayApp({ paths: await tempPaths() });
     const html = await (await app.request("/settings")).text();
