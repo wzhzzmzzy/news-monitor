@@ -474,7 +474,7 @@ git commit -m "feat: resolve hot board paths from xdg directories"
 - Create: `packages/theme/src/index.ts`
 - Test: `packages/theme/src/index.test.ts`
 
-- [ ] **Step 1: Write failing theme tests**
+- [x] **Step 1: Write failing theme tests**
 
 Create `packages/theme/src/index.test.ts`:
 
@@ -506,7 +506,7 @@ pnpm test -- packages/theme/src/index.test.ts
 
 Expected: FAIL because `packages/theme/src/index.ts` does not exist.
 
-- [ ] **Step 2: Implement Catppuccin tokens**
+- [x] **Step 2: Implement Catppuccin tokens**
 
 Create `packages/theme/src/index.ts`:
 
@@ -599,7 +599,7 @@ export function themeToCssVariables(tokens: ThemeTokens): string {
 }
 ```
 
-- [ ] **Step 3: Verify theme package**
+- [x] **Step 3: Verify theme package**
 
 Run:
 
@@ -610,7 +610,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/theme/src
