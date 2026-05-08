@@ -1802,7 +1802,7 @@ git commit -m "feat: persist web theme and generated session titles"
 - Modify: `apps/cli/src/index.ts`
 - Modify: `apps/cli/src/runtime.ts`
 
-- [ ] **Step 1: Write failing gateway process tests**
+- [x] **Step 1: Write failing gateway process tests**
 
 Create `apps/cli/src/gateway-process.test.ts`:
 
@@ -1931,7 +1931,7 @@ pnpm test -- apps/cli/src/gateway-process.test.ts
 
 Expected: FAIL because `apps/cli/src/gateway-process.ts` does not exist.
 
-- [ ] **Step 2: Implement gateway process helpers**
+- [x] **Step 2: Implement gateway process helpers**
 
 Create `apps/cli/src/gateway-process.ts`:
 
@@ -2007,7 +2007,7 @@ Set environment variables for the child from the resolved paths:
 
 After spawning, write `paths.gatewayStateFile` with `pid`, `host`, `port`, and `startedAt`. `stopGateway()` must read the state file, send `SIGTERM` through `terminateProcess()`, remove `gateway.json`, and return `{ state: "stopped" }`. If the state file is missing, it must return `{ state: "stopped" }`.
 
-- [ ] **Step 3: Add CLI commands**
+- [x] **Step 3: Add CLI commands**
 
 Modify `apps/cli/src/index.ts`:
 
@@ -2043,7 +2043,7 @@ gateway.command("restart").description("重启 gateway").action(async () => {
 
 Modify `apps/cli/src/runtime.ts` return value so `createRuntime()` includes `paths`.
 
-- [ ] **Step 4: Verify gateway lifecycle**
+- [x] **Step 4: Verify gateway lifecycle**
 
 Run:
 
@@ -2054,7 +2054,7 @@ pnpm run typecheck
 
 Expected: tests pass and TypeScript has no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/cli/src

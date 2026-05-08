@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import type { ArtifactRef } from "../../../packages/archive/src/index.js";
+import { getGatewayStatus, restartGateway, startGateway, stopGateway } from "./gateway-process.js";
 import { createRuntime } from "./runtime.js";
 
 const program = new Command();
@@ -55,6 +56,34 @@ workflow
   });
 
 const report = program.command("report").description("报告命令");
+
+const gateway = program.command("gateway").description("Gateway lifecycle commands");
+
+gateway.command("status").description("显示 gateway 状态").action(async () => {
+  const runtime = await createRuntime();
+  output.write(`${JSON.stringify(await getGatewayStatus({ paths: runtime.paths }), null, 2)}\n`);
+});
+
+gateway.command("start").description("启动 gateway").action(async () => {
+  const runtime = await createRuntime();
+  output.write(`${JSON.stringify(await startGateway({
+    paths: runtime.paths,
+    config: runtime.appConfig.gateway
+  }), null, 2)}\n`);
+});
+
+gateway.command("stop").description("停止 gateway").action(async () => {
+  const runtime = await createRuntime();
+  output.write(`${JSON.stringify(await stopGateway({ paths: runtime.paths }), null, 2)}\n`);
+});
+
+gateway.command("restart").description("重启 gateway").action(async () => {
+  const runtime = await createRuntime();
+  output.write(`${JSON.stringify(await restartGateway({
+    paths: runtime.paths,
+    config: runtime.appConfig.gateway
+  }), null, 2)}\n`);
+});
 
 report
   .command("list")
