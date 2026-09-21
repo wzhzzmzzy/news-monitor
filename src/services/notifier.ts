@@ -1,6 +1,15 @@
 import nodemailer from 'nodemailer'
-import type { Config } from '../types/index.js'
 import logger from '../utils/logger.js'
+
+export interface MailConfig {
+  smtpHost?: string
+  smtpPort?: number
+  smtpUser?: string
+  smtpPass: string
+  emailFromName?: string
+  emailFrom: string
+  emailTo: string[]
+}
 
 export const SMTP_CONFIGS: Record<string, { server: string; port: number }> = {
   'gmail.com': { server: 'smtp.gmail.com', port: 587 },
@@ -19,9 +28,9 @@ export const SMTP_CONFIGS: Record<string, { server: string; port: number }> = {
 
 export class NotifierService {
   private transporter: nodemailer.Transporter
-  private config: Config
+  private config: MailConfig
 
-  constructor(config: Config) {
+  constructor(config: MailConfig) {
     this.config = config
 
     const domain = config.emailFrom.split('@').pop()?.toLowerCase() || ''
@@ -54,7 +63,7 @@ export class NotifierService {
     const isHtml = content.trim().startsWith('<!DOCTYPE html>') || content.trim().startsWith('<html')
 
     const info = await this.transporter.sendMail({
-      from: `"${this.config.emailFromName}" <${this.config.emailFrom}>`,
+      from: this.config.emailFromName ? { name: this.config.emailFromName, address: this.config.emailFrom } : this.config.emailFrom,
       to: recipients.join(', '),
       subject: subject,
       text: isHtml ? 'Please view this email in an HTML-compatible client.' : content,

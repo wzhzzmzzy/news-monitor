@@ -216,26 +216,30 @@ describe('AnalyzerService', () => {
     ]
     const range = { start: new Date('2026-02-10'), end: new Date('2026-02-11'), mode: 'historical' as const }
 
-    vi.mocked(generateObject).mockResolvedValue({
+    vi.mocked(generateObject).mockResolvedValueOnce({
       object: {
         summary: 'Historical micro summary',
-        topics: [
+        topTopics: [
           { 
             title: 'Topic H', 
             baseScore: 90, 
-            evolution: 'Start to end', 
             relevantNewsIds: ['n1'],
-            timeline: [{ date: '2026-02-10', event: 'Initial', heatScore: 50 }]
           }
         ]
       }
     } as any)
+    vi.mocked(generateObject).mockResolvedValueOnce({ object: {
+      evolution: 'Start to end',
+      timeline: [{ date: '2026-02-10', event: 'Initial', heatScore: 50 }],
+      selectedNews: [],
+    } } as any)
 
     const report = await analyzer.generateHistoricalReport(batches, [], {}, range)
 
     expect(report).toContain('Topic H')
     expect(report).toContain('Historical micro summary')
     expect(report).toContain('历史趋势报告')
-    expect(generateObject).toHaveBeenCalled()
+    expect(report).toContain('Start to end')
+    expect(generateObject).toHaveBeenCalledTimes(2)
   })
 })

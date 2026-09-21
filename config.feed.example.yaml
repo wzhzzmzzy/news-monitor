@@ -1,4 +1,4 @@
-# 开发示例；个人配置请复制到被 Git 忽略的 config.yaml。
+# 兼容先前 feed 命令的示例；与 config.example.yaml 使用同一配置结构。
 # 默认入口 monitor / report / serve 均使用 RSS/X；旧 NewsNow 配置需要迁移。
 # archiveDir 相对于本文件。来源映射与未覆盖项见 docs/source-migration.md。
 archiveDir: ./archive/feed-v1

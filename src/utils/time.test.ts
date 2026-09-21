@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseDateTime, createTimeRange, formatDate, getDatesInRange } from './time.js';
 
 describe('Time Utilities', () => {
@@ -36,9 +36,14 @@ describe('Time Utilities', () => {
     });
 
     it('should use now as default end', () => {
-      const range = createTimeRange('26-02-13 01:00');
-      expect(range.end).toBeDefined();
-      expect(range.end.getTime()).toBeGreaterThan(range.start.getTime());
+      vi.useFakeTimers();
+      const now = new Date(2026, 1, 13, 12);
+      vi.setSystemTime(now);
+      try {
+        const range = createTimeRange('26-02-13 01:00');
+        expect(range.end).toEqual(now);
+        expect(range.end.getTime()).toBeGreaterThan(range.start.getTime());
+      } finally { vi.useRealTimers(); }
     });
 
     it('should throw error for end < start', () => {

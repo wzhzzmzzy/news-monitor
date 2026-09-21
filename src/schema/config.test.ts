@@ -1,53 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { configSchema } from './config.js'
-import { DEFAULT_BROWSER_USER_AGENT } from '../services/crawler.js'
+import { parseFeedConfig } from '../feed/config.js'
 
-const baseConfig = {
-  newsApiBaseUrl: 'https://newsnow.busiyi.world/',
-  hotlist_sources: [
-    { id: 'weibo', name: '微博', type: 'api', url: '/api/s?id=weibo' },
-  ],
-  llmProvider: 'deepseek',
-  llmApiKey: 'test-key',
-  llmModel: 'deepseek-chat',
-  smtpPass: 'test-pass',
-  emailFrom: 'sender@example.com',
-  emailTo: ['receiver@example.com'],
-}
-
-describe('configSchema crawler headers', () => {
-  it('should enable browser User-Agent by default', () => {
-    const result = configSchema.parse(baseConfig)
-
-    expect(result.crawlerBrowserUserAgentEnabled).toBe(true)
-    expect(result.crawlerUserAgent).toBe(DEFAULT_BROWSER_USER_AGENT)
+describe('RSS/X configuration', () => {
+  const sources = [{ id: 'rss', name: 'RSS', type: 'rss', url: 'https://example.com/feed' }]
+  it('needs no aggregation API, hotlist, model or SMTP configuration', () => {
+    const config = configSchema.parse({ sources })
+    expect(config.sources[0].type).toBe('rss')
+    expect(config.schedule.sendEmail).toBe(false)
+    expect(config.llm).toBeUndefined()
+    expect(config.email).toBeUndefined()
   })
-
-  it('should allow disabling and overriding crawler User-Agent', () => {
-    const result = configSchema.parse({
-      ...baseConfig,
-      crawlerBrowserUserAgentEnabled: false,
-      crawlerUserAgent: 'Custom UA',
-    })
-
-    expect(result.crawlerBrowserUserAgentEnabled).toBe(false)
-    expect(result.crawlerUserAgent).toBe('Custom UA')
+  it('refuses the old aggregator configuration instead of silently ignoring it', () => {
+    expect(() => parseFeedConfig({ sources, newsApiBaseUrl: 'https://example.com' })).toThrow('旧 NewsNow 配置不再支持')
   })
-})
-
-describe('configSchema LLM structured output mode', () => {
-  it('should default DeepSeek configs to JSON object generation mode', () => {
-    const result = configSchema.parse(baseConfig)
-
-    expect(result.llmStructuredOutputMode).toBe('json')
-  })
-
-  it('should allow overriding structured output mode', () => {
-    const result = configSchema.parse({
-      ...baseConfig,
-      llmStructuredOutputMode: 'auto',
-    })
-
-    expect(result.llmStructuredOutputMode).toBe('auto')
+  it('supports configurable RSSHub instances, routes and explicit disabled sources', () => {
+    const config = configSchema.parse({ rsshub: { baseUrl: 'http://127.0.0.1:1200' }, sources: [
+      { id: 'wallstreetcn-hot', name: '华尔街见闻', type: 'rsshub', route: '/wallstreetcn/hot/day' },
+      { id: 'weibo', name: '微博', type: 'rsshub', route: '/weibo/search/hot', enabled: false, disabledReason: 'Upstream unavailable' },
+    ] })
+    expect(config.rsshub.baseUrl).toBe('http://127.0.0.1:1200')
+    expect(config.sources[1].enabled).toBe(false)
+    expect(() => configSchema.parse({ sources: [{ ...sources[0], type: 'rsshub', route: '//another-host/path' }] })).toThrow()
   })
 })

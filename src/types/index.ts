@@ -1,57 +1,12 @@
-export interface SourceConfig {
-  id: string;
-  name: string;
-  type: 'rss' | 'api' | 'html';
-  url: string;
-  selector?: string;
-  headers?: Record<string, string>;
-}
-
+/** Configuration for the retained offline analysis of pre-migration archives. */
 export interface Config {
-  // Crawler
-  newsApiBaseUrl: string;
-  /** @deprecated Use hotlist_sources instead */
-  sources?: string[];
-  hotlist_sources: SourceConfig[];
-  stream_sources: SourceConfig[];
-  crawlerBrowserUserAgentEnabled: boolean;
-  crawlerUserAgent: string;
-  monitorCron: string;
-  dailyReportCron: string;
-  historicalReportCron: string;
-  serverPort: number;
-
-  // Analysis
-  analysis_window_days: number;
-  enable_stream_analysis: boolean;
-
-  // Storage
-  archiveDir: string;
-
-  // LLM
+  hotlist_sources: { id: string; name: string }[];
+  stream_sources: { id: string; name: string }[];
   llmProvider: 'openai' | 'deepseek' | 'anthropic';
   llmApiKey: string;
   llmBaseUrl?: string;
   llmModel: string;
   llmStructuredOutputMode: 'auto' | 'json' | 'tool';
-
-  // Notification
-  smtpHost?: string;
-  smtpPort?: number;
-  smtpUser?: string;
-  smtpPass: string;
-  emailFromName?: string;
-  emailFrom: string;
-  emailTo: string[];
-}
-
-export interface RawNewsItem {
-  title: string;
-  url: string;
-  source?: string;
-  rank: number;
-  score?: number;
-  fetchedAt: string;
 }
 
 export interface NewsIndexItem {

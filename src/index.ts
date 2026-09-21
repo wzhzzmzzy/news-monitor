@@ -3,328 +3,102 @@ import { CronJob } from 'cron'
 import { Hono } from 'hono'
 import { serve as honoServe } from '@hono/node-server'
 import { loadConfig } from './core/config.js'
-import { StorageService } from './services/storage.js'
-import { CrawlerService, buildCrawlerHeaders } from './services/crawler.js'
-import { Monitor } from './core/monitor.js'
-import { AnalyzerService } from './services/analyzer.js'
+import { runFeed } from './feed/pipeline.js'
+import { runFeedReport, requireMailConfig, reportRange, validateSchedule, serialTasks } from './feed/runtime.js'
 import { NotifierService } from './services/notifier.js'
-import { Reporter } from './core/reporter.js'
-import logger from './utils/logger.js'
-import { createTimeRange, formatDate } from './utils/time.js'
+import { localizationIncomplete, type LocalizationStats } from './feed/localize.js'
 
-const cli = cac('trend-analyzer')
-
-// Status tracking
-interface TaskStatus {
-  lastRun: Date | null
-  lastStatus: 'idle' | 'running' | 'success' | 'failed'
-  error: string | null
+const cli = cac('news-monitor')
+const configOption = { default: 'config.example.yaml' }
+const showError = (error: unknown) => {
+  console.error(error instanceof Error ? error.message : 'Task failed')
+  process.exitCode = 1
 }
 
-interface RuntimeStatus {
-  monitor: TaskStatus
-  dailyReport: TaskStatus
-  historicalReport: TaskStatus
-}
-
-let status: RuntimeStatus = {
-  monitor: { lastRun: null, lastStatus: 'idle', error: null },
-  dailyReport: { lastRun: null, lastStatus: 'idle', error: null },
-  historicalReport: { lastRun: null, lastStatus: 'idle', error: null },
-}
-
-const RUNTIME_STATE_FILE = 'runtime.json'
-
-async function saveStatus(storage: StorageService) {
-  try {
-    await storage.saveRootJson(RUNTIME_STATE_FILE, status)
-  } catch (err) {
-    logger.warn('Failed to save runtime status: ' + err)
-  }
-}
-
-async function loadStatus(storage: StorageService) {
-  try {
-    const saved = await storage.loadRootJson<any>(RUNTIME_STATE_FILE)
-    if (saved) {
-      // Safely restore monitor status
-      if (saved.monitor) {
-        status.monitor = { ...status.monitor, ...saved.monitor }
-        if (status.monitor.lastRun) status.monitor.lastRun = new Date(status.monitor.lastRun)
-      }
-      
-      // Restore daily report status (with migration from legacy 'report' key)
-      const dailySource = saved.dailyReport || saved.report
-      if (dailySource) {
-        status.dailyReport = { ...status.dailyReport, ...dailySource }
-        if (status.dailyReport.lastRun) status.dailyReport.lastRun = new Date(status.dailyReport.lastRun)
-      }
-
-      // Restore historical report status
-      if (saved.historicalReport) {
-        status.historicalReport = { ...status.historicalReport, ...saved.historicalReport }
-        if (status.historicalReport.lastRun) status.historicalReport.lastRun = new Date(status.historicalReport.lastRun)
-      }
-
-      logger.info('Restored runtime status from ' + RUNTIME_STATE_FILE)
-    }
-  } catch (err) {
-    logger.warn('Failed to load runtime status: ' + err)
-  }
-}
-
-async function runMonitor(configPath: string) {
-  status.monitor.lastStatus = 'running'
-  let storage: StorageService | undefined
-  try {
-    const config = loadConfig(configPath)
-    storage = new StorageService(config.archiveDir)
-    await saveStatus(storage)
-
-    const crawler = new CrawlerService(config.newsApiBaseUrl, undefined, buildCrawlerHeaders(config))
-    const analyzer = new AnalyzerService(config, storage)
-    const notifier = new NotifierService(config)
-    const reporter = new Reporter(storage, analyzer, notifier)
-    const monitor = new Monitor(storage)
-
-    logger.info('Starting monitoring task...')
-    await monitor.run(config, {
-      crawler,
-      analyzer,
-      reporter,
+for (const command of ['monitor', 'feed']) {
+  cli.command(command, 'Collect RSS/Atom, RSSHub and X; create Chinese translations and per-item summaries')
+    .option('-c, --config <file>', 'Configuration file', configOption)
+    .option('--analyze', 'Also generate an optional topical digest during this collection')
+    .action(async options => {
+      try {
+        const result = await runFeed(await loadConfig(options.config), { analyze: options.analyze })
+        console.log(JSON.stringify(result, null, 2))
+        if (result.results.some(source => source.status === 'failed') || localizationIncomplete(result.localization) || ['pending', 'failed'].includes(result.curation.status)) process.exitCode = 1
+      } catch (error) { showError(error) }
     })
-    logger.success('Monitoring task completed successfully.')
-    status.monitor.lastRun = new Date()
-    status.monitor.lastStatus = 'success'
-    status.monitor.error = null
-    await saveStatus(storage)
-  } catch (error) {
-    logger.error(error as any, 'Monitoring task failed:')
-    status.monitor.lastStatus = 'failed'
-    status.monitor.error = error instanceof Error ? error.message : String(error)
-    if (storage) await saveStatus(storage)
-    throw error
-  }
 }
 
-async function runHistoricalReport(configPath: string, startStr: string, endStr?: string, recipientIndex?: number) {
-  status.historicalReport.lastStatus = 'running'
-  let storage: StorageService | undefined
-  try {
-    const config = loadConfig(configPath)
-    storage = new StorageService(config.archiveDir)
-    await saveStatus(storage)
-    
-    const analyzer = new AnalyzerService(config, storage)
-    const notifier = new NotifierService(config)
-    const reporter = new Reporter(storage, analyzer, notifier)
-
-    const range = createTimeRange(startStr, endStr)
-    logger.info(`Generating ${range.mode === 'historical' ? '历史趋势报告' : '今日新闻总结'} from ${range.start.toLocaleString('zh-CN')} to ${range.end.toLocaleString('zh-CN')}...`)
-    
-    await reporter.runHistoricalReport(range, recipientIndex)
-    
-    logger.success('Historical reporting task completed successfully.')
-    status.historicalReport.lastRun = new Date()
-    status.historicalReport.lastStatus = 'success'
-    status.historicalReport.error = null
-    await saveStatus(storage)
-  } catch (error) {
-    logger.error(error as any, 'Historical reporting task failed:')
-    status.historicalReport.lastStatus = 'failed'
-    status.historicalReport.error = error instanceof Error ? error.message : String(error)
-    if (storage) await saveStatus(storage)
-    throw error
-  }
-}
-
-async function runReport(configPath: string, dateStr?: string, recipientIndex?: number) {
-  status.dailyReport.lastStatus = 'running'
-  let storage: StorageService | undefined
-  try {
-    const config = loadConfig(configPath)
-    storage = new StorageService(config.archiveDir)
-    await saveStatus(storage)
-
-    const analyzer = new AnalyzerService(config, storage)
-    const notifier = new NotifierService(config)
-    const reporter = new Reporter(storage, analyzer, notifier)
-
-    const date = dateStr ? new Date(dateStr) : new Date()
-    logger.info(`Generating daily report for ${date.toLocaleDateString('zh-CN')}...`)
-    await reporter.runDailyReport(date, recipientIndex)
-    logger.success('Reporting task completed successfully.')
-    status.dailyReport.lastRun = new Date()
-    status.dailyReport.lastStatus = 'success'
-    status.dailyReport.error = null
-    await saveStatus(storage)
-  } catch (error) {
-    logger.error(error as any, 'Reporting task failed:')
-    status.dailyReport.lastStatus = 'failed'
-    status.dailyReport.error = error instanceof Error ? error.message : String(error)
-    if (storage) await saveStatus(storage)
-    throw error
-  }
-}
-
-cli
-  .command('monitor', 'Fetch, index and analyze news items')
-  .option('-c, --config <file>', 'Path to config file', { default: 'config.yaml' })
-  .action(async (options) => {
+cli.command('report', 'Build a report from archived RSS/X evidence without fetching sources')
+  .option('-c, --config <file>', 'Configuration file', configOption)
+  .option('--hours <number>', 'Observation window in hours (1–168)', { default: 24 })
+  .option('--date <date>', 'Local calendar date YYYY-MM-DD')
+  .option('--all', 'Translate and summarize all archived items, ignoring the default 24-hour window')
+  .option('--start <time>', 'Start time (ISO or yy-MM-dd HH:mm)')
+  .option('--end <time>', 'End time (ISO or yy-MM-dd HH:mm)')
+  .option('--analyze', 'Also generate an optional topical digest from archived source bodies')
+  .option('--send', 'Explicitly send the generated report by email')
+  .action(async options => {
     try {
-      await runMonitor(options.config)
-    } catch (error) {
-      process.exit(1)
-    }
+      if (options.all && (options.date || options.start || options.end)) throw new Error('Use --all or a date/time window, not both')
+      const result = await runFeedReport(await loadConfig(options.config), {
+        ...reportRange(options), all: options.all, analyze: options.analyze, send: options.send,
+      })
+      console.log(JSON.stringify(result, null, 2))
+      if (localizationIncomplete(result.localization) || ['pending', 'failed'].includes(result.curation.status) || result.deliveryError) process.exitCode = 1
+    } catch (error) { showError(error) }
   })
 
-cli
-  .command('report', 'Generate and send daily report')
-  .option('-c, --config <file>', 'Path to config file', { default: 'config.yaml' })
-  .option('--date <date>', 'Date to report on (YYYY-MM-DD)')
-  .option('--start <time>', 'Start time (yy-mm-dd hh:MM)')
-  .option('--end <time>', 'End time (yy-mm-dd hh:MM)')
-  .option('--id <index>', 'Recipient index in the config email list')
-  .action(async (options) => {
+cli.command('serve', 'Schedule RSS/X collection and reports; status listens on localhost')
+  .option('-c, --config <file>', 'Configuration file', configOption)
+  .action(async options => {
     try {
-      const recipientIndex = options.id !== undefined ? parseInt(options.id, 10) : undefined
-      
-      if (options.start || options.end) {
-        const todayStr = formatDate(new Date()).slice(2)
-        const start = options.start || `${todayStr} 01:00`
-        await runHistoricalReport(options.config, start, options.end, recipientIndex)
-      } else {
-        await runReport(options.config, options.date, recipientIndex)
-      }
-    } catch (error) {
-      process.exit(1)
-    }
-  })
-
-cli
-  .command('serve', 'Run as a daemon with scheduler and status server')
-  .option('-c, --config <file>', 'Path to config file', { default: 'config.yaml' })
-  .action(async (options) => {
-    const config = loadConfig(options.config)
-    logger.info('Starting Trend Analyzer daemon...')
-
-    // Init storage and load status
-    const storage = new StorageService(config.archiveDir)
-    await loadStatus(storage)
-
-    // Monitor
-    const monitorJob = new CronJob(config.monitorCron, async () => {
-      try {
-        await runMonitor(options.config)
-      } catch (err) {
-        // Error already logged in runMonitor
-      }
-    })
-
-    // Daily Report
-    const dailyReportJob = new CronJob(config.dailyReportCron, async () => {
-      try {
-        await runReport(options.config)
-      } catch (err) {
-        // Error already logged
-      }
-    })
-
-    // Historical Report
-    const historicalReportJob = new CronJob(config.historicalReportCron, async () => {
-      try {
-        // By default, trigger for the analysis window
-        const now = new Date();
-        const start = new Date(now);
-        start.setDate(now.getDate() - (config.analysis_window_days - 1));
-        start.setHours(0, 0, 0, 0);
-        
-        const startStr = `${formatDate(start).slice(2)} 00:00`;
-        await runHistoricalReport(options.config, startStr);
-      } catch (err) {
-        // Error already logged
-      }
-    })
-
-    monitorJob.start()
-    dailyReportJob.start()
-    historicalReportJob.start()
-
-    logger.info(`Scheduler started: Monitor (${config.monitorCron}), Daily (${config.dailyReportCron}), Historical (${config.historicalReportCron})`)
-
-    const app = new Hono()
-    app.get('/', (c) => c.json({
-      status: 'up',
-      uptime: process.uptime(),
-      tasks: status
-    }))
-
-    app.get('/run/:task', async (c) => {
-      const task = c.req.param('task')
-      const id = c.req.query('id')
-      const start = c.req.query('start')
-      const end = c.req.query('end')
-      const recipientIndex = id !== undefined ? parseInt(id, 10) : undefined
-
-      if (task === 'monitor') {
-        runMonitor(options.config).catch((err) => logger.error(err, 'Manual monitor trigger failed'))
-        return c.json({ message: 'Monitor task triggered' })
-      }
-      
-      if (task === 'daily-report' || (task === 'report' && !start && !end)) {
-        runReport(options.config, undefined, recipientIndex).catch((err) => logger.error(err, 'Manual daily report trigger failed'))
-        return c.json({ message: 'Daily report task triggered' })
-      }
-
-      if (task === 'historical-report' || (task === 'report' && (start || end))) {
-        let startStr = start as string
-        if (!startStr && !end) {
-          // Use default window from config if no params provided for historical-report
-          const now = new Date();
-          const startDate = new Date(now);
-          startDate.setDate(now.getDate() - (config.analysis_window_days - 1));
-          startDate.setHours(0, 0, 0, 0);
-          startStr = `${formatDate(startDate).slice(2)} 00:00`;
-        } else if (!startStr) {
-          const todayStr = formatDate(new Date()).slice(2)
-          startStr = `${todayStr} 01:00`
-        }
-
-        runHistoricalReport(options.config, startStr, end as string, recipientIndex).catch((err) => logger.error(err, 'Manual historical report trigger failed'))
-        return c.json({ 
-          message: 'Historical report task triggered', 
-          range: { start: startStr, end: end || 'now' } 
+      const config = await loadConfig(options.config)
+      validateSchedule(config)
+      const status: Record<string, unknown> = { monitor: 'idle', report: 'idle' }
+      const queue = serialTasks()
+      const active = new Set<string>()
+      const execute = async (name: string, task: () => Promise<unknown>) => {
+        if (active.has(name)) return
+        active.add(name)
+        status[name] = { state: 'queued' }
+        await queue(async () => {
+          status[name] = { state: 'running', startedAt: new Date().toISOString() }
+          try {
+            const result = await task()
+            const outcome = result as { results: { status: string }[]; localization: LocalizationStats; curation: { status: string } }
+            const partial = outcome.results.some(source => source.status === 'failed') || localizationIncomplete(outcome.localization) || ['pending', 'failed'].includes(outcome.curation.status)
+            status[name] = { state: partial ? 'partial' : 'success', completedAt: new Date().toISOString(), result }
+          } catch (error) {
+            status[name] = { state: 'failed', completedAt: new Date().toISOString(), error: error instanceof Error ? error.message : 'Task failed' }
+          } finally { active.delete(name) }
         })
       }
-      
-      return c.json({ error: 'Unknown task' }, 400)
-    })
-
-    honoServe({ fetch: app.fetch, port: config.serverPort }, (info) => {
-      logger.info(`Status server running at http://localhost:${info.port}`)
-    })
+      const collectJob = new CronJob(config.schedule.collect, () => execute('monitor', () => runFeed(config)), null, false, config.schedule.timezone)
+      const reportJob = new CronJob(config.schedule.report, () => execute('report', () => runFeedReport(config, {
+        ...reportRange({ hours: 24 }), analyze: config.schedule.analyze, send: config.schedule.sendEmail,
+      })), null, false, config.schedule.timezone)
+      const app = new Hono()
+      app.get('/', c => c.json({ status: 'up', mode: 'rss-x', tasks: status }))
+      const server = honoServe({ fetch: app.fetch, hostname: '127.0.0.1', port: config.serverPort })
+      server.on('error', error => { collectJob.stop(); reportJob.stop(); showError(error) })
+      collectJob.start()
+      reportJob.start()
+      console.log(`RSS/X scheduler started; status: http://127.0.0.1:${config.serverPort}`)
+      const stop = () => { collectJob.stop(); reportJob.stop(); server.close() }
+      process.once('SIGINT', stop)
+      process.once('SIGTERM', stop)
+    } catch (error) { showError(error) }
   })
 
-cli
-  .command('test-email', 'Send a test email to verify SMTP configuration')
-  .option('-c, --config <file>', 'Path to config file', { default: 'config.yaml' })
-  .action(async (options) => {
+cli.command('test-email', 'Explicitly send a test email using the optional email configuration')
+  .option('-c, --config <file>', 'Configuration file', configOption)
+  .action(async options => {
     try {
-      const config = loadConfig(options.config)
-      const notifier = new NotifierService(config)
-      await notifier.sendReport('SMTP 服务测试', '这是一封来自趋势分析器的测试邮件。')
-      logger.success('Test email sent.')
-    } catch (error) {
-      logger.error(error as any, 'Email test failed:')
-      process.exit(1)
-    }
+      const config = await loadConfig(options.config)
+      await new NotifierService(requireMailConfig(config)).sendReport('News Feed 邮件测试', 'RSS/X 简报邮件服务测试。')
+    } catch (error) { showError(error) }
   })
 
 cli.help()
-
-cli.on('command:*', () => {
-  logger.error('Invalid command: %s', cli.args.join(' '))
-  process.exit(1)
-})
-
+cli.on('command:*', () => { console.error('Unknown command'); process.exitCode = 1 })
 cli.parse()

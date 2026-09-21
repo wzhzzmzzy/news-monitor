@@ -1,41 +1,183 @@
-# 抓取配置
-newsApiBaseUrl: "http://localhost:13000"
-crawlerBrowserUserAgentEnabled: true
-crawlerUserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-
-# 热榜源 (每 2 小时分析一次)
-hotlist_sources:
-  - { id: wallstreetcn-hot, name: "华尔街见闻", type: api, url: "/api/s?id=wallstreetcn-hot" }
-  - { id: thepaper, name: "澎湃新闻", type: api, url: "/api/s?id=thepaper" }
-  - { id: cls-hot, name: "财联社", type: api, url: "/api/s?id=cls-hot" }
-  - { id: weibo, name: "微博", type: api, url: "/api/s?id=weibo" }
-
-# 实时新闻流 (每 30 分钟抓取一次)
-stream_sources:
-  - { id: jin10, name: "金十数据", type: api, url: "/api/s?id=jin10" }
-  - { id: zaobao, name: "联合早报", type: api, url: "/api/s?id=zaobao" }
-
-# 分析配置
-analysis_window_days: 7    # 多日趋势分析的回溯范围
-report_window_days: 1      # 自动报告的时间窗口（1 表示仅当天，3 表示包含过去3天）
-enable_stream_analysis: true
-
-monitorCron: "*/30 * * * *"
-reportCron: "0 13 * * *"
+# 默认入口 monitor / report / serve 均使用 RSS/X；旧 NewsNow 配置需要迁移。
+# archiveDir 相对于本文件。来源映射与未覆盖项见 docs/source-migration.md。
+archiveDir: ./archive/feed-v1
+rsshub:
+  # 2026-09-21 实测可用的社区实例；可换成自建 RSSHub。
+  baseUrl: https://hub.slarker.me
+opencli: {}
+# 多浏览器时，使用 pnpm exec opencli profile list 查询 Brave contextId。
+# opencli:
+#   profile: "Brave-contextId"
+schedule:
+  collect: '*/30 * * * *'
+  report: '5 8,20 * * *'
+  timezone: Asia/Shanghai
+  analyze: false
+  sendEmail: false
+localization:
+  enabled: true # Chinese translation and <=200-character summaries require llm
+  chunkChars: 3000
+  concurrency: 2
 serverPort: 12440
+sources:
+  # HN 官方 RSS 在当前网络超时，使用第三方 HNRSS；其余新增来源为发布方 Feed。
+  - id: hacker-news
+    name: Hacker News · 社区链接（HNRSS）
+    category: 技术
+    type: rss
+    url: https://hnrss.org/frontpage?count=10
+    contentKind: link-metadata
+    limit: 10
+  - id: ars-technica
+    name: Ars Technica
+    category: 技术
+    type: rss
+    url: https://feeds.arstechnica.com/arstechnica/index
+    limit: 5
+  - id: techcrunch
+    name: TechCrunch
+    category: 商业
+    type: rss
+    url: https://techcrunch.com/feed/
+    contentKind: feed-summary
+    limit: 5
+  - id: npr-world
+    name: NPR · 国际新闻
+    category: 综合
+    type: rss
+    url: https://feeds.npr.org/1004/rss.xml
+    contentKind: feed-summary
+    limit: 5
+  - id: owid
+    name: Our World in Data · 数据研究
+    category: 人文
+    type: rss
+    url: https://ourworldindata.org/atom.xml
+    contentKind: feed-summary
+    limit: 3
+  - id: aeon
+    name: Aeon · 思想与文化
+    category: 人文
+    type: rss
+    url: https://aeon.co/feed.rss
+    contentKind: feed-summary
+    limit: 3
+  - id: ithome
+    name: IT之家
+    category: 技术
+    type: rss
+    url: https://www.ithome.com/rss/
+    limit: 10
+  - id: wallstreetcn-hot
+    name: 华尔街见闻 · 日热门
+    category: 商业
+    type: rsshub
+    route: /wallstreetcn/hot/day
+    limit: 10
+  - id: thepaper
+    name: 澎湃新闻 · 热榜
+    category: 综合
+    type: rsshub
+    baseUrl: https://rss.injahow.cn
+    route: /thepaper/sidebar/hotNews
+    limit: 10
+  - id: cls-hot
+    name: 财联社 · 热门
+    category: 商业
+    type: rsshub
+    route: /cls/hot
+    limit: 10
+  - id: jin10
+    name: 金十数据 · 快讯
+    category: 商业
+    type: rsshub
+    route: /jin10
+    limit: 20
+  - id: zaobao
+    name: 联合早报 · 中港台即时
+    category: 综合
+    type: rsshub
+    route: /zaobao/realtime/china
+    limit: 5
+  - id: zaobao-world
+    name: 联合早报 · 国际即时
+    category: 综合
+    type: rsshub
+    route: /zaobao/realtime/world
+    limit: 5
+  - id: zaobao-singapore
+    name: 联合早报 · 新加坡即时
+    category: 综合
+    type: rsshub
+    route: /zaobao/realtime/singapore
+    limit: 5
+  - id: zaobao-finance
+    name: 联合早报 · 财经即时
+    category: 商业
+    type: rsshub
+    route: /zaobao/realtime/zfinance
+    limit: 5
+  - id: weibo
+    name: 微博 · 热搜
+    category: 综合
+    type: rsshub
+    route: /weibo/search/hot
+    enabled: false
+    disabledReason: '2026-09-21 三个实例均返回错误页；需修复 RSSHub 浏览器运行环境或访客 Cookie 后再启用。热搜只提供关键词，不等于新闻正文。'
+    limit: 10
+  - id: simon-rss
+    name: Simon Willison
+    category: 技术
+    type: rss
+    url: https://simonwillison.net/atom/entries/
+    limit: 5
+  - id: econlib-rss
+    name: Econlib
+    category: 商业
+    type: rss
+    url: https://www.econlib.org/feed/
+    limit: 3
+  - id: wip-rss
+    name: Works in Progress
+    category: 人文
+    type: rss
+    url: https://worksinprogress.co/rss.xml
+    limit: 3
+  - id: simon-x
+    name: Simon Willison / X
+    category: 技术
+    type: x-user
+    username: simonw
+    limit: 5
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+# X List：type: x-list + listId: "数字 ID"，不需要创建或关注列表。
+# 凭据从环境变量读取，不写入 YAML。
+# Pi alternative (select one llm block):
+# llm:
+#   piProvider: gateway
+#   model: deepseek-v4-flash
+#   mode: json
+#   piModelsPath: ~/.pi/agent/models.json # optional
+# Environment-based OpenAI-compatible service:
+# llm:
+#   model: deepseek-chat
+#   baseUrl: https://api.deepseek.com
+#   apiKeyEnv: NEWS_FEED_LLM_API_KEY
+#   mode: json
+#   maxItems: 30 # Only for the optional --analyze digest
+#   maxCharsPerItem: 4000
+# email:
+#   smtpHost: smtp.example.com
+#   smtpPort: 465
+#   smtpUser: sender@example.com
+#   passwordEnv: NEWS_FEED_SMTP_PASS
+#   emailFromName: News Feed
+#   emailFrom: sender@example.com
+#   emailTo: [receiver@example.com]
 
-# 存储配置
-archiveDir: "./archive"
-
-# LLM 配置
-llmProvider: "deepseek"
-llmApiKey: "YOUR_API_KEY"
-llmBaseUrl: "https://api.deepseek.com"
-llmModel: "deepseek-chat"
-llmStructuredOutputMode: "json" # DeepSeek thinking/reasoner-compatible models do not accept tool_choice.
-
-# 邮件通知配置 (SMTP)
-smtpPass: "YOUR_SMTP_PASS"
-emailFrom: "YOUR_EMAIL@example.com"
-emailTo:
-  - "user@example.com"
+# Reading priorities, independent of the optional --analyze topical digest.
+curation:
+  enabled: true
+  maxPicks: 10
+  # interests: 技术、商业与人文；优先重大变化、原始信息和深入分析。
