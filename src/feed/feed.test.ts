@@ -225,9 +225,9 @@ describe('RSS/X collection pipeline', () => {
     await expect(analyzeFeed(items, llm)).rejects.toThrow('unknown evidence')
   })
 
-  it('validates analysis credentials before touching sources', async () => {
+  it('rejects removed internal editorial analysis before touching sources', async () => {
     const collect = vi.fn()
-    await expect(runFeed({ ...config, archiveDir: await temp() }, { analyze: true }, collect)).rejects.toThrow('Configure llm')
+    await expect(runFeed({ ...config, archiveDir: await temp() }, { analyze: true }, collect)).rejects.toThrow('calling agent')
     expect(collect).not.toHaveBeenCalled()
   })
 

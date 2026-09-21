@@ -1,0 +1,103 @@
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import { beforeEach, afterEach, expect, it, vi } from 'vitest'
+import { parseHTML } from 'linkedom'
+import { feedConfigSchema, type FeedConfig } from './config.js'
+import { FeedStore, writeJson } from './store.js'
+import type { FeedItem } from './collect.js'
+import { editionRange, queryNews, loadSnapshotEvidence, shanghaiDay } from './news.js'
+import { renderAgentReport, validateAgentReport } from './agent-report.js'
+import { runFeed } from './pipeline.js'
+
+let dir: string, config: FeedConfig
+const morning = editionRange('morning', '2026-09-21')
+const evening = editionRange('evening', '2026-09-21')
+async function observe(time: string, values: Array<[string, string]>) {
+  const raw: FeedItem[] = values.map(([id, content]) => ({ id, content, title: `标题${id}`, sourceId: 'rss', sourceName: 'RSS', category: '技术', url: `https://example.com/${id}`, fetchedAt: time, contentKind: 'feed-content', raw: {} }))
+  const items = await new FeedStore(dir).merge(raw)
+  await writeJson(path.join(dir, 'runs', time.replace(/[:.]/g, '-'), 'source-pack.json'), { version: 1, collectedAt: time, items, results: [{ sourceId: 'rss', sourceName: 'RSS', status: 'ok', count: items.length, coverage: 'feed-snapshot', note: '' }] })
+}
+beforeEach(async () => {
+  dir = await fs.mkdtemp(path.join(os.tmpdir(), 'news-tool-test-'))
+  config = feedConfigSchema.parse({ archiveDir: dir, sources: [{ id: 'rss', name: 'RSS', type: 'rss', url: 'https://example.com/rss' }], localization: { enabled: false }, curation: { enabled: true } })
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-22T00:00:00Z'))
+})
+afterEach(async () => { vi.useRealTimers(); vi.unstubAllGlobals(); await fs.rm(dir, { recursive: true, force: true }) })
+it('anchors morning and evening in Shanghai independently of machine timezone', () => {
+  expect(morning).toEqual({ start: new Date('2026-09-20T02:00:00Z'), end: new Date('2026-09-21T02:00:00Z') })
+  expect(evening).toEqual({ start: morning.end, end: new Date('2026-09-21T12:00:00Z') })
+  expect(shanghaiDay(new Date('2026-09-20T18:00:00Z'))).toBe('2026-09-21')
+  expect(() => editionRange('morning', '2026-02-30')).toThrow()
+  expect(() => editionRange('invalid', '2026-09-21')).toThrow()
+})
+it('compares raw revisions against a frozen baseline, never the mutable latest item', async () => {
+  await observe('2026-09-19T12:00:00.000Z', [['old', '旧文章']])
+  await observe('2026-09-21T01:00:00.000Z', [['a', '初稿'], ['b', '不变'], ['gone', '未再出现']])
+  const before = await queryNews(config, { ...morning, edition: 'morning' })
+  const bytes = await fs.readFile(before.snapshotPath, 'utf8')
+  await observe('2026-09-21T02:00:00.000Z', [['a', '修订'], ['b', '不变'], ['c', '新文章'], ['old', '旧文章']])
+  await observe('2026-09-21T12:00:00.000Z', [['outside', '边界外']])
+  await observe('2026-09-21T13:00:00.000Z', [['a', '未来修订']])
+  const result = await queryNews(config, { ...evening, edition: 'evening', baseline: before.snapshotPath })
+  expect(Object.fromEntries(result.items.map(i => [i.id, i.change]))).toEqual({ a: 'updated', b: 'unchanged', c: 'new', old: 'resurfaced' })
+  expect(result.baseline?.items.map(i => i.id)).toEqual(['a', 'b', 'gone'])
+  expect(result.counts).toMatchObject({ total: 4, new: 1, updated: 1, unchanged: 1, resurfaced: 1 })
+  expect((await loadSnapshotEvidence(result, result.snapshotPath)).items.find(i => i.id === 'a')?.content).toBe('修订')
+  expect(await fs.readFile(before.snapshotPath, 'utf8')).toBe(bytes)
+  const rerun = await queryNews(config, { ...morning, edition: 'morning' })
+  expect(rerun.items).toEqual(before.items)
+  expect(rerun.snapshotId).not.toBe(before.snapshotId)
+})
+it('reports empty and missing coverage without inventing a complete morning baseline', async () => {
+  const before = await queryNews(config, { ...morning, edition: 'morning' })
+  expect(before.status).toBe('empty')
+  expect(before.coverage).toMatchObject({ complete: false, missingSources: ['rss'], observations: [] })
+  await observe('2026-09-21T04:00:00.000Z', [['a', '下午首次观察']])
+  const result = await queryNews(config, { ...evening, edition: 'evening', baseline: before.snapshotPath })
+  expect(result.baseline?.status).toBe('empty')
+  expect(result.items[0].change).toBe('new')
+  expect(result.items[0].summary).toBeNull()
+  expect(result.status).toBe('partial')
+})
+it('refuses missing/wrong baselines, malformed windows and future cutoffs', async () => {
+  await expect(queryNews(config, { ...evening, edition: 'evening' })).rejects.toThrow('baseline')
+  const baseline = await queryNews(config, { ...morning, edition: 'morning' })
+  await expect(queryNews(config, { start: new Date(+evening.start + 1), end: evening.end, baseline: baseline.snapshotPath })).rejects.toThrow('gaps and overlaps')
+  await expect(queryNews(config, { ...editionRange('evening', '2026-09-23'), edition: 'evening', baseline: baseline.snapshotPath })).rejects.toThrow('not ended')
+  await expect(queryNews(config, { ...evening, edition: 'morning' })).rejects.toThrow('cutoff')
+})
+it('renders only external decisions, validates citations and retains every unselected item', async () => {
+  await observe('2026-09-21T01:00:00.000Z', [['a', '初稿']])
+  const baseline = await queryNews(config, { ...morning, edition: 'morning' })
+  await observe('2026-09-21T04:00:00.000Z', [['a', '修订'], ['b', '新文章']])
+  const snapshot = await queryNews(config, { ...evening, edition: 'evening', baseline: baseline.snapshotPath })
+  const report = { version: 'agent-report-v1', snapshotId: snapshot.snapshotId, title: '变化 <script>bad</script>', summary: '由外部编辑比较前后证据。', picks: [{ id: 'a', topic: 'AI', reason: '出现明确新进展。' }], readingIds: [], sections: [{ title: '变化', kind: 'update', body: '<img onerror=bad>前后事实', beforeIds: ['a'], evidenceIds: ['a'] }] }
+  expect(() => validateAgentReport({ ...report, snapshotId: baseline.snapshotId }, snapshot)).toThrow('another snapshot')
+  expect(() => validateAgentReport({ ...report, readingIds: ['a'] }, snapshot)).toThrow('overlapping')
+  expect(() => validateAgentReport({ ...report, sections: [{ ...report.sections[0], evidenceIds: ['fake'] }] }, snapshot)).toThrow('Unknown')
+  expect(() => validateAgentReport({ ...report, sections: [{ ...report.sections[0], beforeIds: [] }] }, snapshot)).toThrow('baseline evidence')
+  const decisions = path.join(dir, 'agent.json'), htmlFile = path.join(dir, 'result.html')
+  await writeJson(decisions, report)
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Rendering must not use network')))
+  await renderAgentReport(snapshot.snapshotPath, decisions, htmlFile)
+  const html = await fs.readFile(htmlFile, 'utf8')
+  const { document } = parseHTML(html)
+  expect(document.querySelectorAll('[data-entry]')).toHaveLength(2)
+  expect(document.querySelectorAll('#panel-other details[data-entry]')).toHaveLength(1)
+  expect(document.querySelector('#panel-other details[open]')).toBeNull()
+  expect(document.querySelectorAll('script')).toHaveLength(1)
+  expect(html).toContain('&lt;script&gt;bad&lt;/script&gt;')
+  expect(html).toContain('早前：RSS')
+  expect(fetch).not.toHaveBeenCalled()
+  await expect(renderAgentReport(snapshot.snapshotPath, decisions, htmlFile)).rejects.toThrow('EEXIST')
+  await fs.appendFile(path.join(path.dirname(snapshot.snapshotPath), 'reading-pack.json'), ' ')
+  await expect(renderAgentReport(snapshot.snapshotPath, decisions, path.join(dir, 'bad.html'))).rejects.toThrow('hash mismatch')
+})
+it('collection ignores legacy curation enabled and performs only the injected Chinese processing', async () => {
+  const localize = vi.fn(async (items: any[]) => ({ items, stats: { enabled: false, total: items.length, ready: 0, cached: 0, generated: 0, pending: 0, failed: 0 } }))
+  const result = await runFeed(config, {}, async () => [], localize)
+  expect(localize).toHaveBeenCalledOnce()
+  expect(result.curation.status).toBe('disabled')
+  await expect(fs.access(path.join(dir, 'editorial'))).rejects.toThrow()
+})

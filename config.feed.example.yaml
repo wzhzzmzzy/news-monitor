@@ -11,10 +11,7 @@ opencli: {}
 #   profile: "Brave-contextId"
 schedule:
   collect: '*/30 * * * *'
-  report: '5 8,20 * * *'
   timezone: Asia/Shanghai
-  analyze: false
-  sendEmail: false
 localization:
   enabled: true # Chinese translation and <=200-character summaries require llm
   chunkChars: 3000
@@ -177,8 +174,8 @@ sources:
 #   emailFrom: sender@example.com
 #   emailTo: [receiver@example.com]
 
-# Reading priorities, independent of the optional --analyze topical digest.
+# Preferences passed to the calling Agent; news-monitor does not rank items.
 curation:
-  enabled: true
+  enabled: false # legacy flag; collect/news never invoke an editorial model
   maxPicks: 10
   # interests: 技术、商业与人文；优先重大变化、原始信息和深入分析。

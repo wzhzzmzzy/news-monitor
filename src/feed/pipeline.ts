@@ -4,13 +4,12 @@ import { randomUUID } from 'node:crypto'
 import type { FeedConfig } from './config.js'
 import { collectSource, type FeedItem, type SourceResult } from './collect.js'
 import { FeedStore, writeJson } from './store.js'
-import { analyzeFeed, renderFeed } from './report.js'
+import { renderFeed } from './view.js'
 import { localizeItems } from './localize.js'
-import { requireLlm } from './llm.js'
-import { curateItems } from './curate.js'
+import type { Curation } from './curate.js'
 
-export async function runFeed(config: FeedConfig, options: { analyze?: boolean } = {}, collect = collectSource, localize = localizeItems, curate = curateItems) {
-  if (options.analyze) requireLlm(config.llm)
+export async function runFeed(config: FeedConfig, options: { analyze?: boolean } = {}, collect = collectSource, localize = localizeItems) {
+  if (options.analyze) throw new Error('Editorial analysis belongs to the calling agent; use news and render')
   const store = new FeedStore(config.archiveDir)
   return store.withLock(async () => {
     const now = new Date().toISOString()
@@ -26,7 +25,7 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean }
       }
       const isFeed = source.type === 'rss' || source.type === 'rsshub'
       try {
-        const collected = await collect(source, config, now)
+        const collected = (await collect(source, config, now)).map(item => ({ ...item, fetchedAt: new Date().toISOString() }))
         items.push(...collected)
         results.push({ sourceId: source.id, sourceName: source.name, status: 'ok', count: collected.length,
           coverage: isFeed ? 'feed-snapshot' : 'unknown',
@@ -41,24 +40,17 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean }
     // Raw payloads remain replayable even if indexing or the model fails later.
     await writeJson(path.join(runDir, 'raw.json'), items)
     const stored = await store.merge(items)
-    await writeJson(path.join(runDir, 'source-pack.json'), { version: 1, collectedAt: now, results, items: stored })
+    await writeJson(path.join(runDir, 'source-pack.json'), { version: 1, collectedAt: new Date().toISOString(), results, items: stored })
     let html = renderFeed(stored, results, now)
     await fs.writeFile(path.join(runDir, 'preview.html'), html, { mode: 0o600 })
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false })
     const reading = await localize(stored, config)
     await writeJson(path.join(runDir, 'reading-pack.json'), reading)
-    const curation = await curate(reading.items, config)
+    const curation: Curation = { status: 'disabled', entries: {}, total: reading.items.length, selected: 0, reading: reading.items.length, other: 0, cached: 0, note: '由调用方 Agent 筛选' }
     await writeJson(path.join(runDir, 'editorial.json'), curation)
     html = renderFeed(reading.items, results, now, undefined, reading.stats, curation)
     await fs.writeFile(path.join(runDir, 'preview.html'), html, { mode: 0o600 })
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false, localization: reading.stats, curation })
-    if (options.analyze) {
-      const analysis = await analyzeFeed(stored, config.llm!)
-      await writeJson(path.join(runDir, 'analysis.json'), analysis)
-      html = renderFeed(reading.items, results, now, analysis.digest, reading.stats, curation)
-      await fs.writeFile(path.join(runDir, 'preview.html'), html, { mode: 0o600 })
-      await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: true, localization: reading.stats, curation })
-    }
     return { runDir, preview: path.join(runDir, 'preview.html'), count: stored.length, results, localization: reading.stats, curation,
       changes: { new: stored.filter(i => i.change === 'new').length, updated: stored.filter(i => i.change === 'updated').length, seen: stored.filter(i => i.change === 'seen').length },
     }

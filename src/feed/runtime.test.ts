@@ -95,9 +95,10 @@ describe('RSS/X reporting and scheduling', () => {
 
   it('validates scheduler settings before starting jobs', () => {
     expect(() => validateSchedule(config)).not.toThrow()
+    expect(() => validateSchedule({ ...config, schedule: { ...config.schedule, report: '0 10 * * *' } })).toThrow('calling agent')
     expect(() => validateSchedule({ ...config, schedule: { ...config.schedule, collect: 'invalid' } })).toThrow()
-    expect(() => validateSchedule({ ...config, schedule: { ...config.schedule, analyze: true } })).toThrow('Configure llm')
-    expect(() => validateSchedule({ ...config, schedule: { ...config.schedule, sendEmail: true } })).toThrow('Configure email')
+    expect(() => validateSchedule({ ...config, schedule: { ...config.schedule, analyze: true } })).toThrow('calling agent')
+    expect(() => validateSchedule({ ...config, schedule: { ...config.schedule, sendEmail: true } })).toThrow('calling agent')
   })
 
   it('serializes overlapping collection/report jobs and continues after a failed job', async () => {

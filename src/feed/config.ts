@@ -31,13 +31,13 @@ export const feedConfigSchema = z.object({
     concurrency: z.number().int().min(1).max(4).default(2),
   }).default({}),
   curation: z.object({
-    enabled: z.boolean().default(true),
+    enabled: z.boolean().default(false),
     maxPicks: z.number().int().min(1).max(20).default(10),
     interests: z.string().min(1).max(1000).default('技术、商业与人文。优先重要变化、原始信息、扎实分析、可复用知识与有启发的观点；降低日常行情碎片、消费品促销上新、标题党、重复报道和缺乏上下文的闲聊的优先级。'),
   }).default({}),
   schedule: z.object({
     collect: z.string().default('*/30 * * * *'),
-    report: z.string().default('5 8,20 * * *'),
+    report: z.string().optional(),
     timezone: z.string().default('Asia/Shanghai'),
     analyze: z.boolean().default(false),
     sendEmail: z.boolean().default(false),

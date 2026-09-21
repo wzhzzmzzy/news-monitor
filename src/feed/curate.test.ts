@@ -18,7 +18,7 @@ const runner: CurationRunner = async (kind, input) => kind === 'rate'
   : { picks: [0], groups: [{ primary: 0, related: [1] }] }
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'news-editor-test-'))
-  config = feedConfigSchema.parse({ archiveDir: dir, sources: [{ id: 'source', name: 'Source', type: 'rss', url: 'https://example.com/rss' }], llm: { model: 'test', apiKeyEnv: 'NEWS_CURATE_TEST_KEY' } })
+  config = feedConfigSchema.parse({ archiveDir: dir, curation: { enabled: true }, sources: [{ id: 'source', name: 'Source', type: 'rss', url: 'https://example.com/rss' }], llm: { model: 'test', apiKeyEnv: 'NEWS_CURATE_TEST_KEY' } })
   vi.stubEnv('NEWS_CURATE_TEST_KEY', '')
 })
 afterEach(async () => { vi.unstubAllEnvs(); await fs.rm(dir, { recursive: true, force: true }) })
