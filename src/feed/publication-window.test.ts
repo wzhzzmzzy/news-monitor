@@ -69,7 +69,7 @@ it('keeps the morning baseline but excludes morning articles reobserved or edite
   expect(await fs.readFile(before.snapshotPath, 'utf8')).toBe(bytes)
 })
 
-it('applies the actual refreshed cutoff rather than the nominal 10:00 window', async () => {
+it('keeps the nominal publication cutoff after refreshed collection and translation', async () => {
   vi.setSystemTime(new Date('2026-09-22T02:00:00Z'))
   const collect = async (cfg: FeedConfig) => runFeed(cfg, {}, async () => {
     vi.setSystemTime(new Date('2026-09-22T02:01:00Z'))
@@ -79,8 +79,9 @@ it('applies the actual refreshed cutoff rather than the nominal 10:00 window', a
     return localizeItems(items, cfg)
   })
   const snapshot = await queryNews(config, { ...editionRange('morning', '2026-09-22'), edition: 'morning', refresh: true }, localizeItems, collect)
-  expect(snapshot.window).toMatchObject({ start: '2026-09-21T02:05:00.000Z', end: '2026-09-22T02:05:00.000Z' })
-  expect(snapshot.items.map(i => i.id)).toEqual(['fresh'])
+  expect(snapshot.window).toMatchObject({ start: '2026-09-21T02:00:00.000Z', end: '2026-09-22T02:00:00.000Z' })
+  expect(snapshot.items.map(i => i.id)).toEqual(['old'])
+  expect(snapshot.observedThrough).toBe('2026-09-22T02:05:00.001Z')
 })
 
 it('filters invalid dates in custom windows and preserves source coverage when no news qualifies', async () => {

@@ -75,7 +75,7 @@ it('collects news and blogs once per edition and includes the batch after the no
   const collect = vi.fn(async (cfg: FeedConfig) => runFeed(cfg, {}, async source => {
     if (source.id === 'broken') throw new Error('Source offline')
     return [{ id: source.id, sourceId: source.id, sourceName: source.name, category: '技术', title: source.name,
-      content: completion, contentKind: 'feed-content' as const, url: `https://${source.id}.example/article`, fetchedAt: new Date().toISOString(), publishedAt: new Date().toISOString(), raw: {} }]
+      content: completion, contentKind: 'feed-content' as const, url: `https://${source.id}.example/article`, fetchedAt: new Date().toISOString(), publishedAt: new Date(Date.now() - 60000).toISOString(), raw: {} }]
   }, async (items, cfg) => {
     vi.setSystemTime(new Date(completion))
     return localizeItems(items, cfg)
@@ -84,7 +84,7 @@ it('collects news and blogs once per edition and includes the batch after the no
   vi.setSystemTime(new Date('2026-09-22T02:00:00Z'))
   const before = await queryNews(config, { ...editionRange('morning', '2026-09-22'), edition: 'morning', refresh: true }, localize, collect)
   expect(collect).toHaveBeenCalledTimes(1)
-  expect(before.window).toMatchObject({ start: '2026-09-21T02:05:00.000Z', end: completion })
+  expect(before.window).toMatchObject({ start: '2026-09-21T02:00:00.000Z', end: '2026-09-22T02:00:00.000Z' })
   expect(before.items.map(item => item.id)).toEqual(['rss'])
   expect(before.blogs.map(item => item.id)).toEqual(['blog'])
   expect(before.coverage.failedSources).toEqual(['broken'])
@@ -96,7 +96,7 @@ it('collects news and blogs once per edition and includes the batch after the no
   vi.setSystemTime(new Date('2026-09-22T12:00:00Z'))
   const after = await queryNews(config, { ...editionRange('evening', '2026-09-22'), edition: 'evening', baseline: before.snapshotPath, refresh: true }, localize, collect)
   expect(collect).toHaveBeenCalledTimes(2)
-  expect(after.window).toMatchObject({ start: before.window.end, end: completion })
+  expect(after.window).toMatchObject({ start: before.window.end, end: '2026-09-22T12:00:00.000Z' })
   expect(after.items[0].change).toBe('updated')
   expect(after.blogs[0].change).toBe('updated')
   expect(after.baseline?.snapshotId).toBe(before.snapshotId)
@@ -130,9 +130,9 @@ it('renders only external decisions, validates citations and retains every unsel
   await renderAgentReport(snapshot.snapshotPath, decisions, htmlFile)
   const html = await fs.readFile(htmlFile, 'utf8')
   const { document } = parseHTML(html)
-  expect(document.querySelectorAll('[data-entry]')).toHaveLength(2)
-  expect(document.querySelectorAll('#panel-other details[data-entry]')).toHaveLength(1)
-  expect(document.querySelector('#panel-other details[open]')).toBeNull()
+  expect(document.querySelectorAll('[data-entry]')).toHaveLength(3)
+  expect(document.querySelectorAll('#panel-timeline article[data-entry]')).toHaveLength(2)
+  expect(document.querySelector('#panel-other')).toBeNull()
   expect(document.querySelectorAll('script')).toHaveLength(1)
   expect(html).toContain('&lt;script&gt;bad&lt;/script&gt;')
   expect(html).toContain('早前：RSS')

@@ -56,7 +56,7 @@ llm:
 | --- | --- |
 | `collect` | 抓取、去重、归档、中文处理；monitor/feed 是别名 |
 | `news` | 按窗口输出新闻与博客快照；`--refresh` 在早晚报生成前统一采集；不精选 |
-| `render` | 接收 Agent 编写的 JSON，离线校验并输出 HTML；`--email` 为邮件版，不投递 |
+| `render` | 接收 Agent 编写的 JSON，校验并输出 HTML；`--email` 为邮件版，`--publish-koalablog` 可发布固定 Svelte 阅读页的报告数据 |
 | `serve` | 可选的独立采集调度器；随早晚报采集时无需启动 |
 | `report` | 兼容命令：未经精选的归档阅读预览，可 `--all` 补处理历史内容 |
 
@@ -69,25 +69,25 @@ Skill 本身不提供网络连接。具备本机命令工具的 ChatGPT/其他 A
 默认随每天早报、晚报各采集一次：新闻 RSS/X 与博客共用同一轮抓取、归档和中文处理，无需另启博客定时任务或 `serve`。全部按北京时间，窗口采用半开区间 `[start, end)`：先限定采集批次，再限定新闻的发布时间。
 
 ```bash
-# 10:00 开始生成早报：先统一采集，再冻结最近 24 小时，保存 snapshotPath
+# 10:00 开始生成早报：先统一采集，按固定 10:00 往前 24 小时筛选，保存 snapshotPath
 node dist/index.js news -c config.yaml --edition morning --refresh
 
-# 20:00 开始生成晚报：先统一采集，从当天早报实际截止时间接续
+# 20:00 开始生成晚报：先统一采集，从当天早报的发布时间截止接续，到固定 20:00
 node dist/index.js news -c config.yaml --edition evening --refresh --baseline /absolute/morning/news.json
 
 # Agent 根据列表写 editorial.json；此步骤由 Agent 完成
 node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/editorial.json --output /absolute/report.html
 ```
 
-`news` 对早报、晚报和自定义窗口统一筛选新闻：来源提供的 `publishedAt` 必须落在报告窗口内。早报取实际截止前 24 小时，晚报取实际早报截止至本轮截止；包括起点，不包括终点。缺少或无效的发布时间、旧文及截止后的文章不进入新闻候选；再次采集或正文变化不会绕过发布时间限制。HN 等社区 Feed 的时间是提交时间，不保证等于外链原文发布时间。
+`news` 对早报、晚报和自定义窗口统一筛选新闻：来源提供的 `publishedAt` 必须落在报告窗口内。早报固定取前一天 10:00 至当天 10:00，晚报取早报 `window.end` 至当天 20:00；包括起点，不包括终点。缺少或无效的发布时间、旧文及截止后的文章不进入新闻候选；再次采集或正文变化不会绕过发布时间限制。HN 等社区 Feed 的时间是提交时间，不保证等于外链原文发布时间。
 
-筛选发生在快照层：RSS 返回的原始条目照常归档，`collect` 的中文处理与归档预览仍保留；独立博客继续展示观察窗口内的新内容和更新，不受新闻发布时间筛选影响。快照 `publicationFilter` 记录纳入数量及排除原因；缺少或无效日期导致内容被排除时，非空快照标记为 partial。旧快照和已发布报告不会自动改写，重新生成后才应用新规则。
+筛选发生在快照层：RSS 返回的原始条目照常归档；报告刷新阶段只翻译窗口内新闻，独立 `collect` 的中文处理与归档预览仍保留；独立博客继续展示观察窗口内的新内容和更新，不受新闻发布时间筛选影响。快照 `publicationFilter` 记录纳入数量及排除原因；缺少或无效日期导致内容被排除时，非空快照标记为 partial。旧快照和已发布报告不会自动改写，重新生成后才应用新规则。
 
 晚报的工具层给出 new/updated/unchanged/resurfaced 和基线全部候选；Agent 再判断“旧事件是否有新进展、意义是什么”。同链接文本更新不等于事件进展，不同链接也可能是同一事件，未再次出现不等于撤稿。增量报告优先展示前后变化及对应引用，重复内容折叠保留。
 
 早报快照不回写，晚报不使用可变的“最新报告”代替基线。没有早报快照就不能假装有对照；空基线会保留为空，报告应说明数据缺口。未到截止时间拒绝生成正式版，可用自定义窗口做中途预览。
 
-`--refresh` 仅用于当天且已到 10:00/20:00 的版次。截止时间在本轮采集和中文处理完成后确定，例如早报 10:05 完成，则早报覆盖前一天 10:05 至当天 10:05，晚报从当天 10:05 接续，包含本轮刚抓取的数据。采集跨到次日时保留归档并报错，需用明确的自定义窗口处理。省略 `--refresh` 只读取归档，版次仍使用固定 10:00/20:00 截止，适合历史回放；复用实际截止时间的快照时，用其 `window` 明确指定自定义窗口。
+`--refresh` 仅用于当天且已到 10:00/20:00 的版次。刷新保持报告发布时间窗口不变：10:45 抓到的 08:00 新闻可以进入 10:00 早报，10:30 发布的新闻只归档，留给晚报。`observedThrough` 单独记录本次证据读取的采集截止（半开区间），包含补采批次；即使采集跨午夜也不移动报告日期。博客仍按观察更新展示，晚报从早报的 `observedThrough` 接续，避免重复展示早报补采的博客。省略 `--refresh` 仍只读取截止前归档，适合历史回放；要补采当天固定截止的早报，请使用 `--refresh`，无需为了保留 10:00 而省略它。
 
 10:00/20:00 编辑任务由宿主 Agent 安排，调用上面的 `news --refresh` 并保存实际早报快照。只采集两次会降低高频来源的覆盖，RSS 已滚出的条目无法补回；博客历史翻译积压也随这两轮逐步处理。程序不会自行安装定时任务。
 
@@ -110,7 +110,7 @@ node dist/index.js serve -c config.yaml
 
 来源包括 IT之家、Hacker News（HNRSS 转换）、Ars Technica、TechCrunch、NPR、Our World in Data、Aeon、Simon Willison、Econlib、Works in Progress，以及 RSSHub 的财联社、金十、澎湃、华尔街见闻和联合早报频道。[迁移表](docs/source-migration.md) 记录来源、限制和实测；微博因实例故障仍停用。NewsNow 已退出运行路径。
 
-源类型 `rss` 使用 url，`rsshub` 使用 route 与 baseUrl，`x-user` 使用 username，`x-list` 使用数字 listId。所有源可配置 id/name/category/limit/enabled。RSS 请求超时 20 秒，瞬时网络/5xx 最多重试一次；X 子进程超时 120 秒，按有限条目采集。失败的来源单独记录，其余数据仍归档。
+源类型 `rss` 使用 url，`rsshub` 使用 route 与 baseUrl，`x-user` 使用 username，`x-list` 使用数字 listId。所有源可配置 id/name/category/limit/enabled。RSS 请求超时 20 秒，瞬时网络/5xx 最多重试一次；X 每次子进程超时 120 秒。报告刷新时，RSS 保存 Feed 返回的全部条目，不受来源 `limit` 截断；X 从至少 100 条开始，借助 OpenCLI 的 cursor 翻页按需扩大请求，直到读到发布时间早于窗口起点的条目、返回不足、失败或达到 `collection.xMaxItems`（默认 1000，范围 100–10000）。扩大请求失败时保留已取得条目。未确认到达起点的 X 来源列入 `coverage.incompleteSources`，非空报告为 partial；返回不足不等于已取完历史。独立 `collect` 仍遵循普通来源的 `limit`。失败的来源单独记录，其余数据仍归档。
 
 X 使用固定依赖 OpenCLI 1.8.7、已授权的官方扩展和 Brave 的登录会话，不需要 X 开发者 API Key。用 `pnpm exec opencli doctor` / `profile list` 检查，并将 Brave contextId 填入 `opencli.profile`；公共示例默认停用 X。程序不复制 Cookie。
 
@@ -120,7 +120,7 @@ RSS 可能只有摘要；HN 是社区链接元数据，不代表外链正文；X
 
 配置中的 `blogCatalog: ./feeds/hn-popular-blogs.json` 加载[指定十年窗口的前 100 名](https://popularity.refactoringenglish.com/?start=2016-09-15&end=2026-09-15)。这是固定排名快照，不会随每次采集重排。清单保留排名、域名、已验证 Feed、别名和未接入原因，详见[博客源说明](feeds/README.md)。相同 Feed 只订阅一次；已有 Simon Willison RSS 会合并到博客频道。
 
-博客在网页的第四个 **“博客”** Tab 中按发布时间倒序展示；邮件版为第四个同名分组。所有采集到的博客更新均保留，不进入精选、继续阅读、其他资讯或 Agent 综述。同一博客链接经 HN 再次出现时也归入博客。`news` 的 `items` 仅包含可编辑新闻，`blogs` 单独返回博客；渲染器拒绝把博客 ID 用于精选或报告引用。
+博客在网页的第二个 **“博客”** Tab 中按发布时间倒序展示；邮件版为独立同名分组。所有采集到的博客更新均保留，不进入精选、新闻时间线或 Agent 综述。同一博客链接经 HN 再次出现时也归入博客。`news` 的 `items` 仅包含可编辑新闻，`blogs` 单独返回博客；渲染器拒绝把博客 ID 用于精选或报告引用。
 
 ```bash
 # 首次采集或手动刷新，仅拉取博客
@@ -149,6 +149,16 @@ RSS 并发由 `collection.rssConcurrency` 控制，默认 4、最大 8；X 仍�
 - `snapshots/<uuid>/news.json` 是 Agent 使用的紧凑列表；同目录 `reading-pack.json` 保存完整中英文证据，用 SHA-256 绑定。渲染验证原始版本与摘要一致。
 - Agent 自行保存成稿 JSON 与 HTML。`render` 不覆盖已有文件；HTML 全部纯文本转义，引用 ID 必须在相应当前/基线列表中。
 - 旧 `reports/`、`editorial/` 和旧系统归档保留，不在新快照里混用旧 NewsNow 标题。
+
+发布到 Koalablog 时，在进程环境设置 `KOALABLOG_API_TOKEN`，再执行。需要代理时设置 `HTTPS_PROXY=http://127.0.0.1:7897`；发布与匿名回读支持 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`：
+
+```bash
+node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/editorial.json --output /absolute/report.html --publish-koalablog
+```
+
+固定入口为 `https://koala.wzhzzmzzy.workers.dev/news-feed`，使用 `templates/news-feed.svelte`。日报数据为 `/data/news-feed/YYYY-MM-DD/morning` 或 `evening`，`/data/news-feed/latest` 指向已成功发布的最新一期。均为 public memo；页面支持日期/早晚报、精选 / 博客 / 时间线三个 Tab、主题过滤、搜索和日期分组折叠。时间线包含全部非博客新闻，按发布时间倒序、北京时间分组，缺少时间的条目单列“时间未知”；精选也在时间线中标注。侧边按日期和小时快速定位，点击自动展开目标日期；搜索和主题过滤同步索引，窄屏显示横向索引。邮件顺序阅读时不重复精选。补发旧报告不会回退首页，同一报告路径的不同内容会拒绝覆盖。支持直达链接 `/news-feed?date=2026-09-21&edition=evening`（早报用 `morning`）；指定版次未发布则显示空状态，日期/版次切换自动同步 URL。
+
+首次上传或模板更新后，必须在 Dashboard 对 `/news-feed` 执行 **Deploy**；只更新日报数据不需要部署。回执 `deploymentRequired` 会指出这一步是否尚未完成。模板更新需显式加 `--koalablog-update-shell`。发布需 admin token，浏览器只做匿名 public 读取，Source 不包含凭据。参数、冲突处理与回执见 [发布协议](skills/news-monitor/references/protocol.md#发布为-koalablog-public-memo)。
 
 邮件 HTML 用 `render --email` 生成，投递由宿主安排。兼容 `report --send` 仍发送未精选阅读列表，需要显式 email 配置及 `passwordEnv`；`test-email` 会真实发送测试邮件。没有这些显式命令就不会发送，重复发送尚无幂等保障。SMTP 凭据不能进成稿或快照。
 

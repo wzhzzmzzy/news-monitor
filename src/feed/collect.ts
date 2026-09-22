@@ -28,6 +28,7 @@ export interface SourceResult {
   sourceName: string
   status: 'ok' | 'failed' | 'disabled'
   count: number
+  windowStartReached?: boolean
   coverage: 'feed-snapshot' | 'unknown'
   note: string
 }
@@ -57,10 +58,10 @@ function optionalUrl(value: unknown, base: string): string | undefined {
 }
 
 const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': 'news-monitor/1.0 (personal RSS reader)' } })
-export async function parseFeed(xml: string, source: Extract<FeedSource, { type: 'rss' }>, now: string): Promise<FeedItem[]> {
+export async function parseFeed(xml: string, source: Extract<FeedSource, { type: 'rss' }>, now: string, allEntries = false): Promise<FeedItem[]> {
   const feed = await parser.parseString(xml)
   // Blog subscriptions retain every entry present in the publisher's feed.
-  return feed.items.slice(0, source.channel === 'blogs' ? undefined : source.limit).map(item => {
+  return feed.items.slice(0, allEntries || source.channel === 'blogs' ? undefined : source.limit).map(item => {
     const url = item.link ? canonicalUrl(new URL(item.link, source.url).href) : ''
     const guid = item.guid || item.id
     if (!url && !guid) throw new Error('RSS item has neither a permalink nor a stable GUID')
@@ -139,13 +140,35 @@ async function fetchFeed(url: string): Promise<string> {
   }
 }
 
-export async function collectSource(source: FeedSource, config: FeedConfig, now: string, run: OpenCliRunner = runOpenCli): Promise<FeedItem[]> {
+export interface PublicationWindow { start: Date; end: Date }
+
+export async function collectSource(source: FeedSource, config: FeedConfig, now: string, run: OpenCliRunner = runOpenCli, window?: PublicationWindow): Promise<FeedItem[]> {
   if (source.type === 'rss' || source.type === 'rsshub') {
     const url = source.type === 'rss' ? source.url : `${(source.baseUrl || config.rsshub.baseUrl).replace(/\/$/, '')}${source.route}`
-    return parseFeed(await fetchFeed(url), { ...source, type: 'rss', url }, now)
+    return parseFeed(await fetchFeed(url), { ...source, type: 'rss', url }, now, !!window)
   }
   const args = source.type === 'x-list'
     ? ['twitter', 'list-tweets', source.listId]
     : ['twitter', 'tweets', source.username]
-  return parseTweets(await run([...args, '--limit', String(source.limit), '-f', 'json'], config.opencli.profile), source, now)
+  if (!window) return parseTweets(await run([...args, '--limit', String(source.limit), '-f', 'json'], config.opencli.profile), source, now)
+  // OpenCLI owns cursor pagination. Grow the requested prefix until it reaches
+  // the report start; its array response cannot prove exhaustion or full coverage.
+  const items = new Map<string, FeedItem>()
+  let limit = Math.min(config.collection.xMaxItems, Math.max(100, source.limit))
+  while (true) {
+    let batch: FeedItem[]
+    try {
+      batch = parseTweets(await run([...args, '--limit', String(limit), '-f', 'json'], config.opencli.profile), { ...source, limit }, now)
+    } catch (error) {
+      if (!items.size) throw error
+      // Preserve already fetched evidence if a larger paginated request fails.
+      break
+    }
+    const size = items.size
+    for (const item of batch) items.set(item.id, item)
+    if (batch.some(item => item.publishedAt && Date.parse(item.publishedAt) < +window.start)
+      || batch.length < limit || items.size === size || limit >= config.collection.xMaxItems) break
+    limit = Math.min(limit * 2, config.collection.xMaxItems)
+  }
+  return [...items.values()]
 }

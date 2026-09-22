@@ -27,7 +27,7 @@ export const feedSourceSchema = z.discriminatedUnion('type', [
 export const feedConfigSchema = z.object({
   archiveDir: z.string().default('./archive/feed-v1'),
   blogCatalog: z.string().min(1).optional(),
-  collection: z.object({ rssConcurrency: z.number().int().min(1).max(8).default(4) }).default({}),
+  collection: z.object({ rssConcurrency: z.number().int().min(1).max(8).default(4), xMaxItems: z.number().int().min(100).max(10000).default(1000) }).default({}),
   sources: z.array(feedSourceSchema).min(1).refine(sources => new Set(sources.map(s => s.id)).size === sources.length, 'Source IDs must be unique'),
   opencli: z.object({ profile: z.string().min(1).optional() }).default({}),
   rsshub: z.object({ baseUrl: httpUrl.default('https://rsshub.app') }).default({}),

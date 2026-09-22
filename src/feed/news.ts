@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
-import { setTimeout as delay } from 'node:timers/promises'
 import { z } from 'zod'
 import type { FeedConfig } from './config.js'
 import type { StoredItem } from './store.js'
@@ -20,19 +19,20 @@ const itemSchema = z.object({
   contentKind: z.enum(['feed-content', 'feed-summary', 'link-metadata', 'title-only', 'post']),
   change: z.enum(['new', 'updated', 'unchanged', 'resurfaced', 'observed']),
 })
-const windowSchema = z.object({ start: timestamp, end: timestamp, basis: z.literal('collectedAt') })
+const windowSchema = z.object({ start: timestamp, end: timestamp, basis: z.enum(['collectedAt', 'publishedAt']) })
 export const newsSchema = z.object({
   version: z.literal('news-list-v1'), snapshotId: z.string().uuid(), snapshotPath: z.string(), createdAt: timestamp,
   edition: z.enum(['morning', 'evening', 'custom']), window: windowSchema,
+  observedThrough: timestamp.optional(),
   publicationFilter: z.object({
     basis: z.literal('publishedAt'), scope: z.literal('news'), missingDate: z.literal('exclude'), included: z.number().int().nonnegative(),
     excluded: z.object({ beforeStart: z.number().int().nonnegative(), atOrAfterEnd: z.number().int().nonnegative(), missingDate: z.number().int().nonnegative(), invalidDate: z.number().int().nonnegative() }),
   }).optional(),
   status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), maxPicks: z.number().int() }),
-  coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), note: z.string() }),
+  coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), incompleteSources: z.array(z.string()).default([]), note: z.string() }),
   items: z.array(itemSchema),
   blogs: z.array(itemSchema).default([]),
-  baseline: z.object({ snapshotId: z.string().uuid(), snapshotPath: z.string(), window: windowSchema, status: z.enum(['ready', 'partial', 'empty']), items: z.array(itemSchema), blogs: z.array(itemSchema).default([]), coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), note: z.string() }) }).nullable(),
+  baseline: z.object({ snapshotId: z.string().uuid(), snapshotPath: z.string(), window: windowSchema, observedThrough: timestamp.optional(), status: z.enum(['ready', 'partial', 'empty']), items: z.array(itemSchema), blogs: z.array(itemSchema).default([]), coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), incompleteSources: z.array(z.string()).default([]), note: z.string() }) }).nullable(),
   counts: z.record(z.number().int().nonnegative()),
   evidenceSha256: z.string().regex(/^[a-f0-9]{64}$/),
 })
@@ -74,20 +74,21 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     if (+expected.start !== +start || +expected.end !== +end) throw new Error('Edition window does not match Asia/Shanghai cutoff')
     if (options.edition === 'evening' && previous?.edition !== 'morning') throw new Error('Evening baseline must be a morning snapshot')
   }
+  let observedThrough = end
   if (options.refresh) {
     const day = shanghaiDay(end)
     if (day !== shanghaiDay()) throw new Error('--refresh only supports today; historical editions read the archive without --refresh')
     if (previous && (shanghaiDay(new Date(previous.window.end)) !== day || Date.parse(previous.window.end) >= Date.now())) throw new Error('Evening baseline must end earlier today')
-    // Collect every configured channel once, then include that batch in this edition.
-    const result = await collect(config)
-    // The archive uses [start, end); even an instant collection must precede end.
-    if (Date.now() <= Date.parse(result.collectedAt)) await delay(Date.parse(result.collectedAt) - Date.now() + 1)
-    end = new Date()
-    if (shanghaiDay(end) !== day) throw new Error('Collection crossed midnight; data is archived, but this edition must be generated with an explicit custom window')
-    start = previous ? new Date(previous.window.end) : new Date(+end - 24 * 3600000)
+    // The publication cutoff is fixed even when collection finishes later.
+    if (previous) start = new Date(previous.window.end)
+    if (+start >= +end) throw new Error('Baseline must end before the edition cutoff')
+    const result = await collect(config, { publicationWindow: { start, end } })
+    // Evidence uses a half-open observation interval; include this batch even
+    // when collection and query finish in the same millisecond.
+    observedThrough = new Date(Math.max(Date.now(), Date.parse(result.collectedAt)) + 1)
   }
   return new FeedStore(config.archiveDir).withLock(async () => {
-    const evidence = await readEvidenceWindow(config.archiveDir, start, end)
+    const evidence = await readEvidenceWindow(config.archiveDir, start, observedThrough, previous?.observedThrough ? new Date(previous.observedThrough) : start)
     const classified = evidence.items.map(item => belongsToBlog(item.url, config.sources) ? { ...item, channel: 'blogs' as const } : item)
     // A direct blog article takes precedence over community metadata for its URL.
     const blogUrls = new Set(classified.filter(item => isBlog(item) && item.contentKind !== 'link-metadata').map(item => item.url))
@@ -126,6 +127,7 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     const blogs = all.filter(item => blogIds.has(item.id)).sort((a, b) => (b.publishedAt || b.observedAt).localeCompare(a.publishedAt || a.observedAt))
     const failedSources = evidence.results.filter(r => r.status === 'failed').map(r => r.sourceId)
     const missingSources = config.sources.filter(s => s.enabled && !evidence.results.some(r => r.sourceId === s.id)).map(s => s.id)
+    const incompleteSources = evidence.results.filter(r => r.windowStartReached === false).map(r => r.sourceId)
     const snapshotId = randomUUID()
     const directory = path.join(config.archiveDir, 'snapshots', snapshotId)
     const snapshotPath = path.join(directory, 'news.json')
@@ -135,14 +137,15 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     for (const item of all) counts[item.change]++
     const result: NewsList = {
       version: 'news-list-v1', snapshotId, snapshotPath, createdAt: new Date().toISOString(), edition: options.edition || 'custom',
-      window: { start: start.toISOString(), end: end.toISOString(), basis: 'collectedAt' },
+      window: { start: start.toISOString(), end: end.toISOString(), basis: 'publishedAt' },
+      observedThrough: observedThrough.toISOString(),
       publicationFilter,
-      status: !all.length ? 'empty' : failedSources.length || missingSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
+      status: !all.length ? 'empty' : failedSources.length || missingSources.length || incompleteSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
       preferences: { interests: config.curation.interests, maxPicks: config.curation.maxPicks },
-      coverage: { complete: false, observations: evidence.observations, failedSources, missingSources,
-        note: '有限 RSS/X 快照，不能保证全量覆盖。先按采集时间读取证据，新闻再按来源提供的发布时间筛选同一窗口；无有效发布时间的新闻不纳入。博客保留窗口内观察到的更新，不限制发布时间。未再出现不表示撤稿；原文变化不等于事件进展。' },
+      coverage: { complete: false, observations: evidence.observations, failedSources, missingSources, incompleteSources,
+        note: '有限 RSS/X 快照，不能保证全量覆盖。新闻按固定发布时间窗口筛选；observedThrough 单独记录可用采集批次的截止时间，刷新补采不会移动报告截止；无有效发布时间的新闻不纳入。博客保留截至 observedThrough 观察到的更新，晚报从早报 observedThrough 接续，不限制发布时间。未再出现不表示撤稿；原文变化不等于事件进展。' },
       items, blogs,
-      baseline: previous ? { snapshotId: previous.snapshotId, snapshotPath: path.resolve(options.baseline!), window: previous.window, status: previous.status, items: previous.items, blogs: previous.blogs, coverage: previous.coverage } : null,
+      baseline: previous ? { snapshotId: previous.snapshotId, snapshotPath: path.resolve(options.baseline!), window: previous.window, observedThrough: previous.observedThrough, status: previous.status, items: previous.items, blogs: previous.blogs, coverage: previous.coverage } : null,
       counts, evidenceSha256: hashBytes(packed),
     }
     parseNews(result)

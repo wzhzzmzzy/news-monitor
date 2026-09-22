@@ -81,7 +81,7 @@ it('keeps new and changed blogs once per window, without treating subsequent pol
   expect(window.items[0]).toMatchObject({ content: 'updated', change: 'updated' })
 })
 
-it('separates blog snapshots from Agent decisions and renders every blog in a fourth group including email', async () => {
+it('separates blog snapshots from Agent decisions and renders every blog in an independent group including email', async () => {
   const time = '2026-09-21T01:00:00.000Z'
   const items = await new FeedStore(dir).merge([raw('blog-post', time), { ...raw('news-post', time), url: 'https://news.example/post', channel: 'news' }])
   await writeJson(path.join(dir, 'runs', '2026-09-21-first', 'source-pack.json'), { version: 1, collectedAt: time, items, results: [] })
@@ -97,9 +97,9 @@ it('separates blog snapshots from Agent decisions and renders every blog in a fo
     const output = path.join(dir, email ? 'email.html' : 'web.html')
     await renderAgentReport(snapshot.snapshotPath, path.join(dir, 'decision.json'), output, email)
     const { document } = parseHTML(await fs.readFile(output, 'utf8'))
-    expect(document.querySelectorAll('[data-panel]')).toHaveLength(4)
+    expect(document.querySelectorAll('[data-panel]')).toHaveLength(3)
     expect(document.querySelectorAll('#panel-blogs [data-entry]')).toHaveLength(1)
-    expect(document.querySelectorAll('#panel-other [data-entry]')).toHaveLength(1)
+    expect(document.querySelectorAll('#panel-timeline [data-entry]')).toHaveLength(1)
     expect(document.querySelector('#panel-blogs .why')).toBeNull()
     if (email) expect(document.querySelector('#panel-blogs h2')?.textContent).toBe('博客')
   }

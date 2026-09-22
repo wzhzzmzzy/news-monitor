@@ -2,14 +2,14 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { FeedConfig } from './config.js'
-import { collectSource, type FeedItem, type SourceResult } from './collect.js'
+import { collectSource, type FeedItem, type SourceResult, type PublicationWindow } from './collect.js'
 import { FeedStore, writeJson } from './store.js'
 import { renderFeed } from './view.js'
 import { localizeItems } from './localize.js'
 import type { Curation } from './curate.js'
 import { belongsToBlog, isBlog } from './blogs.js'
 
-export async function runFeed(config: FeedConfig, options: { analyze?: boolean; channel?: 'news' | 'blogs' } = {}, collect = collectSource, localize = localizeItems) {
+export async function runFeed(config: FeedConfig, options: { analyze?: boolean; channel?: 'news' | 'blogs'; publicationWindow?: PublicationWindow } = {}, collect = collectSource, localize = localizeItems) {
   if (options.analyze) throw new Error('Editorial analysis belongs to the calling agent; use news and render')
   const store = new FeedStore(config.archiveDir)
   return store.withLock(async () => {
@@ -27,12 +27,15 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
       }
       const isFeed = source.type === 'rss' || source.type === 'rsshub'
       try {
-        const collected = (await collect(source, config, now)).map(item => ({ ...item, fetchedAt: new Date().toISOString(),
+        const collected = (await collect(source, config, now, undefined, options.publicationWindow)).map(item => ({ ...item, fetchedAt: new Date().toISOString(),
           channel: isBlog(source) || belongsToBlog(item.url, config.sources) ? 'blogs' as const : item.channel,
         }))
+        const windowStartReached = !isFeed && options.publicationWindow
+          ? collected.some(item => item.publishedAt && Date.parse(item.publishedAt) < +options.publicationWindow!.start) : undefined
         batches[index] = { items: collected, result: { sourceId: source.id, sourceName: source.name, status: 'ok', count: collected.length,
           coverage: isFeed ? 'feed-snapshot' : 'unknown',
-          note: isFeed ? 'RSS 当前快照，正文完整性未核验' : 'X 有限条目快照；上游可能返回部分分页，时间覆盖未知',
+          ...(windowStartReached !== undefined ? { windowStartReached } : {}),
+          note: isFeed ? 'RSS 当前快照，正文完整性未核验' : windowStartReached === false ? 'X 未确认回溯到窗口起点；可能达到采集上限、上游截断或分页失败，已保留成功取得的条目' : 'X 有限条目快照；上游可能返回部分分页，时间覆盖未知',
         } }
       } catch {
         batches[index] = { items: [], result: { sourceId: source.id, sourceName: source.name, status: 'failed', count: 0, coverage: 'unknown',
@@ -57,7 +60,9 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
     await fs.writeFile(path.join(runDir, 'preview.html'), html, { mode: 0o600 })
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false })
     const backlog = options.channel === 'news' ? [] : await store.readBlogs()
-    const reading = await localize([...new Map([...backlog, ...stored].map(item => [item.id, item])).values()], config)
+    const candidates = [...new Map([...backlog, ...stored].map(item => [item.id, item])).values()]
+    const reading = await localize(options.publicationWindow ? candidates.filter(item => isBlog(item) ||
+      (item.publishedAt && Date.parse(item.publishedAt) >= +options.publicationWindow!.start && Date.parse(item.publishedAt) < +options.publicationWindow!.end)) : candidates, config)
     await writeJson(path.join(runDir, 'reading-pack.json'), reading)
     const newsCount = reading.items.filter(item => !isBlog(item)).length
     const curation: Curation = { status: 'disabled', entries: {}, total: newsCount, selected: 0, reading: newsCount, other: 0, cached: 0, note: '由调用方 Agent 筛选新闻；博客独立展示' }

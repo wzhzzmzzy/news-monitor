@@ -24,10 +24,10 @@ function mount(input = items) {
   return { html, document, window, location }
 }
 
-it('navigates and searches the fourth blog tab while keeping blogs out of ranked groups', () => {
+it('navigates and searches the second blog tab while keeping blogs out of ranked groups', () => {
   const blog = { ...items[0], id: 'blog', channel: 'blogs' as const, publishedAt: '2026-09-22T01:00:00Z' }
   const { document, window } = mount([...items, blog])
-  const key = new window.Event('keydown'); Object.assign(key, { key: 'End' })
+  const key = new window.Event('keydown'); Object.assign(key, { key: 'ArrowRight' })
   document.querySelector('#tab-picks')!.dispatchEvent(key)
   expect(document.querySelector('#tab-blogs')!.getAttribute('aria-selected')).toBe('true')
   expect(document.querySelector('#panel-blogs')!.hasAttribute('hidden')).toBe(false)
@@ -42,15 +42,15 @@ it('navigates and searches the fourth blog tab while keeping blogs out of ranked
 it('opens the shortlist by default and supports tabs, topic filtering, search, reset and empty states', () => {
   const { document, window } = mount()
   expect(document.querySelector('#panel-picks')!.hasAttribute('hidden')).toBe(false)
-  expect(document.querySelector('#panel-other')!.hasAttribute('hidden')).toBe(true)
+  expect(document.querySelector('#panel-timeline')!.hasAttribute('hidden')).toBe(true)
   expect(document.querySelector('#tab-picks')!.getAttribute('aria-selected')).toBe('true')
   ;(document.querySelector('[data-topic="商业"]') as HTMLElement).click()
   expect(document.querySelector('#panel-picks [data-entry]')!.hasAttribute('hidden')).toBe(true)
   expect(document.querySelector('#panel-picks [data-empty]')!.hasAttribute('hidden')).toBe(false)
-  ;(document.querySelector('#tab-other') as HTMLElement).click()
-  expect(document.querySelector('#panel-other')!.hasAttribute('hidden')).toBe(false)
-  const low = document.querySelector('#panel-other [data-entry]')!
-  expect(low.tagName).toBe('DETAILS')
+  ;(document.querySelector('#tab-timeline') as HTMLElement).click()
+  expect(document.querySelector('#panel-timeline')!.hasAttribute('hidden')).toBe(false)
+  const low = document.querySelector('#panel-timeline [data-category="商业"]')!
+  expect(low.tagName).toBe('ARTICLE')
   expect(low.hasAttribute('open')).toBe(false)
   const input = document.querySelector('#search') as HTMLInputElement
   input.value = 'not-found'
@@ -61,13 +61,13 @@ it('opens the shortlist by default and supports tabs, topic filtering, search, r
   expect(low.hasAttribute('hidden')).toBe(false)
   const key = new window.Event('keydown')
   Object.assign(key, { key: 'Home' })
-  document.querySelector('#tab-other')!.dispatchEvent(key)
+  document.querySelector('#tab-timeline')!.dispatchEvent(key)
   expect(document.querySelector('#tab-picks')!.getAttribute('aria-selected')).toBe('true')
 })
 
 it('follows duplicate-event links across tabs and clears filters to reveal the primary story', () => {
   const { document, window, location } = mount()
-  ;(document.querySelector('#tab-other') as HTMLElement).click()
+  ;(document.querySelector('#tab-timeline') as HTMLElement).click()
   ;(document.querySelector('[data-topic="商业"]') as HTMLElement).click()
   const target = document.querySelector('#panel-picks [data-entry]')!
   location.hash = '#' + target.id
@@ -75,15 +75,16 @@ it('follows duplicate-event links across tabs and clears filters to reveal the p
   expect(document.querySelector('#tab-picks')!.getAttribute('aria-selected')).toBe('true')
   expect(target.hasAttribute('hidden')).toBe(false)
   expect(document.querySelector('[data-topic="全部"]')!.getAttribute('aria-pressed')).toBe('true')
-  ;(document.querySelector('#tab-other') as HTMLElement).click()
-  ;(document.querySelector('#panel-other .why a') as HTMLElement).click()
+  ;(document.querySelector('#tab-timeline') as HTMLElement).click()
+  ;(document.querySelector('#panel-timeline .why a') as HTMLElement).click()
   expect(document.querySelector('#tab-picks')!.getAttribute('aria-selected')).toBe('true')
 })
 
 it('retains every item without JavaScript and gives email a script-free sequential reading layout', () => {
   const html = renderFeed(items, [], '归档', undefined, undefined, editorial)
   const { document } = parseHTML(html)
-  expect(document.querySelectorAll('[data-entry]')).toHaveLength(3)
+  expect(document.querySelectorAll('[data-entry]')).toHaveLength(4)
+  expect(new Set([...document.querySelectorAll('[data-entry]')].map(e => e.id)).size).toBe(4)
   expect([...document.querySelectorAll('[data-panel]')].every(p => !p.hasAttribute('hidden'))).toBe(true)
   expect(document.querySelectorAll('script')).toHaveLength(1)
   expect(document.querySelector('script')!.textContent).toBe(readerScript)
@@ -102,3 +103,14 @@ it('escapes model and source text without interpolating it into the executable s
   expect(document.querySelector('a[href^="javascript:"]')).toBeNull()
   expect(document.querySelector('.headline')!.textContent).toContain(unsafe)
 })
+
+ it('orders the timeline by publication time, groups Beijing dates and leaves unknown times last', () => {
+  const input = items.map((item, index) => ({...item, publishedAt: ['2026-09-21T16:30:00Z', '2026-09-21T15:30:00Z', 'invalid'][index]}))
+  const { document, window } = mount(input)
+  ;(document.querySelector('#tab-timeline') as HTMLElement).click()
+  expect([...document.querySelectorAll('#panel-timeline time')].map(e => e.textContent)).toEqual(['00:30', '23:30', '—'])
+  expect([...document.querySelectorAll('.timeline-date')].map(e => e.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('2026-09-22'), expect.stringContaining('2026-09-21'), expect.stringContaining('时间未知')]))
+  const search = document.querySelector('#search') as HTMLInputElement
+  search.value = '新闻 1'; search.dispatchEvent(new window.Event('input'))
+  expect([...document.querySelectorAll('[data-timeline-group]')].filter(e => !e.hasAttribute('hidden'))).toHaveLength(1)
+ })

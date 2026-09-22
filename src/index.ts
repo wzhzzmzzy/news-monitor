@@ -52,13 +52,13 @@ cli.command('report', 'Compatibility: unranked archive preview; use news + Agent
 
 cli.command('news', 'Return a frozen JSON news list for an external agent; never ranks or writes prose')
   .option('-c, --config <file>', 'Configuration file', configOption)
-  .option('--hours <number>', 'Custom observation window in hours', { default: 24 })
+  .option('--hours <number>', 'Custom publication window in hours', { default: 24 })
   .option('--start <time>', 'Custom window start (ISO with timezone)')
   .option('--end <time>', 'Custom window end (ISO with timezone)')
   .option('--edition <name>', 'morning (24h to 10:00) or evening (10:00–20:00), Asia/Shanghai')
   .option('--day <date>', 'Edition date YYYY-MM-DD, default today in Asia/Shanghai')
   .option('--baseline <file>', 'Frozen morning news.json; required for evening')
-  .option('--refresh', 'Collect news and blogs once before today’s edition; end at collection completion')
+  .option('--refresh', 'Refresh RSS/X for today’s edition while keeping the fixed publication cutoff')
   .action(async options => {
     try {
       if (options.edition && (options.start || options.end)) throw new Error('Use --edition/--day or --start/--end')
@@ -70,15 +70,19 @@ cli.command('news', 'Return a frozen JSON news list for an external agent; never
     } catch (error) { showError(error) }
   })
 
-cli.command('render', 'Render externally authored decisions; no model calls, fetching or delivery')
+cli.command('render', 'Render Agent decisions; optionally publish a public Koalablog memo')
   .option('--snapshot <file>', 'Frozen news.json')
   .option('--decisions <file>', 'Agent-authored agent-report-v1 JSON')
   .option('--output <file>', 'New HTML file; existing files are never overwritten')
   .option('--email', 'Generate an email-compatible HTML artifact without sending')
+  .option('--publish-koalablog', 'Publish report data for the public Svelte reader')
+  .option('--koalablog-update-shell', 'Update the Svelte reader Source; Dashboard Deploy is then required')
+  .option('--koalablog-url <url>', 'Koalablog HTTPS origin', { default: 'https://koala.wzhzzmzzy.workers.dev' })
+  .option('--koalablog-token-env <name>', 'API token environment variable name', { default: 'KOALABLOG_API_TOKEN' })
   .action(async options => {
     try {
       if (!options.snapshot || !options.decisions || !options.output) throw new Error('render requires --snapshot, --decisions and --output')
-      console.log(JSON.stringify(await renderAgentReport(options.snapshot, options.decisions, options.output, options.email), null, 2))
+      console.log(JSON.stringify(await renderAgentReport(options.snapshot, options.decisions, options.output, options.email, options.publishKoalablog ? { url: options.koalablogUrl, tokenEnv: options.koalablogTokenEnv, updateShell: options.koalablogUpdateShell } : undefined), null, 2))
     } catch (error) { showError(error) }
   })
 

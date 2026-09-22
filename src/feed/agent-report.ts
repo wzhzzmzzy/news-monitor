@@ -4,6 +4,9 @@ import { z } from 'zod'
 import type { Curation } from './curate.js'
 import { loadNews, loadSnapshotEvidence, type NewsList } from './news.js'
 import { renderFeed } from './view.js'
+import { publishReader, type KoalablogOptions } from './koalablog.js'
+import { makeReaderReport, dataMarkdown } from './reader-data.js'
+import { writeJson } from './store.js'
 
 const topic = z.enum(['AI', '技术', '商业', '人文', '综合'])
 export const agentReportSchema = z.object({
@@ -31,7 +34,7 @@ export function validateAgentReport(value: unknown, snapshot: NewsList) {
   return report
 }
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
-export async function renderAgentReport(snapshotFile: string, decisionFile: string, output: string, email = false) {
+export async function renderAgentReport(snapshotFile: string, decisionFile: string, output: string, email = false, koalablog?: KoalablogOptions) {
   const snapshot = await loadNews(snapshotFile)
   const pack = await loadSnapshotEvidence(snapshot, snapshotFile)
   const report = validateAgentReport(JSON.parse(await fs.readFile(decisionFile, 'utf8')), snapshot)
@@ -49,7 +52,7 @@ export async function renderAgentReport(snapshotFile: string, decisionFile: stri
     return /^https?:\/\//i.test(item.url) ? `<a href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${label}</a>` : label
   }
   const kinds = { overview: '综述', new: '新增', update: '进展', correction: '更正', watch: '观察' }
-  const editorial = `<section aria-label="Agent 编辑报告" style="padding:28px 0 16px;border-bottom:1px solid var(--line)"><h2>${escape(report.title)}</h2><p style="white-space:pre-wrap">${escape(report.summary)}</p>${report.sections.map(s => `<article style="margin-top:24px"><p class="kicker">${kinds[s.kind]}</p><h3>${escape(s.title)}</h3><p style="white-space:pre-wrap">${escape(s.body)}</p><p class="meta">${s.beforeIds.map(id => citation(id, true)).concat(s.evidenceIds.map(id => citation(id))).join(' · ')}</p></article>`).join('')}</section>`
+  const editorial = `<section aria-label="Agent 编辑报告" style="padding:28px 0 16px;border-bottom:1px solid var(--line)"><h2>${escape(report.title)}</h2>${report.summary.trim() ? `<p style="white-space:pre-wrap">${escape(report.summary)}</p>` : ''}${report.sections.map(s => `<article style="margin-top:24px">${s.kind === 'overview' ? '' : `<p class="kicker">${kinds[s.kind]}</p><h3>${escape(s.title)}</h3>`}<p style="white-space:pre-wrap">${escape(s.body)}</p><p class="meta">${s.beforeIds.map(id => citation(id, true)).concat(s.evidenceIds.map(id => citation(id))).join(' · ')}</p></article>`).join('')}</section>`
   let html = renderFeed(pack.items, pack.results, `${snapshot.window.start} — ${snapshot.window.end}`, undefined, pack.stats, curation, { email })
   html = html.replace('</header>', `</header>${editorial}`).replace('<title>值得读 · News Feed</title>', `<title>${escape(report.title)}</title>`)
     .replace('译文、摘要与阅读筛选由模型生成', '译文与摘要由配置的模型生成；精选、变化判断与报告由调用方 Agent 编写')
@@ -57,6 +60,18 @@ export async function renderAgentReport(snapshotFile: string, decisionFile: stri
   const protectedFiles = [snapshotFile, decisionFile, path.join(path.dirname(snapshotFile), 'reading-pack.json')].map(p => path.resolve(p))
   if (protectedFiles.includes(target)) throw new Error('Output must not overwrite input evidence or decisions')
   await fs.mkdir(path.dirname(target), { recursive: true })
-  await fs.writeFile(target, html, { flag: 'wx', mode: 0o600 })
-  return { output: target, snapshotId: snapshot.snapshotId, count: snapshot.items.length + snapshot.blogs.length, blogs: snapshot.blogs.length, selected: picks.size, email }
+  try { await fs.writeFile(target, html, { flag: 'wx', mode: 0o600 }) }
+  catch (error) {
+    if (!koalablog || (error as NodeJS.ErrnoException).code !== 'EEXIST' || await fs.readFile(target, 'utf8') !== html) throw error
+  }
+  let publication
+  if (koalablog) {
+    const { content, latest } = makeReaderReport(snapshot, report)
+    await fs.writeFile(`${target}.report.md`, content, { mode: 0o600 })
+    await fs.writeFile(`${target}.latest-candidate.md`, dataMarkdown(latest), { mode: 0o600 })
+    await fs.copyFile(new URL('../../templates/news-feed.svelte', import.meta.url), `${target}.svelte`)
+    publication = await publishReader(snapshot, report, koalablog)
+    await writeJson(`${target}.koalablog.json`, publication)
+  }
+  return { output: target, snapshotId: snapshot.snapshotId, count: snapshot.items.length + snapshot.blogs.length, blogs: snapshot.blogs.length, selected: picks.size, email, ...(publication ? { publication } : {}) }
 }
