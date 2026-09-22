@@ -174,3 +174,5 @@ pnpm build
 ```
 
 测试使用临时目录、本地数据和模拟模型/邮件，不访问私人账号。历史 PRD/specs 描述旧系统，当前设计以本文及 Skill 协议为准。
+
+阅读入口的页面描述采用模板中的固定简介“每日自动更新的 RSS、X、HN 新闻汇总”。Koalablog 从已部署 Svelte 快照的首个段落提取 description / og:description；修改简介后需要更新页面 Source 并在 Dashboard Deploy，普通日报数据更新不会覆盖它。

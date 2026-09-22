@@ -129,6 +129,7 @@
 </script>
 
 <div class="reader">
+  <p class="page-description">每日自动更新的 RSS、X、HN 新闻汇总</p>
   <div class="toolbar">
     <label class="date">日期 <input type="date" bind:value={day} onchange={chooseDay} aria-label="报告日期" /></label>
     <div class="editions" aria-label="选择报告">
@@ -229,6 +230,7 @@
 </div>
 
 <style>
+  .page-description{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.7}
   .reader{--ink:#253630;--muted:#768078;--line:#dde3de;--accent:#2d6851;color:var(--ink);font-family:system-ui,-apple-system,'PingFang SC',sans-serif;font-size:15px;line-height:1.75;width:100%;margin:0 auto;padding:8px 0 44px}
   button,input,select{font:inherit;color:inherit}button{cursor:pointer;border:0;background:transparent}button:disabled{opacity:.5;cursor:wait}a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
   .toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--line);padding-bottom:16px;font-size:12px}.date{display:flex;align-items:center;gap:8px;color:var(--muted)}input[type=date]{width:138px;background:transparent;border:0;color:var(--ink)}.editions{display:flex;gap:3px}.editions button{padding:3px 9px;border-radius:4px}.chosen{background:#eaf1ec;color:var(--accent)}.refresh{margin-left:auto;color:var(--accent)}
