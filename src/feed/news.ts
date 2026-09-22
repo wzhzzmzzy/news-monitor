@@ -24,6 +24,10 @@ const windowSchema = z.object({ start: timestamp, end: timestamp, basis: z.liter
 export const newsSchema = z.object({
   version: z.literal('news-list-v1'), snapshotId: z.string().uuid(), snapshotPath: z.string(), createdAt: timestamp,
   edition: z.enum(['morning', 'evening', 'custom']), window: windowSchema,
+  publicationFilter: z.object({
+    basis: z.literal('publishedAt'), scope: z.literal('news'), missingDate: z.literal('exclude'), included: z.number().int().nonnegative(),
+    excluded: z.object({ beforeStart: z.number().int().nonnegative(), atOrAfterEnd: z.number().int().nonnegative(), missingDate: z.number().int().nonnegative(), invalidDate: z.number().int().nonnegative() }),
+  }).optional(),
   status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), maxPicks: z.number().int() }),
   coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), note: z.string() }),
   items: z.array(itemSchema),
@@ -52,6 +56,7 @@ export function parseNews(value: unknown): NewsList {
     if (new Set(items.map(i => i.id)).size !== items.length) throw new Error('Duplicate snapshot item IDs')
   }
   if (Date.parse(list.window.end) <= Date.parse(list.window.start)) throw new Error('Invalid snapshot window')
+  if (list.publicationFilter && (list.publicationFilter.included !== list.items.length || list.items.some(item => !item.publishedAt || Date.parse(item.publishedAt) < Date.parse(list.window.start) || Date.parse(item.publishedAt) >= Date.parse(list.window.end)))) throw new Error('Snapshot news does not match its publication window')
   return list
 }
 export async function loadNews(file: string) { return parseNews(JSON.parse(await fs.readFile(file, 'utf8'))) }
@@ -86,9 +91,22 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     const classified = evidence.items.map(item => belongsToBlog(item.url, config.sources) ? { ...item, channel: 'blogs' as const } : item)
     // A direct blog article takes precedence over community metadata for its URL.
     const blogUrls = new Set(classified.filter(item => isBlog(item) && item.contentKind !== 'link-metadata').map(item => item.url))
+    const publicationFilter: NonNullable<NewsList['publicationFilter']> = { basis: 'publishedAt', scope: 'news', missingDate: 'exclude', included: 0,
+      excluded: { beforeStart: 0, atOrAfterEnd: 0, missingDate: 0, invalidDate: 0 } }
+    const eligible = classified.filter(item => {
+      if (isBlog(item)) return !(item.contentKind === 'link-metadata' && blogUrls.has(item.url))
+      // A recent observation does not make an old or undated article recent news.
+      if (!item.publishedAt) { publicationFilter.excluded.missingDate++; return false }
+      if (!timestamp.safeParse(item.publishedAt).success) { publicationFilter.excluded.invalidDate++; return false }
+      const published = Date.parse(item.publishedAt)
+      if (published < +start) { publicationFilter.excluded.beforeStart++; return false }
+      if (published >= +end) { publicationFilter.excluded.atOrAfterEnd++; return false }
+      publicationFilter.included++
+      return true
+    })
     // Collection already spent the blog translation budget; reuse its cache here.
     const readingConfig = options.refresh ? { ...config, localization: { ...config.localization, blogBatchSize: 0 } } : config
-    const reading = await localize(classified.filter(item => !(isBlog(item) && item.contentKind === 'link-metadata' && blogUrls.has(item.url))), readingConfig)
+    const reading = await localize(eligible, readingConfig)
     const old = new Map([...(previous?.items || []), ...(previous?.blogs || [])].map(i => [i.id, i]))
     const all: NewsItem[] = reading.items.map((item): NewsItem => {
       const revision = contentRevision(item)
@@ -118,10 +136,11 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     const result: NewsList = {
       version: 'news-list-v1', snapshotId, snapshotPath, createdAt: new Date().toISOString(), edition: options.edition || 'custom',
       window: { start: start.toISOString(), end: end.toISOString(), basis: 'collectedAt' },
-      status: !all.length ? 'empty' : failedSources.length || missingSources.length || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
+      publicationFilter,
+      status: !all.length ? 'empty' : failedSources.length || missingSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
       preferences: { interests: config.curation.interests, maxPicks: config.curation.maxPicks },
       coverage: { complete: false, observations: evidence.observations, failedSources, missingSources,
-        note: '有限 RSS/X 快照，不能保证窗口内所有新闻均已采集；窗口按观察时间，不按发布时间。未再出现的条目不表示撤稿；原始文本变化不等于事件取得进展。' },
+        note: '有限 RSS/X 快照，不能保证全量覆盖。先按采集时间读取证据，新闻再按来源提供的发布时间筛选同一窗口；无有效发布时间的新闻不纳入。博客保留窗口内观察到的更新，不限制发布时间。未再出现不表示撤稿；原文变化不等于事件进展。' },
       items, blogs,
       baseline: previous ? { snapshotId: previous.snapshotId, snapshotPath: path.resolve(options.baseline!), window: previous.window, status: previous.status, items: previous.items, blogs: previous.blogs, coverage: previous.coverage } : null,
       counts, evidenceSha256: hashBytes(packed),

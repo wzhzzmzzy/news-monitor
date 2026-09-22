@@ -66,7 +66,7 @@ Skill 本身不提供网络连接。具备本机命令工具的 ChatGPT/其他 A
 
 ## 10:00 早报与 20:00 增量报
 
-默认随每天早报、晚报各采集一次：新闻 RSS/X 与博客共用同一轮抓取、归档和中文处理，无需另启博客定时任务或 `serve`。全部按北京时间，窗口使用实际采集批次时间与半开区间：
+默认随每天早报、晚报各采集一次：新闻 RSS/X 与博客共用同一轮抓取、归档和中文处理，无需另启博客定时任务或 `serve`。全部按北京时间，窗口采用半开区间 `[start, end)`：先限定采集批次，再限定新闻的发布时间。
 
 ```bash
 # 10:00 开始生成早报：先统一采集，再冻结最近 24 小时，保存 snapshotPath
@@ -78,6 +78,10 @@ node dist/index.js news -c config.yaml --edition evening --refresh --baseline /a
 # Agent 根据列表写 editorial.json；此步骤由 Agent 完成
 node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/editorial.json --output /absolute/report.html
 ```
+
+`news` 对早报、晚报和自定义窗口统一筛选新闻：来源提供的 `publishedAt` 必须落在报告窗口内。早报取实际截止前 24 小时，晚报取实际早报截止至本轮截止；包括起点，不包括终点。缺少或无效的发布时间、旧文及截止后的文章不进入新闻候选；再次采集或正文变化不会绕过发布时间限制。HN 等社区 Feed 的时间是提交时间，不保证等于外链原文发布时间。
+
+筛选发生在快照层：RSS 返回的原始条目照常归档，`collect` 的中文处理与归档预览仍保留；独立博客继续展示观察窗口内的新内容和更新，不受新闻发布时间筛选影响。快照 `publicationFilter` 记录纳入数量及排除原因；缺少或无效日期导致内容被排除时，非空快照标记为 partial。旧快照和已发布报告不会自动改写，重新生成后才应用新规则。
 
 晚报的工具层给出 new/updated/unchanged/resurfaced 和基线全部候选；Agent 再判断“旧事件是否有新进展、意义是什么”。同链接文本更新不等于事件进展，不同链接也可能是同一事件，未再次出现不等于撤稿。增量报告优先展示前后变化及对应引用，重复内容折叠保留。
 

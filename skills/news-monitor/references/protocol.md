@@ -15,12 +15,15 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 `--refresh` 必须搭配 `--edition morning|evening`，仅支持北京时间当天且已到 10:00/20:00 的版次；历史日期、缺失或非当天早报基线会在抓取前拒绝。截止时间取采集和中文处理完成后的实际时间，包含刚保存的批次；早报覆盖此前 24 小时，晚报从当天早报的实际 `window.end` 接续。采集跨到次日则保留原文并报错，使用明确的自定义窗口处理。博客中文额度只在采集阶段使用一次，快照阶段仅复用博客缓存。
 
-不加 `--refresh` 时，`news` 支持自定义 `--start/--end` 或 `--hours`（1–168，默认 24）。历史预设版次只使用北京时间：早报 `[前一天10:00, 当天10:00)`，晚报 `[当天10:00, 当天20:00)`；`--day` 默认北京时间当天。未到截止时间会拒绝生成正式版次，可用明确截止当前的自定义窗口生成预览。基线结束必须恰好等于新窗口开始。晚报必须使用 `edition: morning` 的快照。窗口由采集批次完成时间 collectedAt 决定；截止后完成的批次不会倒填窗口。以第一次观察到的时间区分新增与旧内容重现，不把文章发布时间等同采集时间。
+不加 `--refresh` 时，`news` 支持自定义 `--start/--end` 或 `--hours`（1–168，默认 24）。历史预设版次只使用北京时间：早报 `[前一天10:00, 当天10:00)`，晚报 `[当天10:00, 当天20:00)`；`--day` 默认北京时间当天。未到截止时间会拒绝生成正式版次，可用明确截止当前的自定义窗口生成预览。基线结束必须恰好等于新窗口开始。晚报必须使用 `edition: morning` 的快照。首先按采集批次完成时间 collectedAt 读取证据；截止后完成的批次不会倒填窗口。新闻还必须满足 `start <= publishedAt < end`，用于早报、晚报和自定义窗口；日期缺失、无效、过早或达到/超过截止时间的新闻不会进入 items 或快照 reading-pack。原文归档保留，collect 的中文处理与归档预览仍可包含窗口外文章。博客继续按观察到的更新展示，不受此发布时间筛选影响。
+
+发布时间使用来源提供的字段；HN 时间是社区提交时间，不代表核实过外链原文日期。不用采集时间填补缺失的发布时间，也不因旧文再次出现或正文变化而放宽筛选。早报基线保留原样供对照；`change` 仍描述已入选文章的首次观察/文本版本变化。旧快照保持可读，原有报告不会自动重写，重新生成后才应用筛选。
 
 ## news-list-v1
 
 - `snapshotId` / `snapshotPath`：本次不可覆盖的快照 ID 与文件路径。每次导出产生独立 ID；重复渲染使用相同快照。早报使用哪份快照，就以那份快照作晚报基线。
-- `window`：`start`、`end`、`basis: collectedAt`，ISO 时间与半开区间。
+- `window`：`start`、`end`、`basis: collectedAt`，采集证据窗口，ISO 时间与半开区间；新快照的新闻发布时间也必须落在相同范围。
+- `publicationFilter`：新快照记录 `basis: publishedAt`、`scope: news`、`missingDate: exclude`、`included`，以及 `excluded.beforeStart / atOrAfterEnd / missingDate / invalidDate` 数量。博客不计入这些统计。缺失或无效日期被排除时，非空快照为 partial；旧快照可无此字段。
 - `edition`：`morning | evening | custom`；`status`：`ready | partial | empty`。
 - `coverage`：实际采集批次时间 `observations`，`failedSources`、`missingSources`；`complete` 固定 false，RSS/X 有限快照不承诺全量覆盖。
 - `preferences`：`interests`、`maxPicks`，给 Agent 的偏好和数量建议。

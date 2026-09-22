@@ -15,7 +15,7 @@ let dir: string, config: FeedConfig
 const morning = editionRange('morning', '2026-09-21')
 const evening = editionRange('evening', '2026-09-21')
 async function observe(time: string, values: Array<[string, string]>) {
-  const raw: FeedItem[] = values.map(([id, content]) => ({ id, content, title: `标题${id}`, sourceId: 'rss', sourceName: 'RSS', category: '技术', url: `https://example.com/${id}`, fetchedAt: time, contentKind: 'feed-content', raw: {} }))
+  const raw: FeedItem[] = values.map(([id, content]) => ({ id, content, title: `标题${id}`, sourceId: 'rss', sourceName: 'RSS', category: '技术', url: `https://example.com/${id}`, fetchedAt: time, publishedAt: time, contentKind: 'feed-content', raw: {} }))
   const items = await new FeedStore(dir).merge(raw)
   await writeJson(path.join(dir, 'runs', time.replace(/[:.]/g, '-'), 'source-pack.json'), { version: 1, collectedAt: time, items, results: [{ sourceId: 'rss', sourceName: 'RSS', status: 'ok', count: items.length, coverage: 'feed-snapshot', note: '' }] })
 }
@@ -75,7 +75,7 @@ it('collects news and blogs once per edition and includes the batch after the no
   const collect = vi.fn(async (cfg: FeedConfig) => runFeed(cfg, {}, async source => {
     if (source.id === 'broken') throw new Error('Source offline')
     return [{ id: source.id, sourceId: source.id, sourceName: source.name, category: '技术', title: source.name,
-      content: completion, contentKind: 'feed-content' as const, url: `https://${source.id}.example/article`, fetchedAt: new Date().toISOString(), raw: {} }]
+      content: completion, contentKind: 'feed-content' as const, url: `https://${source.id}.example/article`, fetchedAt: new Date().toISOString(), publishedAt: new Date().toISOString(), raw: {} }]
   }, async (items, cfg) => {
     vi.setSystemTime(new Date(completion))
     return localizeItems(items, cfg)

@@ -105,7 +105,7 @@ it('separates blog snapshots from Agent decisions and renders every blog in a fo
   }
   const moved = { ...snapshot, items: [...snapshot.items, ...snapshot.blogs], blogs: [] }
   await expect(loadSnapshotEvidence(moved, snapshot.snapshotPath)).rejects.toThrow('channel mismatch')
-  const old = { ...snapshot, items: [], blogs: undefined }
+  const old = { ...snapshot, items: [], blogs: undefined, publicationFilter: undefined }
   await writeJson(path.join(dir, 'legacy.json'), old)
   expect((await loadNews(path.join(dir, 'legacy.json'))).blogs).toEqual([])
 })
