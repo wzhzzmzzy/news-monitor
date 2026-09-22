@@ -5,7 +5,7 @@ import type { Curation } from './curate.js'
 import { loadNews, loadSnapshotEvidence, type NewsList } from './news.js'
 import { renderFeed } from './view.js'
 import { publishReader, type KoalablogOptions } from './koalablog.js'
-import { makeReaderReport, dataMarkdown } from './reader-data.js'
+import { makeReaderReport, dataMarkdown, safeUrl } from './reader-data.js'
 import { writeJson } from './store.js'
 
 const topic = z.enum(['AI', '技术', '商业', '人文', '综合'])
@@ -46,13 +46,17 @@ export async function renderAgentReport(snapshotFile: string, decisionFile: stri
       tier: picked ? 'picks' : report.readingIds.includes(item.id) ? 'reading' : 'other', ...(picked ? { rank: picked.rank } : {}) }]
   }))
   const curation: Curation = { status: 'ready', total: snapshot.items.length, selected: picks.size, reading: report.readingIds.length, other: snapshot.items.length - picks.size - report.readingIds.length, cached: 0, entries }
+  let citationNumber = 0
   const citation = (id: string, before = false) => {
     const item = (before ? snapshot.baseline?.items : snapshot.items)?.find(i => i.id === id)!
     const label = escape(`${before ? '早前：' : ''}${item.source} · ${item.title}`)
-    return /^https?:\/\//i.test(item.url) ? `<a href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${label}</a>` : label
+    const number = ++citationNumber
+    const url = safeUrl(item.url)
+    return url ? `<a href="${escape(url)}" target="_blank" rel="noopener noreferrer" title="${label}" aria-label="参考来源 ${number}：${label}" style="margin-left:3px;color:var(--accent)">[${number}]</a>` : `<span title="${label}" style="margin-left:3px">[${number}]</span>`
   }
   const kinds = { overview: '综述', new: '新增', update: '进展', correction: '更正', watch: '观察' }
-  const editorial = `<section aria-label="Agent 编辑报告" style="padding:28px 0 16px;border-bottom:1px solid var(--line)"><h2>${escape(report.title)}</h2>${report.summary.trim() ? `<p style="white-space:pre-wrap">${escape(report.summary)}</p>` : ''}${report.sections.map(s => `<article style="margin-top:24px">${s.kind === 'overview' ? '' : `<p class="kicker">${kinds[s.kind]}</p><h3>${escape(s.title)}</h3>`}<p style="white-space:pre-wrap">${escape(s.body)}</p><p class="meta">${s.beforeIds.map(id => citation(id, true)).concat(s.evidenceIds.map(id => citation(id))).join(' · ')}</p></article>`).join('')}</section>`
+  const overview = report.sections.length ? `<section class="report-overview" aria-labelledby="overview-heading" style="margin:20px 0 0;padding:20px 24px;background:var(--wash);border-radius:8px"><h3 id="overview-heading" style="font-size:12px;letter-spacing:.08em;color:var(--accent);margin:0 0 14px">新闻综述</h3>${report.sections.map(s => `<article style="margin-top:12px">${s.kind === 'overview' ? '' : `<h4 style="font-size:14px;margin:12px 0 6px">${kinds[s.kind]} · ${escape(s.title)}</h4>`}<p style="margin:0;font-size:13px;line-height:1.9;white-space:pre-wrap">${escape(s.body)}<sup class="citations" style="font-size:10px;line-height:0;vertical-align:super;white-space:nowrap">${s.evidenceIds.map(id => citation(id)).concat(s.beforeIds.map(id => citation(id, true))).join('')}</sup></p></article>`).join('')}</section>` : ''
+  const editorial = `<section aria-label="Agent 编辑报告" style="padding:28px 0 24px;border-bottom:1px solid var(--line)"><h2>${escape(report.title)}</h2>${report.summary.trim() ? `<p class="report-note" style="font-size:11px;line-height:1.8;color:var(--muted);white-space:pre-wrap">${escape(report.summary)}</p>` : ''}${overview}</section>`
   let html = renderFeed(pack.items, pack.results, `${snapshot.window.start} — ${snapshot.window.end}`, undefined, pack.stats, curation, { email })
   html = html.replace('</header>', `</header>${editorial}`).replace('<title>值得读 · News Feed</title>', `<title>${escape(report.title)}</title>`)
     .replace('译文、摘要与阅读筛选由模型生成', '译文与摘要由配置的模型生成；精选、变化判断与报告由调用方 Agent 编写')
