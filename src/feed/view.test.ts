@@ -15,14 +15,29 @@ const editorial: Curation = { status: 'ready', total: 3, selected: 1, reading: 1
   '1': { score: 70, topic: '人文', reason: '可补充对话题的理解。', tier: 'reading' },
   '2': { score: 40, topic: '商业', reason: '同一事件重复跟进。', tier: 'other', duplicateOf: '0' },
 } }
-function mount() {
-  const html = renderFeed(items, [], '测试归档', undefined, undefined, editorial)
+function mount(input = items) {
+  const html = renderFeed(input, [], '测试归档', undefined, undefined, editorial)
   const { document, window } = parseHTML(html)
   const location = { hash: '' }
   window.HTMLElement.prototype.scrollIntoView = () => {}
   runInNewContext(readerScript, { document, window, location })
   return { html, document, window, location }
 }
+
+it('navigates and searches the fourth blog tab while keeping blogs out of ranked groups', () => {
+  const blog = { ...items[0], id: 'blog', channel: 'blogs' as const, publishedAt: '2026-09-22T01:00:00Z' }
+  const { document, window } = mount([...items, blog])
+  const key = new window.Event('keydown'); Object.assign(key, { key: 'End' })
+  document.querySelector('#tab-picks')!.dispatchEvent(key)
+  expect(document.querySelector('#tab-blogs')!.getAttribute('aria-selected')).toBe('true')
+  expect(document.querySelector('#panel-blogs')!.hasAttribute('hidden')).toBe(false)
+  expect(document.querySelectorAll('#panel-blogs [data-entry]')).toHaveLength(1)
+  const input = document.querySelector('#search') as HTMLInputElement
+  input.value = 'not-found'; input.dispatchEvent(new window.Event('input'))
+  expect(document.querySelector('#panel-blogs [data-entry]')!.hasAttribute('hidden')).toBe(true)
+  ;(document.querySelector('#clear-filters') as HTMLElement).click()
+  expect(document.querySelector('#panel-blogs [data-entry]')!.hasAttribute('hidden')).toBe(false)
+})
 
 it('opens the shortlist by default and supports tabs, topic filtering, search, reset and empty states', () => {
   const { document, window } = mount()

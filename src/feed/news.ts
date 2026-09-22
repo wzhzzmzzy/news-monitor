@@ -7,6 +7,7 @@ import type { StoredItem } from './store.js'
 import { FeedStore, writeJson } from './store.js'
 import { localizeItems, localizationIncomplete, type ReadingItem } from './localize.js'
 import { readEvidenceWindow, reportRange } from './runtime.js'
+import { belongsToBlog, isBlog } from './blogs.js'
 
 const timestamp = z.string().datetime({ offset: true })
 const itemSchema = z.object({
@@ -24,7 +25,8 @@ export const newsSchema = z.object({
   status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), maxPicks: z.number().int() }),
   coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), note: z.string() }),
   items: z.array(itemSchema),
-  baseline: z.object({ snapshotId: z.string().uuid(), snapshotPath: z.string(), window: windowSchema, status: z.enum(['ready', 'partial', 'empty']), items: z.array(itemSchema), coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), note: z.string() }) }).nullable(),
+  blogs: z.array(itemSchema).default([]),
+  baseline: z.object({ snapshotId: z.string().uuid(), snapshotPath: z.string(), window: windowSchema, status: z.enum(['ready', 'partial', 'empty']), items: z.array(itemSchema), blogs: z.array(itemSchema).default([]), coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), note: z.string() }) }).nullable(),
   counts: z.record(z.number().int().nonnegative()),
   evidenceSha256: z.string().regex(/^[a-f0-9]{64}$/),
 })
@@ -44,7 +46,7 @@ export function shanghaiDay(now = new Date()) { return new Date(+now + 8 * 36000
 
 export function parseNews(value: unknown): NewsList {
   const list = newsSchema.parse(value)
-  for (const items of [list.items, list.baseline?.items || []]) {
+  for (const items of [[...list.items, ...list.blogs], [...(list.baseline?.items || []), ...(list.baseline?.blogs || [])]]) {
     if (new Set(items.map(i => i.id)).size !== items.length) throw new Error('Duplicate snapshot item IDs')
   }
   if (Date.parse(list.window.end) <= Date.parse(list.window.start)) throw new Error('Invalid snapshot window')
@@ -66,9 +68,12 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
   }
   return new FeedStore(config.archiveDir).withLock(async () => {
     const evidence = await readEvidenceWindow(config.archiveDir, start, end)
-    const reading = await localize(evidence.items, config)
-    const old = new Map(previous?.items.map(i => [i.id, i]))
-    const items: NewsItem[] = reading.items.map((item): NewsItem => {
+    const classified = evidence.items.map(item => belongsToBlog(item.url, config.sources) ? { ...item, channel: 'blogs' as const } : item)
+    // A direct blog article takes precedence over community metadata for its URL.
+    const blogUrls = new Set(classified.filter(item => isBlog(item) && item.contentKind !== 'link-metadata').map(item => item.url))
+    const reading = await localize(classified.filter(item => !(isBlog(item) && item.contentKind === 'link-metadata' && blogUrls.has(item.url))), config)
+    const old = new Map([...(previous?.items || []), ...(previous?.blogs || [])].map(i => [i.id, i]))
+    const all: NewsItem[] = reading.items.map((item): NewsItem => {
       const revision = contentRevision(item)
       const before = old.get(item.id)
       return {
@@ -81,6 +86,9 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
         change: !previous ? 'observed' : before ? before.revision === revision ? 'unchanged' : 'updated' : Date.parse(item.firstSeen) < +start ? 'resurfaced' : 'new',
       }
     }).sort((a, b) => a.id.localeCompare(b.id))
+    const blogIds = new Set(reading.items.filter(isBlog).map(item => item.id))
+    const items = all.filter(item => !blogIds.has(item.id))
+    const blogs = all.filter(item => blogIds.has(item.id)).sort((a, b) => (b.publishedAt || b.observedAt).localeCompare(a.publishedAt || a.observedAt))
     const failedSources = evidence.results.filter(r => r.status === 'failed').map(r => r.sourceId)
     const missingSources = config.sources.filter(s => s.enabled && !evidence.results.some(r => r.sourceId === s.id)).map(s => s.id)
     const snapshotId = randomUUID()
@@ -88,17 +96,17 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     const snapshotPath = path.join(directory, 'news.json')
     const pack = { items: reading.items, stats: reading.stats, results: evidence.results }
     const packed = JSON.stringify(pack, null, 2) + '\n'
-    const counts: Record<string, number> = { total: items.length, new: 0, updated: 0, unchanged: 0, resurfaced: 0, observed: 0 }
-    for (const item of items) counts[item.change]++
+    const counts: Record<string, number> = { total: all.length, news: items.length, blogs: blogs.length, new: 0, updated: 0, unchanged: 0, resurfaced: 0, observed: 0 }
+    for (const item of all) counts[item.change]++
     const result: NewsList = {
       version: 'news-list-v1', snapshotId, snapshotPath, createdAt: new Date().toISOString(), edition: options.edition || 'custom',
       window: { start: start.toISOString(), end: end.toISOString(), basis: 'collectedAt' },
-      status: !items.length ? 'empty' : failedSources.length || missingSources.length || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
+      status: !all.length ? 'empty' : failedSources.length || missingSources.length || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
       preferences: { interests: config.curation.interests, maxPicks: config.curation.maxPicks },
       coverage: { complete: false, observations: evidence.observations, failedSources, missingSources,
         note: '有限 RSS/X 快照，不能保证窗口内所有新闻均已采集；窗口按观察时间，不按发布时间。未再出现的条目不表示撤稿；原始文本变化不等于事件取得进展。' },
-      items,
-      baseline: previous ? { snapshotId: previous.snapshotId, snapshotPath: path.resolve(options.baseline!), window: previous.window, status: previous.status, items: previous.items, coverage: previous.coverage } : null,
+      items, blogs,
+      baseline: previous ? { snapshotId: previous.snapshotId, snapshotPath: path.resolve(options.baseline!), window: previous.window, status: previous.status, items: previous.items, blogs: previous.blogs, coverage: previous.coverage } : null,
       counts, evidenceSha256: hashBytes(packed),
     }
     parseNews(result)
@@ -113,9 +121,12 @@ export async function loadSnapshotEvidence(snapshot: NewsList, file: string) {
   const bytes = await fs.readFile(path.join(path.dirname(file), 'reading-pack.json'), 'utf8')
   if (hashBytes(bytes) !== snapshot.evidenceSha256) throw new Error('Snapshot evidence hash mismatch')
   const pack = JSON.parse(bytes) as { items: ReadingItem[]; stats: Parameters<typeof import('./view.js').renderFeed>[4]; results: Parameters<typeof import('./view.js').renderFeed>[1] }
-  if (pack.items.length !== snapshot.items.length || new Set(pack.items.map(i => i.id)).size !== pack.items.length) throw new Error('Snapshot evidence IDs mismatch')
+  const all = [...snapshot.items, ...snapshot.blogs]
+  const blogIds = new Set(snapshot.blogs.map(item => item.id))
+  if (pack.items.length !== all.length || new Set(pack.items.map(i => i.id)).size !== pack.items.length) throw new Error('Snapshot evidence IDs mismatch')
   for (const item of pack.items) {
-    const listed = snapshot.items.find(i => i.id === item.id)
+    const listed = all.find(i => i.id === item.id)
+    if (isBlog(item) !== blogIds.has(item.id)) throw new Error('Snapshot blog channel mismatch')
     if (!listed || contentRevision(item) !== listed.revision || (item.chinese?.summaryZh || null) !== listed.summary || (item.chinese?.titleZh || item.title) !== listed.title) throw new Error('Snapshot evidence content mismatch')
   }
   return pack

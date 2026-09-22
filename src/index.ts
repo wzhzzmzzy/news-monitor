@@ -20,9 +20,11 @@ const showError = (error: unknown) => {
 for (const command of ['collect', 'monitor', 'feed']) {
   cli.command(command, 'Collect RSS/Atom, RSSHub and X; create Chinese translations and per-item summaries')
     .option('-c, --config <file>', 'Configuration file', configOption)
+    .option('--channel <name>', 'Collect news or blogs only; default both')
     .action(async options => {
       try {
-        const result = await runFeed(await loadConfig(options.config), {})
+        if (options.channel && !['news', 'blogs'].includes(options.channel)) throw new Error('--channel must be news or blogs')
+        const result = await runFeed(await loadConfig(options.config), { channel: options.channel })
         console.log(JSON.stringify(result, null, 2))
         if (result.results.some(source => source.status === 'failed') || localizationIncomplete(result.localization)) process.exitCode = 1
       } catch (error) { showError(error) }

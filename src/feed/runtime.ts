@@ -11,6 +11,7 @@ import { formatDate, parseDateTime } from '../utils/time.js'
 import { localizeItems, localizationIncomplete } from './localize.js'
 import { requireLlm } from './llm.js'
 import type { Curation } from './curate.js'
+import { isBlog } from './blogs.js'
 
 // Collection and reporting share an archive lock. Queue scheduled work rather
 // than losing the report whenever its cron overlaps a collection.
@@ -77,7 +78,12 @@ export async function readEvidenceWindow(directory: string, start?: Date, end?: 
     if (pack.version !== 1 || !Array.isArray(pack.items) || !Array.isArray(pack.results) || !Number.isFinite(Date.parse(pack.collectedAt))) throw new Error(`Invalid source pack in run ${run}`)
     if ((start && Date.parse(pack.collectedAt) < +start) || (end && Date.parse(pack.collectedAt) >= +end)) continue
     observations.push(pack.collectedAt)
-    for (const item of pack.items) items.set(item.id, item)
+    // Repeated polls are observations, not new blog updates. A changed copy
+    // already observed in this window remains visible after later seen copies.
+    for (const item of pack.items) {
+      if (isBlog(item) && item.change === 'seen') continue
+      items.set(item.id, item)
+    }
     for (const result of pack.results) results.set(result.sourceId, result)
   }
   return { items: [...items.values()], results: [...results.values()], observations }
@@ -100,7 +106,8 @@ export async function runFeedReport(config: FeedConfig, options: { start: Date; 
     const label = options.all ? '全部已归档内容' : `${window.start} 至 ${window.end}（采集窗口）`
     const preview = path.join(directory, 'report.html')
     await fs.writeFile(preview, renderFeed(reading.items, results, label, undefined, reading.stats), { mode: 0o600 })
-    const curation: Curation = { status: 'disabled', entries: {}, total: items.length, selected: 0, reading: items.length, other: 0, cached: 0, note: '由调用方 Agent 筛选' }
+    const newsCount = items.filter(item => !isBlog(item)).length
+    const curation: Curation = { status: 'disabled', entries: {}, total: newsCount, selected: 0, reading: newsCount, other: 0, cached: 0, note: '由调用方 Agent 筛选新闻；博客独立展示' }
     await writeJson(path.join(directory, 'editorial.json'), curation)
     const html = renderFeed(reading.items, results, label, undefined, reading.stats, curation)
     await fs.writeFile(preview, html, { mode: 0o600 })

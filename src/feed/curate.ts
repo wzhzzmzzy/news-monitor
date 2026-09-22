@@ -7,6 +7,7 @@ import { z } from 'zod'
 import type { FeedConfig } from './config.js'
 import type { ReadingItem } from './localize.js'
 import { requireLlm, resolveLlm } from './llm.js'
+import { isBlog } from './blogs.js'
 import { writeJson } from './store.js'
 import { readingTopic } from './topics.js'
 
@@ -56,6 +57,7 @@ export function validateSelection(value: unknown, ids: number[], maxPicks: numbe
 }
 
 export async function curateItems(items: ReadingItem[], config: FeedConfig, injected?: CurationRunner): Promise<Curation> {
+  items = items.filter(item => !isBlog(item))
   const base: Curation = { status: 'pending', entries: {}, total: items.length, selected: 0, reading: items.length, other: 0, cached: 0 }
   if (!config.curation.enabled || !config.localization.enabled) return { ...base, status: 'disabled' }
   if (items.some(item => !item.chinese)) return { ...base, note: '中文摘要完成后再筛选；当前保留全部内容。' }

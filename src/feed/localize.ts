@@ -7,6 +7,7 @@ import { z } from 'zod'
 import type { FeedConfig } from './config.js'
 import { writeJson, type StoredItem } from './store.js'
 import { resolveLlm, requireLlm } from './llm.js'
+import { isBlog } from './blogs.js'
 
 export const SUMMARY_LIMIT = 200
 const VERSION = 'zh-reading-v1'
@@ -130,6 +131,10 @@ export async function localizeItems(items: StoredItem[], config: FeedConfig, run
   const modelIdentity = { version: VERSION, model: llm?.model || 'unconfigured', baseUrl: resolved?.baseURL || llm?.baseUrl || '', piProvider: llm?.piProvider || '', mode: llm?.mode || 'json' }
   const output: ReadingItem[] = new Array(items.length)
   let next = 0
+  let blogAttempts = 0
+  const order = items.map((item, index) => ({ item, index })).sort((a, b) =>
+    Number(isBlog(a.item)) - Number(isBlog(b.item)) ||
+    (isBlog(a.item) ? (b.item.publishedAt || b.item.firstSeen).localeCompare(a.item.publishedAt || a.item.firstSeen) : 0))
   const processItem = async (item: StoredItem): Promise<ReadingItem> => {
     const context = { title: item.title, source: item.sourceName, category: item.category, contentKind: item.contentKind }
     const fingerprint = hash({ ...modelIdentity, id: item.id, context, content: item.content, chunkChars: config.localization.chunkChars })
@@ -144,6 +149,10 @@ export async function localizeItems(items: StoredItem[], config: FeedConfig, run
       if (!run) {
         stats.pending++
         return { ...item, chineseStatus: 'pending', chineseError: '尚未配置可用模型；原文已保存，中文翻译和摘要待处理。' }
+      }
+      if (isBlog(item) && blogAttempts++ >= config.localization.blogBatchSize) {
+        stats.pending++
+        return { ...item, chineseStatus: 'pending', chineseError: '原文已归档，中文翻译和摘要排队中；后续采集会继续处理。' }
       }
       async function step<T>(kind: ReadingRequest['kind'], payload: Record<string, unknown>, validate: (value: unknown) => T): Promise<T> {
         const stepFile = path.join(config.archiveDir, 'chinese', 'steps', `${hash({ ...modelIdentity, kind, payload })}.json`)
@@ -189,7 +198,7 @@ export async function localizeItems(items: StoredItem[], config: FeedConfig, run
   }
   await Promise.all(Array.from({ length: Math.min(config.localization.concurrency, items.length) }, async () => {
     while (next < items.length) {
-      const index = next++
+      const { index } = order[next++]
       output[index] = await processItem(items[index])
     }
   }))

@@ -30,6 +30,10 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 ## agent-report-v1
 
+配置 `blogCatalog` 时，`news-list-v1` 还含 `blogs` 数组，字段与 `items` 相同；`baseline.blogs` 保存对应基线。`items` 只含新闻候选，博客全部进入独立的第四个“博客”分组，不进入 picks、readingIds、sections.evidenceIds 或 beforeIds。`counts.total = counts.news + counts.blogs`。旧快照缺少 blogs 时视为空数组。
+
+博客窗口只包含首次发现或内容变化的条目，重复轮询不算更新；首次导入旧文章不代表刚发表。博客完整保存 Feed 返回的条目，中文处理默认每轮新处理 20 篇，pending 会在后续 collect 中继续处理；不要因为 pending 就丢弃原文或声称摘要已经完成。`collect --channel blogs` 仅采集博客，`--channel news` 仅采集新闻；默认两者都采集。
+
 由调用方 Agent 编写，news-monitor 只校验、排版。所有 ID 使用新闻列表的稳定字符串 ID。
 
 ```json

@@ -58,5 +58,5 @@ export async function renderAgentReport(snapshotFile: string, decisionFile: stri
   if (protectedFiles.includes(target)) throw new Error('Output must not overwrite input evidence or decisions')
   await fs.mkdir(path.dirname(target), { recursive: true })
   await fs.writeFile(target, html, { flag: 'wx', mode: 0o600 })
-  return { output: target, snapshotId: snapshot.snapshotId, count: snapshot.items.length, selected: picks.size, email }
+  return { output: target, snapshotId: snapshot.snapshotId, count: snapshot.items.length + snapshot.blogs.length, blogs: snapshot.blogs.length, selected: picks.size, email }
 }

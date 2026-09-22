@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import yaml from 'js-yaml'
 import { z } from 'zod'
+import { withBlogCatalog } from './blogs.js'
 
 const common = {
   id: z.string().regex(/^[a-z0-9-]+$/),
@@ -10,6 +11,9 @@ const common = {
   limit: z.number().int().min(1).max(100).default(10),
   enabled: z.boolean().default(true),
   disabledReason: z.string().optional(),
+  channel: z.enum(['news', 'blogs']).optional(),
+  siteUrl: z.string().url().refine(value => /^https?:\/\//.test(value)).optional(),
+  siteAliases: z.array(z.string().url().refine(value => /^https?:\/\//.test(value))).optional(),
 }
 const httpUrl = z.string().url().refine(value => /^https?:\/\//.test(value), 'Expected HTTP(S) URL')
 // Optional source-level evidence boundary; never asserts that a feed is full text.
@@ -22,6 +26,8 @@ export const feedSourceSchema = z.discriminatedUnion('type', [
 ])
 export const feedConfigSchema = z.object({
   archiveDir: z.string().default('./archive/feed-v1'),
+  blogCatalog: z.string().min(1).optional(),
+  collection: z.object({ rssConcurrency: z.number().int().min(1).max(8).default(4) }).default({}),
   sources: z.array(feedSourceSchema).min(1).refine(sources => new Set(sources.map(s => s.id)).size === sources.length, 'Source IDs must be unique'),
   opencli: z.object({ profile: z.string().min(1).optional() }).default({}),
   rsshub: z.object({ baseUrl: httpUrl.default('https://rsshub.app') }).default({}),
@@ -29,6 +35,7 @@ export const feedConfigSchema = z.object({
     enabled: z.boolean().default(true),
     chunkChars: z.number().int().min(500).max(6000).default(3000),
     concurrency: z.number().int().min(1).max(4).default(2),
+    blogBatchSize: z.number().int().min(0).max(500).default(20),
   }).default({}),
   curation: z.object({
     enabled: z.boolean().default(false),
@@ -73,6 +80,10 @@ export function parseFeedConfig(raw: unknown): FeedConfig {
 export async function loadFeedConfig(file: string): Promise<FeedConfig> {
   const config = parseFeedConfig(yaml.load(await fs.readFile(file, 'utf8')))
   config.archiveDir = path.resolve(path.dirname(file), config.archiveDir)
+  if (config.blogCatalog) {
+    config.blogCatalog = path.resolve(path.dirname(file), config.blogCatalog)
+    config.sources = await withBlogCatalog(config.sources, config.blogCatalog)
+  }
   if (config.llm?.piModelsPath && !config.llm.piModelsPath.startsWith('~/')) {
     config.llm.piModelsPath = path.resolve(path.dirname(file), config.llm.piModelsPath)
   }

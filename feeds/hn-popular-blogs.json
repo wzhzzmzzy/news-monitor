@@ -1,0 +1,1912 @@
+{
+  "version": 1,
+  "rankingUrl": "https://popularity.refactoringenglish.com/?start=2016-09-15&end=2026-09-15",
+  "start": "2016-09-15",
+  "end": "2026-09-15",
+  "limit": 100,
+  "retrievedAt": "2026-09-22",
+  "entries": [
+    {
+      "rank": 1,
+      "domain": "krebsonsecurity.com",
+      "score": 84538,
+      "stories": 410,
+      "author": "Brian Krebs",
+      "siteUrl": "https://krebsonsecurity.com/",
+      "status": "available",
+      "feedUrl": "https://krebsonsecurity.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://krebsonsecurity.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:26:57.232Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 2,
+      "domain": "simonwillison.net",
+      "score": 80022,
+      "stories": 319,
+      "author": "Simon Willison",
+      "siteUrl": "https://simonwillison.net/",
+      "status": "available",
+      "feedUrl": "https://simonwillison.net/atom/everything/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://simonwillison.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:26:56.566Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 3,
+      "domain": "paulgraham.com",
+      "score": 48554,
+      "stories": 171,
+      "author": "Paul Graham",
+      "siteUrl": "https://paulgraham.com/",
+      "status": "unresolved",
+      "feedUrl": "http://www.aaronsw.com/2002/feeds/pgessays.rss",
+      "note": "官网提供的 Aaron Swartz 抓取 Feed 可解析，但最新条目为 Superlinear Returns，缺少官网后续文章；为避免把旧快照当持续更新，暂不启用。",
+      "resolvedSiteUrl": "https://paulgraham.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:26:57.380Z",
+      "feedItems": 219,
+      "verificationUrl": "https://paulgraham.com/articles.html",
+      "manualHold": "官网提供的 Aaron Swartz 抓取 Feed 可解析，但最新条目为 Superlinear Returns，缺少官网后续文章；为避免把旧快照当持续更新，暂不启用。"
+    },
+    {
+      "rank": 4,
+      "domain": "jeffgeerling.com",
+      "score": 44219,
+      "stories": 219,
+      "author": "Jeff Geerling",
+      "siteUrl": "https://jeffgeerling.com/",
+      "status": "available",
+      "feedUrl": "https://www.jeffgeerling.com/blog.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.jeffgeerling.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:26:58.767Z",
+      "feedItems": 20
+    },
+    {
+      "rank": 5,
+      "domain": "stratechery.com",
+      "score": 44056,
+      "stories": 232,
+      "author": "Ben Thompson",
+      "siteUrl": "https://stratechery.com/",
+      "status": "available",
+      "feedUrl": "https://stratechery.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://stratechery.com/",
+      "discovery": "conventional-path",
+      "checkedAt": "2026-09-22T02:27:00.179Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 6,
+      "domain": "jvns.ca",
+      "score": 43532,
+      "stories": 196,
+      "author": "Julia Evans",
+      "siteUrl": "https://jvns.ca/",
+      "status": "available",
+      "feedUrl": "https://jvns.ca/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://jvns.ca/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:26:56.883Z",
+      "feedItems": 20
+    },
+    {
+      "rank": 7,
+      "domain": "shkspr.mobi",
+      "score": 43472,
+      "stories": 244,
+      "author": "Terence Eden",
+      "siteUrl": "https://shkspr.mobi/",
+      "status": "available",
+      "feedUrl": "https://shkspr.mobi/blog/feed/atom/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://shkspr.mobi/blog/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:03.513Z",
+      "feedItems": 20
+    },
+    {
+      "rank": 8,
+      "domain": "danluu.com",
+      "score": 41566,
+      "stories": 173,
+      "author": "Dan Luu",
+      "siteUrl": "https://danluu.com/",
+      "status": "available",
+      "feedUrl": "https://danluu.com/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://danluu.com/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:26:59.904Z",
+      "feedItems": 128
+    },
+    {
+      "rank": 9,
+      "domain": "righto.com",
+      "score": 38800,
+      "stories": 278,
+      "author": "Ken Shirriff",
+      "siteUrl": "https://righto.com/",
+      "status": "available",
+      "feedUrl": "https://www.righto.com/feeds/posts/default",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.righto.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:01.357Z",
+      "feedItems": 25
+    },
+    {
+      "rank": 10,
+      "domain": "rachelbythebay.com",
+      "score": 37060,
+      "stories": 207,
+      "author": "Rachel Kroll",
+      "siteUrl": "https://rachelbythebay.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:41:31.085Z",
+      "attempts": [
+        {
+          "url": "https://rachelbythebay.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://rachelbythebay.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://rachelbythebay.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://rachelbythebay.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ],
+      "discoveryPage": "https://rachelbythebay.com/w/"
+    },
+    {
+      "rank": 11,
+      "domain": "troyhunt.com",
+      "score": 35055,
+      "stories": 129,
+      "author": "",
+      "siteUrl": "https://troyhunt.com/",
+      "status": "available",
+      "feedUrl": "https://www.troyhunt.com/rss/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.troyhunt.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:01.292Z",
+      "feedItems": 15
+    },
+    {
+      "rank": 12,
+      "domain": "utcc.utoronto.ca/~cks",
+      "score": 34038,
+      "stories": 312,
+      "author": "Chris Siebenmann",
+      "siteUrl": "https://utcc.utoronto.ca/~cks/",
+      "status": "available",
+      "feedUrl": "https://utcc.utoronto.ca/~cks/space/blog/?atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://utcc.utoronto.ca/~cks/space/blog/",
+      "checkedAt": "2026-09-22T02:32:45.293Z",
+      "attempts": [
+        {
+          "url": "https://utcc.utoronto.ca/~cks/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://utcc.utoronto.ca/~cks/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://utcc.utoronto.ca/~cks/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://utcc.utoronto.ca/~cks/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://utcc.utoronto.ca/~cks/space/blog/",
+      "discovery": "html-alternate",
+      "feedItems": 100
+    },
+    {
+      "rank": 13,
+      "domain": "ciechanow.ski",
+      "score": 33710,
+      "stories": 30,
+      "author": "",
+      "siteUrl": "https://ciechanow.ski/",
+      "status": "available",
+      "feedUrl": "https://ciechanow.ski/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://ciechanow.ski/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:02.595Z",
+      "feedItems": 2
+    },
+    {
+      "rank": 14,
+      "domain": "daringfireball.net",
+      "score": 33063,
+      "stories": 203,
+      "author": "John Gruber",
+      "siteUrl": "https://daringfireball.net/",
+      "status": "available",
+      "feedUrl": "https://daringfireball.net/feeds/main",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://daringfireball.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:03.674Z",
+      "feedItems": 48
+    },
+    {
+      "rank": 15,
+      "domain": "drewdevault.com",
+      "score": 30851,
+      "stories": 183,
+      "author": "",
+      "siteUrl": "https://drewdevault.com/",
+      "status": "available",
+      "feedUrl": "https://drewdevault.com/blog/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://drewdevault.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:08.101Z",
+      "feedItems": 32
+    },
+    {
+      "rank": 16,
+      "domain": "fabiensanglard.net",
+      "score": 28331,
+      "stories": 125,
+      "author": "Fabien Sanglard",
+      "siteUrl": "https://fabiensanglard.net/",
+      "status": "available",
+      "feedUrl": "https://fabiensanglard.net/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://fabiensanglard.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:05.516Z",
+      "feedItems": 146
+    },
+    {
+      "rank": 17,
+      "domain": "devblogs.microsoft.com/oldnewthing",
+      "score": 26079,
+      "stories": 170,
+      "author": "Raymond Chen",
+      "siteUrl": "https://devblogs.microsoft.com/oldnewthing/",
+      "status": "available",
+      "feedUrl": "https://devblogs.microsoft.com/oldnewthing/feed",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://devblogs.microsoft.com/oldnewthing/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:27:05.650Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 18,
+      "domain": "pluralistic.net",
+      "score": 25594,
+      "stories": 187,
+      "author": "Cory Doctorow",
+      "siteUrl": "https://pluralistic.net/",
+      "status": "available",
+      "feedUrl": "https://pluralistic.net/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://pluralistic.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:06.856Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 19,
+      "domain": "tbray.org",
+      "score": 23947,
+      "stories": 112,
+      "author": "",
+      "siteUrl": "https://tbray.org/",
+      "status": "available",
+      "feedUrl": "https://www.tbray.org/ongoing/ongoing.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.tbray.org/ongoing/",
+      "checkedAt": "2026-09-22T02:32:37.867Z",
+      "attempts": [
+        {
+          "url": "https://www.tbray.org/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://www.tbray.org/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://www.tbray.org/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://www.tbray.org/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://www.tbray.org/ongoing/",
+      "discovery": "html-alternate",
+      "feedItems": 19
+    },
+    {
+      "rank": 20,
+      "domain": "daniel.haxx.se",
+      "score": 23706,
+      "stories": 154,
+      "author": "Daniel Stenberg",
+      "siteUrl": "https://daniel.haxx.se/",
+      "status": "available",
+      "feedUrl": "https://daniel.haxx.se/blog/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://daniel.haxx.se/blog/",
+      "checkedAt": "2026-09-22T02:32:35.272Z",
+      "attempts": [
+        {
+          "url": "https://daniel.haxx.se/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://daniel.haxx.se/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://daniel.haxx.se/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://daniel.haxx.se/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://daniel.haxx.se/blog/",
+      "discovery": "html-alternate",
+      "feedItems": 10
+    },
+    {
+      "rank": 21,
+      "domain": "antirez.com",
+      "score": 22586,
+      "stories": 67,
+      "author": "Salvatore Sanfilippo",
+      "siteUrl": "https://antirez.com/",
+      "status": "available",
+      "feedUrl": "https://antirez.com/rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://antirez.com/latest/0",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:27.293Z",
+      "feedItems": 100
+    },
+    {
+      "rank": 22,
+      "domain": "dynomight.net",
+      "score": 22386,
+      "stories": 104,
+      "author": "Anonymous",
+      "siteUrl": "https://dynomight.net/",
+      "status": "available",
+      "feedUrl": "https://dynomight.net/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://dynomight.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:10.167Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 23,
+      "domain": "tonsky.me",
+      "score": 22345,
+      "stories": 62,
+      "author": "Nikita Prokopov",
+      "siteUrl": "https://tonsky.me/",
+      "status": "available",
+      "feedUrl": "https://tonsky.me/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://tonsky.me/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:12.824Z",
+      "feedItems": 6
+    },
+    {
+      "rank": 24,
+      "domain": "gwern.net",
+      "score": 22044,
+      "stories": 162,
+      "author": "Gwern Branwen",
+      "siteUrl": "https://gwern.net/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "resolvedSiteUrl": "https://gwern.net/",
+      "checkedAt": "2026-09-22T02:40:48.981Z",
+      "attempts": [
+        {
+          "url": "https://gwern.substack.com/feed",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gwern.net/haskell/wikipedia-rss-archive-bot",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gwern.net/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gwern.net/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gwern.net/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gwern.net/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 25,
+      "domain": "neal.fun",
+      "score": 21940,
+      "stories": 35,
+      "author": "Neal Agarwal",
+      "siteUrl": "https://neal.fun/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "resolvedSiteUrl": "https://neal.fun/",
+      "checkedAt": "2026-09-22T02:39:29.446Z",
+      "attempts": [
+        {
+          "url": "https://neal.fun/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://neal.fun/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://neal.fun/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://neal.fun/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 26,
+      "domain": "lemire.me",
+      "score": 20413,
+      "stories": 199,
+      "author": "Daniel Lemire",
+      "siteUrl": "https://lemire.me/",
+      "status": "available",
+      "feedUrl": "https://lemire.me/blog/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://lemire.me/blog/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:15.972Z",
+      "feedItems": 40
+    },
+    {
+      "rank": 27,
+      "domain": "xeiaso.net",
+      "score": 20214,
+      "stories": 108,
+      "author": "Xe Iaso",
+      "siteUrl": "https://xeiaso.net/",
+      "status": "available",
+      "feedUrl": "https://xeiaso.net/blog.rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://xeiaso.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:16.303Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 28,
+      "domain": "pragmaticengineer.com",
+      "score": 18420,
+      "stories": 90,
+      "author": "Gergely Orosz",
+      "siteUrl": "https://pragmaticengineer.com/",
+      "status": "available",
+      "feedUrl": "https://blog.pragmaticengineer.com/rss/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://blog.pragmaticengineer.com/",
+      "checkedAt": "2026-09-22T02:32:37.776Z",
+      "attempts": [
+        {
+          "url": "https://www.pragmaticengineer.com/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://www.pragmaticengineer.com/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://www.pragmaticengineer.com/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://www.pragmaticengineer.com/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://blog.pragmaticengineer.com/",
+      "discovery": "html-alternate",
+      "feedItems": 15
+    },
+    {
+      "rank": 29,
+      "domain": "seangoedecke.com",
+      "score": 18223,
+      "stories": 85,
+      "author": "Sean Goedecke",
+      "siteUrl": "https://seangoedecke.com/",
+      "status": "available",
+      "feedUrl": "https://www.seangoedecke.com/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.seangoedecke.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:16.835Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 30,
+      "domain": "martinfowler.com",
+      "score": 17736,
+      "stories": 117,
+      "author": "Martin Fowler",
+      "siteUrl": "https://martinfowler.com/",
+      "status": "available",
+      "feedUrl": "https://martinfowler.com/feed.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://martinfowler.com/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:27:20.624Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 31,
+      "domain": "filfre.net",
+      "score": 17658,
+      "stories": 129,
+      "author": "Jimmy Maher",
+      "siteUrl": "https://filfre.net/",
+      "status": "available",
+      "feedUrl": "https://www.filfre.net/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.filfre.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:23.479Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 32,
+      "domain": "nullprogram.com",
+      "score": 17544,
+      "stories": 127,
+      "author": "Chris Wellons",
+      "siteUrl": "https://nullprogram.com/",
+      "status": "available",
+      "feedUrl": "https://nullprogram.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://nullprogram.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:17.837Z",
+      "feedItems": 8
+    },
+    {
+      "rank": 33,
+      "domain": "mtlynch.io",
+      "score": 17323,
+      "stories": 45,
+      "author": "Michael Lynch",
+      "siteUrl": "https://mtlynch.io/",
+      "status": "available",
+      "feedUrl": "https://mtlynch.io/posts/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://mtlynch.io/posts/",
+      "checkedAt": "2026-09-22T02:32:36.788Z",
+      "attempts": [
+        {
+          "url": "https://mtlynch.io/index.xml",
+          "error": "Feed exceeds 8 MiB"
+        },
+        {
+          "url": "https://mtlynch.io/feed/",
+          "error": "Feed exceeds 8 MiB"
+        },
+        {
+          "url": "https://mtlynch.io/feed.xml",
+          "error": "Feed exceeds 8 MiB"
+        },
+        {
+          "url": "https://mtlynch.io/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://mtlynch.io/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://mtlynch.io/posts/",
+      "discovery": "html-alternate",
+      "feedItems": 76
+    },
+    {
+      "rank": 34,
+      "domain": "kalzumeus.com",
+      "score": 16835,
+      "stories": 61,
+      "author": "Patrick McKenzie",
+      "siteUrl": "https://kalzumeus.com/",
+      "status": "available",
+      "feedUrl": "https://www.kalzumeus.com/feed/articles/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.kalzumeus.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:22.537Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 35,
+      "domain": "blog.acolyer.org",
+      "score": 16596,
+      "stories": 163,
+      "author": "Adrian Colyer",
+      "siteUrl": "https://blog.acolyer.org/",
+      "status": "available",
+      "feedUrl": "https://blog.acolyer.org/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://blog.acolyer.org/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:24.360Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 36,
+      "domain": "blog.plover.com",
+      "score": 16471,
+      "stories": 96,
+      "author": "Mark Dominus",
+      "siteUrl": "https://blog.plover.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:41:31.085Z",
+      "attempts": [
+        {
+          "url": "https://blog.plover.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://blog.plover.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://blog.plover.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://blog.plover.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 37,
+      "domain": "schneier.com",
+      "score": 16291,
+      "stories": 149,
+      "author": "Bruce Schneier",
+      "siteUrl": "https://schneier.com/",
+      "status": "available",
+      "feedUrl": "https://www.schneier.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.schneier.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:26.205Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 38,
+      "domain": "blog.samaltman.com",
+      "score": 15981,
+      "stories": 55,
+      "author": "Sam Altman",
+      "siteUrl": "https://blog.samaltman.com/",
+      "status": "available",
+      "feedUrl": "https://blog.samaltman.com/posts.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://blog.samaltman.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:29.390Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 39,
+      "domain": "johndcook.com",
+      "score": 15886,
+      "stories": 139,
+      "author": "John D. Cook",
+      "siteUrl": "https://johndcook.com/",
+      "status": "available",
+      "feedUrl": "https://www.johndcook.com/blog/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.johndcook.com/blog/services-2/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:29.524Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 40,
+      "domain": "acoup.blog",
+      "score": 15770,
+      "stories": 121,
+      "author": "Bret Devereaux",
+      "siteUrl": "https://acoup.blog/",
+      "status": "available",
+      "feedUrl": "https://acoup.blog/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://acoup.blog/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:29.683Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 41,
+      "domain": "justine.lol",
+      "score": 15465,
+      "stories": 42,
+      "author": "Justine Tunney",
+      "siteUrl": "https://justine.lol/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:39:31.361Z",
+      "attempts": [
+        {
+          "url": "https://justine.lol/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://justine.lol/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://justine.lol/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://justine.lol/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 42,
+      "domain": "gatesnotes.com",
+      "score": 15388,
+      "stories": 67,
+      "author": "Bill Gates",
+      "siteUrl": "https://gatesnotes.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:39:35.140Z",
+      "attempts": [
+        {
+          "url": "https://gatesnotes.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gatesnotes.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gatesnotes.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://gatesnotes.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 43,
+      "domain": "astralcodexten.com",
+      "score": 15359,
+      "stories": 128,
+      "author": "Scott Alexander",
+      "siteUrl": "https://astralcodexten.com/",
+      "status": "available",
+      "feedUrl": "https://www.astralcodexten.com/feed",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.astralcodexten.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:34.073Z",
+      "feedItems": 20
+    },
+    {
+      "rank": 44,
+      "domain": "buttondown.com/hillelwayne",
+      "score": 15280,
+      "stories": 97,
+      "author": "Hillel Wayne",
+      "siteUrl": "https://buttondown.com/hillelwayne/",
+      "status": "available",
+      "feedUrl": "https://buttondown.com/hillelwayne/rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://buttondown.com/hillelwayne/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:33.403Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 45,
+      "domain": "slatestarcodex.com",
+      "score": 15243,
+      "stories": 87,
+      "author": "Scott Alexander",
+      "siteUrl": "https://slatestarcodex.com/",
+      "status": "available",
+      "feedUrl": "https://slatestarcodex.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://slatestarcodex.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:36.511Z",
+      "feedItems": 1
+    },
+    {
+      "rank": 46,
+      "domain": "brendangregg.com",
+      "score": 15211,
+      "stories": 60,
+      "author": "Brendan Gregg",
+      "siteUrl": "https://brendangregg.com/",
+      "status": "available",
+      "feedUrl": "https://www.brendangregg.com/blog/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.brendangregg.com/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:27:36.302Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 47,
+      "domain": "lcamtuf.substack.com",
+      "score": 14859,
+      "stories": 83,
+      "author": "Michał Zalewski",
+      "siteUrl": "https://lcamtuf.substack.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:39:29.853Z",
+      "attempts": [
+        {
+          "url": "https://lcamtuf.substack.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://lcamtuf.substack.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://lcamtuf.substack.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://lcamtuf.substack.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 48,
+      "domain": "marginalia.nu",
+      "score": 14838,
+      "stories": 51,
+      "author": "Viktor Lofgren",
+      "siteUrl": "https://marginalia.nu/",
+      "status": "available",
+      "feedUrl": "https://www.marginalia.nu/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.marginalia.nu/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:46.475Z",
+      "feedItems": 172
+    },
+    {
+      "rank": 49,
+      "domain": "matklad.github.io",
+      "score": 14502,
+      "stories": 86,
+      "author": "Alex Kladov",
+      "siteUrl": "https://matklad.github.io/",
+      "status": "available",
+      "feedUrl": "https://matklad.github.io/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://matklad.github.io/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:37.238Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 50,
+      "domain": "hillelwayne.com",
+      "score": 14245,
+      "stories": 86,
+      "author": "Hillel Wayne",
+      "siteUrl": "https://hillelwayne.com/",
+      "status": "available",
+      "feedUrl": "https://www.hillelwayne.com/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://hillelwayne.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:41.253Z",
+      "feedItems": 17
+    },
+    {
+      "rank": 51,
+      "domain": "mitchellh.com",
+      "score": 14087,
+      "stories": 31,
+      "author": "Mitchell Hashimoto",
+      "siteUrl": "https://mitchellh.com/",
+      "status": "available",
+      "feedUrl": "https://mitchellh.com/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://mitchellh.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:41.822Z",
+      "feedItems": 53
+    },
+    {
+      "rank": 52,
+      "domain": "lapcatsoftware.com",
+      "score": 13896,
+      "stories": 72,
+      "author": "Jeff Johnson",
+      "siteUrl": "https://lapcatsoftware.com/",
+      "status": "available",
+      "feedUrl": "https://lapcatsoftware.com/articles/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://lapcatsoftware.com/articles/",
+      "checkedAt": "2026-09-22T02:32:44.199Z",
+      "attempts": [
+        {
+          "url": "https://lapcatsoftware.com/main/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://lapcatsoftware.com/main/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://lapcatsoftware.com/main/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://lapcatsoftware.com/main/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://lapcatsoftware.com/articles/",
+      "discovery": "html-alternate",
+      "feedItems": 496
+    },
+    {
+      "rank": 53,
+      "domain": "austinhenley.com",
+      "score": 13509,
+      "stories": 65,
+      "author": "Austin Henley",
+      "siteUrl": "https://austinhenley.com/",
+      "status": "available",
+      "feedUrl": "https://austinhenley.com/blog/feed.rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://austinhenley.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:46.920Z",
+      "feedItems": 34
+    },
+    {
+      "rank": 54,
+      "domain": "lucumr.pocoo.org",
+      "score": 13258,
+      "stories": 67,
+      "author": "Armin Ronacher",
+      "siteUrl": "https://lucumr.pocoo.org/",
+      "status": "available",
+      "feedUrl": "https://lucumr.pocoo.org/feed.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://lucumr.pocoo.org/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:48.727Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 55,
+      "domain": "blog.jim-nielsen.com",
+      "score": 13147,
+      "stories": 43,
+      "author": "Jim Nielsen",
+      "siteUrl": "https://blog.jim-nielsen.com/",
+      "status": "available",
+      "feedUrl": "https://blog.jim-nielsen.com/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://blog.jim-nielsen.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:47.727Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 56,
+      "domain": "jacquesmattheij.com",
+      "score": 12978,
+      "stories": 48,
+      "author": "Jacques Mattheij",
+      "siteUrl": "https://jacquesmattheij.com/",
+      "status": "available",
+      "feedUrl": "https://jacquesmattheij.com/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://jacquesmattheij.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:02.011Z",
+      "feedItems": 335
+    },
+    {
+      "rank": 57,
+      "domain": "writings.stephenwolfram.com",
+      "score": 12726,
+      "stories": 73,
+      "author": "Stephen Wolfram",
+      "siteUrl": "https://writings.stephenwolfram.com/",
+      "status": "available",
+      "feedUrl": "https://writings.stephenwolfram.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://writings.stephenwolfram.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:49.881Z",
+      "feedItems": 12
+    },
+    {
+      "rank": 58,
+      "domain": "tedium.co",
+      "score": 12509,
+      "stories": 92,
+      "author": "Ernie Smith",
+      "siteUrl": "https://tedium.co/",
+      "status": "available",
+      "feedUrl": "https://feed.tedium.co/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://tedium.co/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:27:56.780Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 59,
+      "domain": "filippo.io",
+      "score": 12395,
+      "stories": 64,
+      "author": "Filippo Valsorda",
+      "siteUrl": "https://filippo.io/",
+      "status": "available",
+      "feedUrl": "https://words.filippo.io/rss/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://filippo.io/",
+      "discovery": "conventional-path",
+      "checkedAt": "2026-09-22T02:27:56.199Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 60,
+      "domain": "randomascii.wordpress.com",
+      "score": 12353,
+      "stories": 64,
+      "author": "Bruce Dawson",
+      "siteUrl": "https://randomascii.wordpress.com/",
+      "status": "available",
+      "feedUrl": "https://randomascii.wordpress.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://randomascii.wordpress.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:50.930Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 61,
+      "domain": "sive.rs",
+      "score": 12324,
+      "stories": 74,
+      "author": "Derek Sivers",
+      "siteUrl": "https://sive.rs/",
+      "status": "available",
+      "feedUrl": "https://sive.rs/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://sive.rs/",
+      "checkedAt": "2026-09-22T02:39:49.850Z",
+      "discovery": "html-alternate",
+      "feedItems": 100
+    },
+    {
+      "rank": 62,
+      "domain": "idiallo.com",
+      "score": 12235,
+      "stories": 38,
+      "author": "Ibrahim Diallo",
+      "siteUrl": "https://idiallo.com/",
+      "status": "available",
+      "feedUrl": "https://idiallo.com/feed.rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://idiallo.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:57.863Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 63,
+      "domain": "joshwcomeau.com",
+      "score": 11961,
+      "stories": 65,
+      "author": "Josh W. Comeau",
+      "siteUrl": "https://joshwcomeau.com/",
+      "status": "available",
+      "feedUrl": "https://www.joshwcomeau.com/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.joshwcomeau.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:27:58.530Z",
+      "feedItems": 88
+    },
+    {
+      "rank": 64,
+      "domain": "idlewords.com",
+      "score": 11473,
+      "stories": 56,
+      "author": "Maciej Cegłowski",
+      "siteUrl": "https://idlewords.com/",
+      "status": "available",
+      "feedUrl": "https://idlewords.com/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://idlewords.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:00.527Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 65,
+      "domain": "blog.cryptographyengineering.com",
+      "score": 11344,
+      "stories": 51,
+      "author": "Matthew Green",
+      "siteUrl": "https://blog.cryptographyengineering.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:41:36.496Z",
+      "attempts": [
+        {
+          "url": "https://blog.cryptographyengineering.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://blog.cryptographyengineering.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://blog.cryptographyengineering.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://blog.cryptographyengineering.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 66,
+      "domain": "mjg59.dreamwidth.org",
+      "score": 11272,
+      "stories": 69,
+      "author": "",
+      "siteUrl": "https://mjg59.dreamwidth.org/",
+      "status": "available",
+      "feedUrl": "https://mjg59.dreamwidth.org/data/rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "checkedAt": "2026-09-22T02:39:56.351Z",
+      "resolvedSiteUrl": "https://mjg59.dreamwidth.org/",
+      "discovery": "html-alternate",
+      "feedItems": 25
+    },
+    {
+      "rank": 67,
+      "domain": "apenwarr.ca",
+      "score": 11216,
+      "stories": 54,
+      "author": "Avery Pennarun",
+      "siteUrl": "https://apenwarr.ca/",
+      "status": "available",
+      "feedUrl": "https://apenwarr.ca/log/rss.php",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://apenwarr.ca/log/20260704-thundersnap-0-01-an-undo-button-for-everything",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:09.499Z",
+      "feedItems": 50
+    },
+    {
+      "rank": 68,
+      "domain": "overreacted.io",
+      "score": 11137,
+      "stories": 34,
+      "author": "Dan Abramov",
+      "siteUrl": "https://overreacted.io/",
+      "status": "available",
+      "feedUrl": "https://overreacted.io/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://overreacted.io/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:11.242Z",
+      "feedItems": 59
+    },
+    {
+      "rank": 69,
+      "domain": "berthub.eu",
+      "score": 11110,
+      "stories": 52,
+      "author": "Bert Hubert",
+      "siteUrl": "https://berthub.eu/",
+      "status": "available",
+      "feedUrl": "https://berthub.eu/articles/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://berthub.eu/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:15.890Z",
+      "feedItems": 373
+    },
+    {
+      "rank": 70,
+      "domain": "brandur.org",
+      "score": 11093,
+      "stories": 68,
+      "author": "Brandur Leach",
+      "siteUrl": "https://brandur.org/",
+      "status": "available",
+      "feedUrl": "https://brandur.org/articles.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://brandur.org/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:17.950Z",
+      "feedItems": 20
+    },
+    {
+      "rank": 71,
+      "domain": "fasterthanli.me",
+      "score": 11081,
+      "stories": 52,
+      "author": "Amos Wenger",
+      "siteUrl": "https://fasterthanli.me/",
+      "status": "available",
+      "feedUrl": "https://fasterthanli.me/index.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://fasterthanli.me/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:19.147Z",
+      "feedItems": 25
+    },
+    {
+      "rank": 72,
+      "domain": "steveblank.com",
+      "score": 11017,
+      "stories": 63,
+      "author": "Steve Blank",
+      "siteUrl": "https://steveblank.com/",
+      "status": "available",
+      "feedUrl": "https://steveblank.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://steveblank.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:20.215Z",
+      "feedItems": 20
+    },
+    {
+      "rank": 73,
+      "domain": "computer.rip",
+      "score": 10830,
+      "stories": 70,
+      "author": "J.B. Crawford",
+      "siteUrl": "https://computer.rip/",
+      "status": "available",
+      "feedUrl": "https://computer.rip/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://computer.rip/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:28:23.198Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 74,
+      "domain": "ctrl.blog",
+      "score": 10730,
+      "stories": 53,
+      "author": "",
+      "siteUrl": "https://ctrl.blog/",
+      "status": "available",
+      "feedUrl": "https://www.ctrl.blog/rss/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.ctrl.blog/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:26.547Z",
+      "feedItems": 15
+    },
+    {
+      "rank": 75,
+      "domain": "mattstoller.substack.com",
+      "score": 10488,
+      "stories": 57,
+      "author": "Matt Stoller",
+      "siteUrl": "https://mattstoller.substack.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:41:55.019Z",
+      "attempts": [
+        {
+          "url": "https://mattstoller.substack.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://mattstoller.substack.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://mattstoller.substack.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://mattstoller.substack.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 76,
+      "domain": "construction-physics.com",
+      "score": 10151,
+      "stories": 67,
+      "author": "Brian Potter",
+      "siteUrl": "https://construction-physics.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:39:56.423Z",
+      "attempts": [
+        {
+          "url": "https://construction-physics.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://construction-physics.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://construction-physics.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://construction-physics.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 77,
+      "domain": "eli.thegreenplace.net",
+      "score": 10124,
+      "stories": 93,
+      "author": "Eli Bendersky",
+      "siteUrl": "https://eli.thegreenplace.net/",
+      "status": "available",
+      "feedUrl": "https://eli.thegreenplace.net/feeds/all.atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://eli.thegreenplace.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:28.522Z",
+      "feedItems": 5
+    },
+    {
+      "rank": 78,
+      "domain": "backreaction.blogspot.com",
+      "score": 10055,
+      "stories": 66,
+      "author": "Sabine Hossenfelder",
+      "siteUrl": "https://backreaction.blogspot.com/",
+      "status": "available",
+      "feedUrl": "https://backreaction.blogspot.com/feeds/posts/default",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://backreaction.blogspot.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:28.575Z",
+      "feedItems": 25
+    },
+    {
+      "rank": 79,
+      "domain": "thebignewsletter.com",
+      "score": 9956,
+      "stories": 52,
+      "author": "Matt Stoller",
+      "siteUrl": "https://thebignewsletter.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "resolvedSiteUrl": "https://thebignewsletter.com/",
+      "checkedAt": "2026-09-22T02:41:05.978Z",
+      "attempts": [
+        {
+          "url": "https://thebignewsletter.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://thebignewsletter.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://thebignewsletter.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://thebignewsletter.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 80,
+      "domain": "susam.net",
+      "score": 9950,
+      "stories": 74,
+      "author": "Susam Pal",
+      "siteUrl": "https://susam.net/",
+      "status": "available",
+      "feedUrl": "https://susam.net/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://susam.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:33.375Z",
+      "feedItems": 9
+    },
+    {
+      "rank": 81,
+      "domain": "blog.benjojo.co.uk",
+      "score": 9946,
+      "stories": 53,
+      "author": "Ben Cox",
+      "siteUrl": "https://blog.benjojo.co.uk/",
+      "status": "available",
+      "feedUrl": "https://blog.benjojo.co.uk/rss.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://blog.benjojo.co.uk/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:30.695Z",
+      "feedItems": 77
+    },
+    {
+      "rank": 82,
+      "domain": "xkcd.com",
+      "score": 9891,
+      "stories": 81,
+      "author": "Randall Munroe",
+      "siteUrl": "https://xkcd.com/",
+      "status": "available",
+      "feedUrl": "https://xkcd.com/atom.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://xkcd.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:33.693Z",
+      "feedItems": 4
+    },
+    {
+      "rank": 83,
+      "domain": "scottaaronson.blog",
+      "score": 9761,
+      "stories": 60,
+      "author": "Scott Aaronson",
+      "siteUrl": "https://scottaaronson.blog/",
+      "status": "available",
+      "feedUrl": "https://scottaaronson.blog/?feed=rss2",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://scottaaronson.blog/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:34.804Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 84,
+      "domain": "jgc.org",
+      "score": 9726,
+      "stories": 55,
+      "author": "John Graham-Cumming",
+      "siteUrl": "https://jgc.org/",
+      "status": "available",
+      "feedUrl": "https://blog.jgc.org/feeds/posts/default",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://blog.jgc.org/",
+      "checkedAt": "2026-09-22T02:33:30.489Z",
+      "attempts": [
+        {
+          "url": "https://jgc.org/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://jgc.org/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://jgc.org/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://jgc.org/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://blog.jgc.org/",
+      "discovery": "html-alternate",
+      "feedItems": 25
+    },
+    {
+      "rank": 85,
+      "domain": "jefftk.com",
+      "score": 9580,
+      "stories": 74,
+      "author": "Jeff Kaufman",
+      "siteUrl": "https://jefftk.com/",
+      "status": "available",
+      "feedUrl": "https://www.jefftk.com/news.rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.jefftk.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:41.763Z",
+      "feedItems": 30
+    },
+    {
+      "rank": 86,
+      "domain": "robertheaton.com",
+      "score": 9533,
+      "stories": 29,
+      "author": "Robert Heaton",
+      "siteUrl": "https://robertheaton.com/",
+      "status": "available",
+      "feedUrl": "https://robertheaton.com/feed.xml",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://robertheaton.com/",
+      "discovery": "html-link",
+      "checkedAt": "2026-09-22T02:28:36.480Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 87,
+      "domain": "stephendiehl.com",
+      "score": 9513,
+      "stories": 50,
+      "author": "Stephen Diehl",
+      "siteUrl": "https://stephendiehl.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:40:49.331Z",
+      "attempts": [
+        {
+          "url": "https://stephendiehl.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://stephendiehl.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://stephendiehl.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://stephendiehl.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 88,
+      "domain": "hanselman.com",
+      "score": 9447,
+      "stories": 53,
+      "author": "",
+      "siteUrl": "https://hanselman.com/",
+      "status": "available",
+      "feedUrl": "http://feeds.hanselman.com/ScottHanselman",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.hanselman.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:42.908Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 89,
+      "domain": "garymarcus.substack.com",
+      "score": 9287,
+      "stories": 84,
+      "author": "Gary Marcus",
+      "siteUrl": "https://garymarcus.substack.com/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "checkedAt": "2026-09-22T02:42:54.470Z",
+      "attempts": [
+        {
+          "url": "https://garymarcus.substack.com/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://garymarcus.substack.com/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://garymarcus.substack.com/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://garymarcus.substack.com/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 90,
+      "domain": "scottaaronson.com",
+      "score": 9276,
+      "stories": 71,
+      "author": "Scott Aaronson",
+      "siteUrl": "https://scottaaronson.com/",
+      "status": "available",
+      "feedUrl": "https://scottaaronson.blog/?feed=rss2",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://scottaaronson.blog/",
+      "checkedAt": "2026-09-22T02:33:35.308Z",
+      "attempts": [
+        {
+          "url": "https://scottaaronson.com/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://scottaaronson.com/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://scottaaronson.com/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://scottaaronson.com/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://www.scottaaronson.com/blog/",
+      "discovery": "html-alternate",
+      "feedItems": 10,
+      "aliasOf": "scottaaronson.blog"
+    },
+    {
+      "rank": 91,
+      "domain": "research.swtch.com",
+      "score": 9265,
+      "stories": 56,
+      "author": "Russ Cox",
+      "siteUrl": "https://research.swtch.com/",
+      "status": "available",
+      "feedUrl": "https://research.swtch.com/feed.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://research.swtch.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:43.044Z",
+      "feedItems": 24
+    },
+    {
+      "rank": 92,
+      "domain": "aphyr.com",
+      "score": 9095,
+      "stories": 38,
+      "author": "Kyle Kingsbury",
+      "siteUrl": "https://aphyr.com/",
+      "status": "available",
+      "feedUrl": "https://aphyr.com/posts.atom",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://aphyr.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:43.820Z",
+      "feedItems": 12
+    },
+    {
+      "rank": 93,
+      "domain": "jsomers.net",
+      "score": 9027,
+      "stories": 26,
+      "author": "James Somers",
+      "siteUrl": "https://jsomers.net/",
+      "status": "available",
+      "feedUrl": "https://jsomers.net/blog/feed",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://jsomers.net/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:44.615Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 94,
+      "domain": "oldvcr.blogspot.com",
+      "score": 8933,
+      "stories": 97,
+      "author": "Cameron Kaiser",
+      "siteUrl": "https://oldvcr.blogspot.com/",
+      "status": "available",
+      "feedUrl": "https://oldvcr.blogspot.com/feeds/posts/default",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://oldvcr.blogspot.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:48.565Z",
+      "feedItems": 25
+    },
+    {
+      "rank": 95,
+      "domain": "patrick-breyer.de",
+      "score": 8829,
+      "stories": 30,
+      "author": "Patrick Breyer",
+      "siteUrl": "https://patrick-breyer.de/",
+      "status": "available",
+      "feedUrl": "https://www.patrick-breyer.de/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.patrick-breyer.de/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:49.904Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 96,
+      "domain": "wheresyoured.at",
+      "score": 8813,
+      "stories": 76,
+      "author": "Ed Zitron",
+      "siteUrl": "https://wheresyoured.at/",
+      "status": "available",
+      "feedUrl": "https://www.wheresyoured.at/rss/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.wheresyoured.at/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:50.614Z",
+      "feedItems": 15
+    },
+    {
+      "rank": 97,
+      "domain": "practical.engineering",
+      "score": 8765,
+      "stories": 35,
+      "author": "Grady Hillhouse",
+      "siteUrl": "https://practical.engineering/",
+      "status": "available",
+      "feedUrl": "https://practical.engineering/blog?format=rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://practical.engineering/blog",
+      "checkedAt": "2026-09-22T02:33:48.306Z",
+      "attempts": [
+        {
+          "url": "https://practical.engineering/feed/",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://practical.engineering/feed.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://practical.engineering/rss.xml",
+          "error": "HTTP 404"
+        },
+        {
+          "url": "https://practical.engineering/atom.xml",
+          "error": "HTTP 404"
+        }
+      ],
+      "discoveryPage": "https://practical.engineering/blog",
+      "discovery": "html-alternate",
+      "feedItems": 20
+    },
+    {
+      "rank": 98,
+      "domain": "terrytao.wordpress.com",
+      "score": 8721,
+      "stories": 58,
+      "author": "Terence Tao",
+      "siteUrl": "https://terrytao.wordpress.com/",
+      "status": "available",
+      "feedUrl": "https://terrytao.wordpress.com/feed/",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://terrytao.wordpress.com/",
+      "discovery": "html-alternate",
+      "checkedAt": "2026-09-22T02:28:51.339Z",
+      "feedItems": 10
+    },
+    {
+      "rank": 99,
+      "domain": "bellard.org",
+      "score": 8530,
+      "stories": 39,
+      "author": "Fabrice Bellard",
+      "siteUrl": "https://bellard.org/",
+      "status": "unresolved",
+      "feedUrl": null,
+      "note": "本次无法读取或未发现可解析的 RSS/Atom；保留待修复，不代表网站停止更新",
+      "resolvedSiteUrl": "https://bellard.org/",
+      "checkedAt": "2026-09-22T02:41:11.089Z",
+      "attempts": [
+        {
+          "url": "https://bellard.org/feed/",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://bellard.org/feed.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://bellard.org/rss.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        },
+        {
+          "url": "https://bellard.org/atom.xml",
+          "error": "curl 无法读取或不是有效 RSS/Atom"
+        }
+      ]
+    },
+    {
+      "rank": 100,
+      "domain": "ben-evans.com",
+      "score": 8483,
+      "stories": 67,
+      "author": "Benedict Evans",
+      "siteUrl": "https://ben-evans.com/",
+      "status": "available",
+      "feedUrl": "https://www.ben-evans.com/benedictevans?format=rss",
+      "note": "已解析 RSS/Atom；内容完整性与长期可用性未保证",
+      "resolvedSiteUrl": "https://www.ben-evans.com/benedictevans/",
+      "checkedAt": "2026-09-22T02:41:29.759Z",
+      "discoveryPage": "https://www.ben-evans.com/benedictevans/",
+      "discovery": "html-alternate",
+      "feedItems": 20
+    }
+  ]
+}

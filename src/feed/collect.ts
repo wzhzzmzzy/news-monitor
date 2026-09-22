@@ -21,6 +21,7 @@ export interface FeedItem {
   content: string
   contentKind: 'feed-content' | 'feed-summary' | 'link-metadata' | 'title-only' | 'post'
   raw: unknown
+  channel?: 'news' | 'blogs'
 }
 export interface SourceResult {
   sourceId: string
@@ -58,7 +59,8 @@ function optionalUrl(value: unknown, base: string): string | undefined {
 const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': 'news-monitor/1.0 (personal RSS reader)' } })
 export async function parseFeed(xml: string, source: Extract<FeedSource, { type: 'rss' }>, now: string): Promise<FeedItem[]> {
   const feed = await parser.parseString(xml)
-  return feed.items.slice(0, source.limit).map(item => {
+  // Blog subscriptions retain every entry present in the publisher's feed.
+  return feed.items.slice(0, source.channel === 'blogs' ? undefined : source.limit).map(item => {
     const url = item.link ? canonicalUrl(new URL(item.link, source.url).href) : ''
     const guid = item.guid || item.id
     if (!url && !guid) throw new Error('RSS item has neither a permalink nor a stable GUID')
@@ -69,7 +71,7 @@ export async function parseFeed(xml: string, source: Extract<FeedSource, { type:
     const full = item['content:encoded'] || item.content
     const html = full || item.summary || item.contentSnippet || ''
     return {
-      id, sourceId: source.id, sourceName: source.name, category: source.category,
+      id, sourceId: source.id, sourceName: source.name, category: source.category, channel: source.channel,
       title: convert(item.title || '(无标题)', { wordwrap: false }), url,
       discussionUrl: optionalUrl(item.comments, source.url),
       author: item.creator || item.author, publishedAt: date(item.isoDate || item.pubDate), fetchedAt: now,

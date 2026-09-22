@@ -1,3 +1,4 @@
+blogCatalog: ./feeds/hn-popular-blogs.json
 # 开发示例；个人配置请复制到被 Git 忽略的 config.yaml。
 # 默认入口 monitor / report / serve 均使用 RSS/X；旧 NewsNow 配置需要迁移。
 # archiveDir 相对于本文件。来源映射与未覆盖项见 docs/source-migration.md。
@@ -13,6 +14,7 @@ schedule:
   collect: '*/30 * * * *'
   timezone: Asia/Shanghai
 localization:
+  blogBatchSize: 20 # 每轮新处理的博客数；原文全部归档，待处理项自动续跑
   enabled: true # Chinese translation and <=200-character summaries require llm
   chunkChars: 3000
   concurrency: 2
