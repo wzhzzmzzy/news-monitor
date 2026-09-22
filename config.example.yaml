@@ -150,6 +150,201 @@ sources:
     limit: 5
     enabled: false
     disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+
+  # X 来源扩充（2026-09-22）；身份、用途和验证见 feeds/x-accounts.md。
+  - id: x-openai
+    name: OpenAI / X
+    category: AI
+    type: x-user
+    username: OpenAI
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-anthropicai
+    name: Anthropic / X
+    category: AI
+    type: x-user
+    username: AnthropicAI
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-googledeepmind
+    name: Google DeepMind / X
+    category: AI
+    type: x-user
+    username: GoogleDeepMind
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-microsoft
+    name: Microsoft / X
+    category: 技术
+    type: x-user
+    username: Microsoft
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-nvidiaai
+    name: NVIDIA AI / X
+    category: AI
+    type: x-user
+    username: NVIDIAAI
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-huggingface
+    name: Hugging Face / X
+    category: AI
+    type: x-user
+    username: huggingface
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-github
+    name: GitHub / X
+    category: 技术
+    type: x-user
+    username: github
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-cloudflare
+    name: Cloudflare / X
+    category: 技术
+    type: x-user
+    username: Cloudflare
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-vercel
+    name: Vercel / X
+    category: 技术
+    type: x-user
+    username: vercel
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-alibaba-qwen
+    name: Qwen / X
+    category: AI
+    type: x-user
+    username: Alibaba_Qwen
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-deepseek-ai
+    name: DeepSeek / X
+    category: AI
+    type: x-user
+    username: deepseek_ai
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-mistralai
+    name: Mistral AI / X
+    category: AI
+    type: x-user
+    username: MistralAI
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-mit-csail
+    name: MIT CSAIL / X
+    category: 技术
+    type: x-user
+    username: MIT_CSAIL
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-stanfordhai
+    name: Stanford HAI / X
+    category: AI
+    type: x-user
+    username: StanfordHAI
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-allen-ai
+    name: Allen Institute for AI / X
+    category: AI
+    type: x-user
+    username: allen_ai
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-cloudnativefdn
+    name: Cloud Native Computing Foundation / X
+    category: 技术
+    type: x-user
+    username: CloudNativeFdn
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-sama
+    name: Sam Altman / X
+    category: AI
+    type: x-user
+    username: sama
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-karpathy
+    name: Andrej Karpathy / X
+    category: AI
+    type: x-user
+    username: karpathy
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-demishassabis
+    name: Demis Hassabis / X
+    category: AI
+    type: x-user
+    username: demishassabis
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-andrewyng
+    name: Andrew Ng / X
+    category: AI
+    type: x-user
+    username: AndrewYNg
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-drfeifei
+    name: Fei-Fei Li / X
+    category: AI
+    type: x-user
+    username: drfeifei
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-ylecun
+    name: Yann LeCun / X
+    category: AI
+    type: x-user
+    username: ylecun
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-fchollet
+    name: François Chollet / X
+    category: AI
+    type: x-user
+    username: fchollet
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+  - id: x-mitchellh
+    name: Mitchell Hashimoto / X
+    category: 技术
+    type: x-user
+    username: mitchellh
+    limit: 20
+    enabled: false
+    disabledReason: '安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。'
+
 # X List：type: x-list + listId: "数字 ID"，不需要创建或关注列表。
 # 凭据从环境变量读取，不写入 YAML。
 # Pi alternative (select one llm block):

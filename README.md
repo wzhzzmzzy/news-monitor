@@ -112,6 +112,8 @@ node dist/index.js serve -c config.yaml
 
 源类型 `rss` 使用 url，`rsshub` 使用 route 与 baseUrl，`x-user` 使用 username，`x-list` 使用数字 listId。所有源可配置 id/name/category/limit/enabled。RSS 请求超时 20 秒，瞬时网络/5xx 最多重试一次；X 每次子进程超时 120 秒。报告刷新时，RSS 保存 Feed 返回的全部条目，不受来源 `limit` 截断；X 从至少 100 条开始，借助 OpenCLI 的 cursor 翻页按需扩大请求，直到读到发布时间早于窗口起点的条目、返回不足、失败或达到 `collection.xMaxItems`（默认 1000，范围 100–10000）。扩大请求失败时保留已取得条目。未确认到达起点的 X 来源列入 `coverage.incompleteSources`，非空报告为 partial；返回不足不等于已取完历史。独立 `collect` 仍遵循普通来源的 `limit`。失败的来源单独记录，其余数据仍归档。
 
+X 来源清单已扩充至 25 个账号（12 个厂商、4 个组织、9 位人物），包括 OpenAI、Anthropic、DeepMind、Qwen、DeepSeek、GitHub、Cloudflare、MIT CSAIL、Stanford HAI、Karpathy、Andrew Ng 等，见[账号清单与采集约定](feeds/x-accounts.md)。公开示例默认停用 X，完成登录配置后启用；日常随报告统一采集。
+
 X 使用固定依赖 OpenCLI 1.8.7、已授权的官方扩展和 Brave 的登录会话，不需要 X 开发者 API Key。用 `pnpm exec opencli doctor` / `profile list` 检查，并将 Brave contextId 填入 `opencli.profile`；公共示例默认停用 X。程序不复制 Cookie。
 
 RSS 可能只有摘要；HN 是社区链接元数据，不代表外链正文；X 不保证完整分页/thread/Article。保留 `contentKind`、原始发布时间和观察时间。当前不补抓付费全文、图片 OCR 或外链正文，有限快照不能保证覆盖过去所有新闻。
