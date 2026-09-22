@@ -17,7 +17,7 @@ function page(search: string, editions = ['evening']) {
   const window = {matchMedia:vi.fn(()=>({matches:false})),origin:'https://blog.example',location,history:{pushState:vi.fn((_state, _title, url) => { location.href=String(url) })},addEventListener:(event:string,fn:()=>void)=>listeners.set(event,fn),removeEventListener:(event:string)=>listeners.delete(event)}
   let mount:()=>()=>void = () => () => {}
   const scope:any = {window, document, URL, URLSearchParams, callAction:calls, readMarkdown:latest, onMount:(fn:any)=>mount=fn}
-  runInNewContext(source+`\nglobalThis.controller = {jumpTo,rowId,timelineGroups,inTab,tabs,check,loadRoute,goLatest,chooseReport,chooseDay,setDay:value=>day=value,state:()=>({report,error,day,requestedEdition,choices,loading})};`,scope)
+  runInNewContext(source+`\nglobalThis.controller = {groupItems,matches,jumpTo,rowId,timelineGroups,inTab,tabs,check,loadRoute,goLatest,chooseReport,chooseDay,setDay:value=>day=value,state:()=>({report,error,day,requestedEdition,choices,loading})};`,scope)
   return {controller:scope.controller,calls,latest,window,document,listeners,mount:()=>mount()}
 }
 it('opens an exact dated evening report without consulting latest', async () => {
@@ -105,4 +105,22 @@ it('opens a collapsed day and focuses the jump destination without changing repo
   expect(target.scrollIntoView).toHaveBeenLastCalledWith({block:'start',behavior:'instant'})
   p.document.getElementById.mockReturnValue(null)
   expect(()=>p.controller.jumpTo('missing')).not.toThrow()
+})
+
+it('validates groups, preserves secondary sources for filtering and sorts events by newest report',()=>{
+  const p=page('');const entries=[
+    {id:'a',title:'发布',summary:'第一条',source:'主来源',url:'https://example.com/a',category:'AI',publishedAt:'2026-09-21T01:00:00Z',tier:'picks'},
+    {id:'b',title:'更新',summary:'独有细节',source:'另一来源',url:'https://example.com/b',category:'技术',publishedAt:'2026-09-22T01:00:00Z',tier:'other'},
+    {id:'blog',title:'博客',summary:null,source:'博客',url:'https://example.com/blog',category:'人文',publishedAt:null,tier:'blogs'},
+  ];const events=[{eventId:'e',title:'合并事件',summary:'事实',itemIds:['b','a']}];
+  const data={version:'news-feed-reader-v1',title:'早报',date:'2026-09-22',cutoff:'2026-09-22T02:00:00Z',summary:'',sections:[],items:entries,events};
+  p.controller.check(data);
+  const grouped=p.controller.groupItems(entries,events);
+  expect(grouped).toHaveLength(2);expect(grouped[0]).toMatchObject({id:'a',tier:'picks',publishedAt:'2026-09-22T01:00:00.000Z'});
+  expect(grouped[0].members).toHaveLength(2);
+  expect(p.controller.matches(grouped[0],'技术','独有细节')).toBe(true);
+  expect(p.controller.matches(grouped[0],'人文','')).toBe(false);
+  expect(p.controller.groupItems(entries)).toEqual(entries);
+  for(const ids of [['a','missing'],['a','blog'],['a','a']])expect(()=>p.controller.check({...data,events:[{...events[0],itemIds:ids}]})).toThrow();
+  expect(()=>p.controller.check({...data,items:entries.map(i=>i.id==='b'?{...i,tier:'picks'}:i)})).toThrow('重复精选');
 })

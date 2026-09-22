@@ -6,6 +6,7 @@ import { loadNews, loadSnapshotEvidence, type NewsList } from './news.js'
 import { renderFeed } from './view.js'
 import { publishReader, type KoalablogOptions } from './koalablog.js'
 import { makeReaderReport, dataMarkdown, safeUrl } from './reader-data.js'
+import { eventSchema, indexEvents } from './events.js'
 import { writeJson } from './store.js'
 
 const topic = z.enum(['AI', '技术', '商业', '人文', '综合'])
@@ -14,6 +15,7 @@ export const agentReportSchema = z.object({
   title: z.string().min(1).max(200), summary: z.string().max(3000),
   picks: z.array(z.object({ id: z.string(), reason: z.string().min(1).max(300), topic })).max(20),
   readingIds: z.array(z.string()).default([]),
+  events: z.array(eventSchema).max(500).optional(),
   sections: z.array(z.object({
     title: z.string().min(1).max(200), kind: z.enum(['overview', 'new', 'update', 'correction', 'watch']),
     body: z.string().min(1).max(5000), evidenceIds: z.array(z.string()).min(1), beforeIds: z.array(z.string()).default([]),
@@ -27,8 +29,18 @@ export function validateAgentReport(value: unknown, snapshot: NewsList) {
   const before = new Set(snapshot.baseline?.items.map(i => i.id))
   const selected = [...report.picks.map(p => p.id), ...report.readingIds]
   if (new Set(selected).size !== selected.length || selected.some(id => !ids.has(id))) throw new Error('Invalid or overlapping selection IDs')
+  const events = indexEvents(report.events || [], ids)
+  const pickedEvents = report.picks.map(p => events.get(p.id)?.eventId).filter(Boolean)
+  if (new Set(pickedEvents).size !== pickedEvents.length) throw new Error('An event can only be picked once')
+  const describedEvents = new Set<string>()
   for (const section of report.sections) {
     if (section.evidenceIds.some(id => !ids.has(id)) || section.beforeIds.some(id => !before.has(id))) throw new Error('Unknown report evidence IDs')
+    const event = section.evidenceIds.map(id => events.get(id)).find(Boolean)
+    if (event) {
+      if (section.evidenceIds.some(id => events.get(id) !== event)) throw new Error('A section must describe one event')
+      if (describedEvents.has(event.eventId)) throw new Error('An event can only have one overview section')
+      describedEvents.add(event.eventId)
+    }
     if (['update', 'correction'].includes(section.kind) && !section.beforeIds.length) throw new Error('Changes require baseline evidence')
   }
   return report
@@ -57,7 +69,7 @@ export async function renderAgentReport(snapshotFile: string, decisionFile: stri
   const kinds = { overview: '综述', new: '新增', update: '进展', correction: '更正', watch: '观察' }
   const overview = report.sections.length ? `<section class="report-overview" aria-labelledby="overview-heading" style="margin:20px 0 0;padding:20px 24px;background:var(--wash);border-radius:8px"><h3 id="overview-heading" style="font-size:12px;letter-spacing:.08em;color:var(--accent);margin:0 0 14px">新闻综述</h3><ol style="list-style:decimal;margin:0;padding-left:1.5em;font-size:13px">${report.sections.map(s => `<li style="margin:0 0 12px;padding-left:4px">${s.kind === 'overview' ? '' : `<h4 style="font-size:14px;margin:12px 0 6px">${kinds[s.kind]} · ${escape(s.title)}</h4>`}<p style="margin:0;font-size:13px;line-height:1.9;white-space:pre-wrap">${escape(s.body)}<sup class="citations" style="font-size:10px;line-height:0;vertical-align:super;white-space:nowrap">${s.evidenceIds.map(id => citation(id)).concat(s.beforeIds.map(id => citation(id, true))).join('')}</sup></p></li>`).join('')}</ol></section>` : ''
   const editorial = `<section aria-label="Agent 编辑报告" style="padding:28px 0 24px;border-bottom:1px solid var(--line)"><h2>${escape(report.title)}</h2>${report.summary.trim() ? `<p class="report-note" style="font-size:11px;line-height:1.8;color:var(--muted);white-space:pre-wrap">${escape(report.summary)}</p>` : ''}${overview}</section>`
-  let html = renderFeed(pack.items, pack.results, `${snapshot.window.start} — ${snapshot.window.end}`, undefined, pack.stats, curation, { email })
+  let html = renderFeed(pack.items, pack.results, `${snapshot.window.start} — ${snapshot.window.end}`, undefined, pack.stats, curation, { email, events: report.events })
   html = html.replace('</header>', `</header>${editorial}`).replace('<title>值得读 · News Feed</title>', `<title>${escape(report.title)}</title>`)
     .replace('译文、摘要与阅读筛选由模型生成', '译文与摘要由配置的模型生成；精选、变化判断与报告由调用方 Agent 编写')
   const target = path.resolve(output)

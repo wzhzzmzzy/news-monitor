@@ -114,3 +114,25 @@ it('escapes model and source text without interpolating it into the executable s
   search.value = '新闻 1'; search.dispatchEvent(new window.Event('input'))
   expect([...document.querySelectorAll('[data-timeline-group]')].filter(e => !e.hasAttribute('hidden'))).toHaveLength(1)
  })
+
+it('groups reports without losing original bodies, searches secondary sources and sorts by latest member', () => {
+  const input=items.map((i,n)=>({...i,publishedAt:`2026-09-${n===2?'22':'21'}T01:00:00Z`,sourceName:n===2?'Secondary exclusive':'Primary'}))
+  const events=[{eventId:'event',title:'事件标题',summary:'合并事实',itemIds:['0','2']}]
+  const html=renderFeed(input,[],'now',undefined,undefined,editorial,{events})
+  const {document,window}=parseHTML(html)
+  runInNewContext(readerScript,{document,window,location:{hash:''}})
+  expect(document.querySelectorAll('#panel-timeline [data-entry]')).toHaveLength(2)
+  expect(document.querySelectorAll('#panel-picks [data-entry]')).toHaveLength(1)
+  expect([...document.querySelectorAll('#panel-timeline [data-event-member]')].map(e=>e.getAttribute('data-event-member'))).toEqual(['0','2'])
+  expect(document.querySelector('#panel-timeline .timeline-clock')?.getAttribute('datetime')).toBe('2026-09-22T01:00:00.000Z')
+  expect(document.querySelector('#panel-timeline .event-reports')?.textContent).toContain('中文正文 2')
+  ;(document.querySelector('#tab-timeline') as HTMLElement).click()
+  ;(document.querySelector('[data-topic="商业"]') as HTMLElement).click()
+  const search=document.querySelector('#search') as HTMLInputElement
+  search.value='Secondary exclusive';search.dispatchEvent(new window.Event('input'))
+  expect([...document.querySelectorAll('#panel-timeline [data-entry]')].filter(e=>!e.hasAttribute('hidden'))).toHaveLength(1)
+  const email=parseHTML(renderFeed(input,[],'now',undefined,undefined,editorial,{events,email:true})).document
+  expect(email.querySelectorAll('[data-event-member]')).toHaveLength(2)
+  expect(email.querySelector('.event-reports')?.hasAttribute('open')).toBe(true)
+  expect(email.querySelectorAll('#panel-timeline [data-entry]')).toHaveLength(1)
+})

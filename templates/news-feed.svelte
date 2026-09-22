@@ -81,8 +81,39 @@
     if (data?.version !== 'news-feed-reader-v1' || !Array.isArray(data.items) || !Array.isArray(data.sections) || typeof data.title !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) || !Number.isFinite(Date.parse(data.cutoff))) throw new Error('报告数据格式不正确');
     if (data.items.some(i => !i || typeof i.id !== 'string' || typeof i.title !== 'string' || typeof i.source !== 'string' || typeof i.url !== 'string' || typeof i.category !== 'string' || !(i.summary === null || typeof i.summary === 'string') || !['picks','reading','other','blogs'].includes(i.tier))) throw new Error('新闻条目格式不正确');
     if (new Set(data.items.map(i => i.id)).size !== data.items.length || data.sections.some(s => typeof s.body !== 'string' || !Array.isArray(s.sources))) throw new Error('报告内容不完整');
+    if (data.events !== undefined) {
+      if (!Array.isArray(data.events)) throw new Error('事件分组格式不正确');
+      const news = new Set(data.items.filter(i => i.tier !== 'blogs').map(i => i.id));
+      const eventIds = new Set(), members = new Set();
+      for (const e of data.events) {
+        if (!e || typeof e.eventId !== 'string' || !e.eventId || eventIds.has(e.eventId) || typeof e.title !== 'string' || !e.title || typeof e.summary !== 'string' || !e.summary || !Array.isArray(e.itemIds) || e.itemIds.length < 2) throw new Error('事件分组格式不正确');
+        eventIds.add(e.eventId);
+        for (const id of e.itemIds) {
+          if (!news.has(id) || members.has(id)) throw new Error('事件包含未知、重复或博客条目');
+          members.add(id);
+        }
+        if (data.items.filter(i => e.itemIds.includes(i.id) && i.tier === 'picks').length > 1) throw new Error('同一事件不能重复精选');
+      }
+    }
     return data;
   }
+  function groupItems(entries, events = []) {
+    const byId = new Map(entries.map(i => [i.id, i]));
+    const byItem = new Map(events.flatMap(e => e.itemIds.map(id => [id, e])));
+    const seen = new Set();
+    return entries.flatMap(item => {
+      const event = byItem.get(item.id);
+      if (!event) return [item];
+      if (seen.has(event.eventId)) return [];
+      seen.add(event.eventId);
+      const members = event.itemIds.map(id => byId.get(id));
+      const primary = members.find(i => i.tier === 'picks') || members[0];
+      const times = members.map(timestamp).filter(t => t !== null);
+      return [{...primary, title:event.title, summary:event.summary, source:[...new Set(members.map(i => i.source))].join(' · '), publishedAt:times.length ? new Date(Math.max(...times)).toISOString() : null, members}];
+    });
+  }
+  const categories = item => [...new Set([item, ...(item.members || [])].map(i => i.category))];
+  const matches = (item, topic, text) => (topic === '全部主题' || categories(item).includes(topic)) && [item, ...(item.members || [])].some(i => `${i.title} ${i.summary || ''} ${i.source}`.toLowerCase().includes(text.trim().toLowerCase()));
   function adopt(data) { report = data; query = ''; category = '全部主题'; limit = 40; }
   async function reportsFor(date) {
     const files = await callAction('/_actions/db.markdown.byPrefix', {prefix:`/data/news-feed/${date}`, scope:'public'});
@@ -116,9 +147,9 @@
     finally { if (run === sequence) loading = false; }
   }
   function selectTab(id) { tab = id; limit = 40; }
-  $: items = report?.items || [];
-  $: topics = ['全部主题', ...new Set(items.filter(i => inTab(i, tab)).map(i => i.category))];
-  $: filtered = items.filter(i => inTab(i, tab) && (category === '全部主题' || i.category === category) && `${i.title} ${i.summary || ''} ${i.source}`.toLowerCase().includes(query.trim().toLowerCase()));
+  $: items = groupItems(report?.items || [], report?.events || []);
+  $: topics = ['全部主题', ...new Set(items.filter(i => inTab(i, tab)).flatMap(categories))];
+  $: filtered = items.filter(i => inTab(i, tab) && matches(i, category, query));
   $: timeline = timelineGroups(filtered);
   onMount(() => {
     if (window.origin === 'null') return;
@@ -127,6 +158,23 @@
     return () => { ++sequence; window.removeEventListener('popstate', navigate); };
   });
 </script>
+
+{#snippet eventReports(item)}
+  {#if item.members}
+    <details class="event-reports">
+      <summary>展开 {item.members.length} 篇相关报道</summary>
+      <ol>
+        {#each item.members as member (member.id)}
+          <li>
+            <a href={safe(member.url) || undefined} target="_blank" rel="noopener noreferrer">{member.title}</a>
+            <div class="event-source">{member.source} · {timestamp(member) === null ? '时间未知' : new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(member.publishedAt))}</div>
+            <p>{member.summary || '中文摘要待处理。'}</p>
+          </li>
+        {/each}
+      </ol>
+    </details>
+  {/if}
+{/snippet}
 
 <div class="reader">
   <p class="page-description">每日自动更新的 RSS、X、HN 新闻汇总</p>
@@ -171,7 +219,7 @@
     </div>
     <section class="stories" aria-label={tabs.find(t => t.id === tab)?.label}>
       {#if tab === 'timeline'}
-        <p class="timeline-note">发布时间 · 北京时间</p>
+        <p class="timeline-note">发布时间 · 北京时间{report.events?.length ? '；合并事件按最新报道排序' : ''}</p>
         <div class="timeline-layout">
           {#if timeline.length}
           <aside class="timeline-index">
@@ -202,6 +250,7 @@
                       <div class="timeline-meta"><span>{item.source}</span><span class="timeline-topic">{item.category}</span>{#if item.tier === 'picks'}<span class="timeline-picked">精选</span>{/if}</div>
                       <h3><a href={safe(item.url) || undefined} target="_blank" rel="noopener noreferrer">{item.title}</a></h3>
                       <p>{item.summary || '中文摘要待处理。'}</p>
+                      {@render eventReports(item)}
                     </article>
                   </li>
                 {/each}
@@ -217,6 +266,7 @@
             <div class="meta"><span>{item.category}</span> {item.source}</div>
             <h2><a href={safe(item.url) || undefined} target="_blank" rel="noopener noreferrer">{item.title}</a></h2>
             <p>{item.summary || '中文摘要待处理。'}</p>
+            {@render eventReports(item)}
           </article>
         {:else}
           <details>
@@ -234,6 +284,7 @@
 </div>
 
 <style>
+  .event-reports{margin-top:12px;border:0}.event-reports summary{font-size:12px;padding:4px 0;color:var(--accent)}.event-reports ol{list-style:decimal;padding-left:20px;margin:12px 0 0}.event-reports li{padding:10px 0;border-top:1px solid var(--line);font-size:13px}.event-reports li>a{font-weight:500}.event-source{font-size:11px;color:var(--muted);margin:4px 0}.event-reports p{font-size:12px!important;margin:0;color:var(--muted)}
   .page-description{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.7}
   .reader{--ink:#253630;--muted:#768078;--line:#dde3de;--accent:#2d6851;color:var(--ink);font-family:system-ui,-apple-system,'PingFang SC',sans-serif;font-size:15px;line-height:1.75;width:100%;margin:0 auto;padding:8px 0 44px}
   button,input,select{font:inherit;color:inherit}button{cursor:pointer;border:0;background:transparent}button:disabled{opacity:.5;cursor:wait}a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}

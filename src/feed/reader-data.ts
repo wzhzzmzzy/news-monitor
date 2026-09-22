@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { eventSchema } from './events.js'
 import type { AgentReport } from './agent-report.js'
 import type { NewsItem, NewsList } from './news.js'
 import { shanghaiDay } from './news.js'
@@ -10,7 +11,7 @@ const publicItem = z.object({ id: z.string(), title: z.string(), summary: z.stri
 export const readerSchema = z.object({
   version: z.literal('news-feed-reader-v1'), title: z.string(), date, edition: z.enum(['morning', 'evening', 'custom']), cutoff: time,
   summary: z.string(), sections: z.array(z.object({ kind: z.string(), title: z.string(), body: z.string(), sources: z.array(z.object({ title: z.string(), url: z.string(), source: z.string(), before: z.boolean() })) })),
-  items: z.array(publicItem),
+  items: z.array(publicItem), events: z.array(eventSchema).optional(),
 })
 export const latestSchema = z.object({ version: z.literal('news-feed-latest-v1'), path: reportPath, title: z.string(), date, edition: z.enum(['morning', 'evening', 'custom']), cutoff: time })
 export type ReaderReport = z.infer<typeof readerSchema>
@@ -33,6 +34,7 @@ export function makeReaderReport(snapshot: NewsList, report: AgentReport) {
   const item = (i: NewsItem, tier: 'picks' | 'reading' | 'other' | 'blogs') => ({ id: i.id, title: i.title, summary: i.summary, source: i.source, url: safeUrl(i.url), category: picks.get(i.id)?.topic || i.category, publishedAt: i.publishedAt, tier })
   const citation = (i: NewsItem, before: boolean) => ({ title: i.title, source: i.source, url: safeUrl(i.url), before })
   const data = readerSchema.parse({ version: 'news-feed-reader-v1', title: report.title, date: day, edition: snapshot.edition, cutoff: snapshot.window.end, summary: report.summary,
+    ...(report.events?.length ? { events: report.events } : {}),
     sections: report.sections.map(s => ({ kind: s.kind, title: s.title, body: s.body, sources: [...s.evidenceIds.map(id => citation(byId.get(id)!, false)), ...s.beforeIds.map(id => citation(previous.get(id)!, true))] })),
     items: [...report.picks.map(p => item(byId.get(p.id)!, 'picks')), ...snapshot.items.filter(i => !picks.has(i.id)).map(i => item(i, reading.has(i.id) ? 'reading' : 'other')), ...snapshot.blogs.map(i => item(i, 'blogs'))],
   })

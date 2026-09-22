@@ -4,6 +4,7 @@ import type { SourceResult } from './collect.js'
 import type { ReadingItem, LocalizationStats } from './localize.js'
 import type { Curation } from './curate.js'
 import { readingTopic } from './topics.js'
+import { indexEvents, type NewsEvent } from './events.js'
 import { isBlog } from './blogs.js'
 
 const escape = (text: string) => text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
@@ -26,7 +27,7 @@ export const readerScript = `(() => {
    panel.hidden = panel.dataset.panel !== active;
    let visible = 0;
    const entries = [...panel.querySelectorAll('[data-entry]')];
-   entries.forEach(entry => { const show = (topic === '全部' || entry.dataset.category === topic) && (!query || entry.dataset.search.toLocaleLowerCase().includes(query)); entry.hidden = !show; if (show) visible++; });
+   entries.forEach(entry => { const show = (topic === '全部' || (entry.dataset.categories || entry.dataset.category).split('|').includes(topic)) && (!query || entry.dataset.search.toLocaleLowerCase().includes(query)); entry.hidden = !show; if (show) visible++; });
    panel.querySelector('[data-empty]').hidden = visible !== 0;
    panel.querySelectorAll('[data-timeline-group]').forEach(group => { group.hidden = [...group.querySelectorAll('[data-entry]')].every(entry => entry.hidden); });
   });
@@ -74,27 +75,49 @@ const styles = `
 @media print{body{background:white}main{padding:0;max-width:none}[data-controls],.operations{display:none!important}[data-panel][hidden],[data-entry][hidden]{display:block!important}.entry{break-inside:avoid}.hero{padding-top:20px}}
 `
 
-export function renderFeed(items: ReadingItem[], results: SourceResult[], now: string, digest?: Digest, localization?: LocalizationStats, curation?: Curation, options: { email?: boolean } = {}): string {
+export function renderFeed(items: ReadingItem[], results: SourceResult[], now: string, digest?: Digest, localization?: LocalizationStats, curation?: Curation, options: { email?: boolean; events?: NewsEvent[] } = {}): string {
   const ready = curation?.status === 'ready'
   const tier = (item: ReadingItem) => isBlog(item) ? 'blogs' : ready ? curation.entries[item.id]?.tier || 'reading' : 'reading'
-  const groups = { picks: items.filter(i => tier(i) === 'picks'), blogs: items.filter(isBlog), timeline: items.filter(i => !isBlog(i) && (!options.email || tier(i) !== 'picks')) }
+  const byEvent = indexEvents(options.events || [], new Set(items.filter(i => !isBlog(i)).map(i => i.id)))
+  const eventMembers = new Map<string, ReadingItem[]>()
+  const display = items.filter(item => {
+    const event = byEvent.get(item.id)
+    if (!event) return true
+    const members = event.itemIds.map(id => items.find(i => i.id === id)!)
+    const primary = members.find(i => tier(i) === 'picks') || members[0]
+    if (item.id !== primary.id) return false
+    eventMembers.set(item.id, members)
+    return true
+  }).map(item => {
+    const event = byEvent.get(item.id), members = eventMembers.get(item.id)
+    if (!event || !members) return item
+    const times = members.map(i => i.publishedAt).filter((t): t is string => !!t && Number.isFinite(Date.parse(t))).sort((a,b) => Date.parse(b)-Date.parse(a))
+    return { ...item, title: event.title, publishedAt: times[0], sourceName: [...new Set(members.map(i => i.sourceName))].join(' · '),
+      ...(item.chinese ? { chinese: { ...item.chinese, titleZh: event.title, summaryZh: event.summary } } : {}) }
+  })
+  const groups = { picks: display.filter(i => tier(i) === 'picks'), blogs: display.filter(isBlog), timeline: display.filter(i => !isBlog(i) && (!options.email || tier(i) !== 'picks')) }
   groups.picks.sort((a, b) => ((curation?.entries[a.id]?.rank || 99) - (curation?.entries[b.id]?.rank || 99)) || ((curation?.entries[b.id]?.score || 0) - (curation?.entries[a.id]?.score || 0)))
   groups.blogs.sort((a, b) => (b.publishedAt || b.fetchedAt).localeCompare(a.publishedAt || a.fetchedAt) || a.id.localeCompare(b.id))
   const published = (item: ReadingItem) => item.publishedAt && Number.isFinite(Date.parse(item.publishedAt)) ? Date.parse(item.publishedAt) : null
   groups.timeline.sort((a,b) => (published(b) ?? -Infinity) - (published(a) ?? -Infinity) || a.id.localeCompare(b.id))
   const initial = groups.picks.length ? 'picks' : groups.blogs.length ? 'blogs' : 'timeline'
-  const itemBody = (item: ReadingItem) => {
+  const originalBody = (item: ReadingItem) => {
     const chinese = item.chinese
     const entry = isBlog(item) ? undefined : curation?.entries[item.id]
     const related = entry?.duplicateOf ? items.find(i => i.id === entry.duplicateOf) : undefined
     const rationale = entry ? `<p class="why"><b>${entry.tier === 'picks' ? '为什么值得读' : entry.tier === 'other' ? '收起原因' : '阅读提示'}</b>${related ? `同一事件的补充报道，优先阅读 <a href="#${anchor(related.id)}">${escape(related.chinese?.titleZh || related.title)}</a>。` : escape(entry.reason)}</p>` : ''
     return `${chinese ? `<p class="core">${escape(chinese.summaryZh)}</p>` : `<p class="pending">${escape(item.chineseError || '尚未生成中文摘要')}</p>`}${rationale}<p class="meta">${contentNames[item.contentKind]} · ${item.contentKind === 'link-metadata' ? '投稿时间：' : ''}${escape(item.publishedAt || '发布时间未知')}${item.author ? ` · ${item.contentKind === 'link-metadata' ? '提交者：' : item.contentKind === 'post' ? '@' : '作者：'}${escape(item.author)}` : ''}${item.discussionUrl && safeLink(item.discussionUrl) ? ` · <a href="${safeLink(item.discussionUrl)}">查看讨论</a>` : ''}</p><details class="text-details"><summary>${chinese?.translated ? '完整中文译文' : chinese ? '完整中文内容' : '查看原文'}</summary><div class="body">${escape(chinese?.contentZh || item.content || '来源未提供正文')}</div></details>${chinese?.translated ? `<details class="text-details"><summary>查看原文</summary><h3>${escape(item.title)}</h3><div class="body">${escape(item.content || '来源未提供正文')}</div></details>` : ''}`
   }
+  const itemBody = (item: ReadingItem) => {
+    const members = eventMembers.get(item.id), event = byEvent.get(item.id)
+    if (!members || !event) return originalBody(item)
+    return `<p class="core">${escape(event.summary)}</p><p class="meta">${members.length} 篇相关报道 · 按本组最新发布时间排序</p><details class="text-details event-reports"${options.email ? ' open' : ''}><summary>展开 ${members.length} 篇报道与原文</summary>${members.map(m => `<section data-event-member="${escape(m.id)}"><h4>${itemLink(m, m.chinese?.titleZh || m.title)}</h4><p class="meta">${escape(m.sourceName)}</p>${originalBody(m)}</section>`).join('')}</details>`
+  }
   const article = (item: ReadingItem, index: number, section: string) => {
     const topic = readingTopic(curation?.entries[item.id]?.topic || item.category, item)
-    const title = item.chinese?.titleZh || item.title
-    const search = [title, item.chinese?.summaryZh || '', item.sourceName, curation?.entries[item.id]?.reason || ''].join(' ')
-    const attrs = `id="${section === 'timeline' && tier(item) === 'picks' ? 'timeline-' : ''}${anchor(item.id)}" tabindex="-1" data-entry data-category="${escape(topic)}" data-search="${escape(search)}"`
+    const title = byEvent.get(item.id)?.title || item.chinese?.titleZh || item.title
+    const search = [title, item.chinese?.summaryZh || '', item.sourceName, byEvent.get(item.id)?.summary || '', ...(eventMembers.get(item.id) || []).flatMap(m => [m.title, m.chinese?.titleZh || '', m.chinese?.summaryZh || '', m.sourceName]), curation?.entries[item.id]?.reason || ''].join(' ')
+    const attrs = `id="${section === 'timeline' && tier(item) === 'picks' ? 'timeline-' : ''}${anchor(item.id)}" tabindex="-1" data-entry data-category="${escape(topic)}" data-categories="${escape([topic, ...(eventMembers.get(item.id) || []).map(m => readingTopic(curation?.entries[m.id]?.topic || m.category, m))].join('|'))}" data-search="${escape(search)}"`
     if (section === 'timeline') {
       const stamp = published(item)
       const local = stamp === null ? '' : new Date(stamp + 8 * 3600000).toISOString()
@@ -110,7 +133,7 @@ export function renderFeed(items: ReadingItem[], results: SourceResult[], now: s
       const date = stamp === null ? 'unknown' : new Date(stamp + 8 * 3600000).toISOString().slice(0,10)
       days.set(date, [...(days.get(date) || []), item])
     }
-    return '<p class="meta">发布时间 · 北京时间</p>' + [...days].map(([date, entries]) => `<section data-timeline-group><h2 class="timeline-date">${date === 'unknown' ? '时间未知' : escape(date)}<small>${entries.length} 条</small></h2>${entries.map((item,i) => article(item,i,'timeline')).join('')}</section>`).join('')
+    return `<p class="meta">发布时间 · 北京时间${options.events?.length ? '；合并事件按最新报道排序' : ''}</p>` + [...days].map(([date, entries]) => `<section data-timeline-group><h2 class="timeline-date">${date === 'unknown' ? '时间未知' : escape(date)}<small>${entries.length} 条</small></h2>${entries.map((item,i) => article(item,i,'timeline')).join('')}</section>`).join('')
   }
   const panels = (Object.keys(groups) as Array<keyof typeof groups>).map(key => `<section class="panel" id="panel-${key}" role="tabpanel" aria-labelledby="tab-${key}" data-panel="${key}">${options.email ? `<h2>${labels[key]}</h2>` : `<noscript><h2>${labels[key]}</h2></noscript>`}${key === 'timeline' ? timeline() : groups[key].map((item, i) => article(item, i, key)).join('')}<p class="empty" data-empty ${groups[key].length ? 'hidden' : ''}>这个分组下没有匹配内容。可切换分类或清除搜索。</p></section>`).join('')
   const progress = localization?.enabled ? `<p class="meta">中文处理：完成 ${localization.ready}/${localization.total} · 缓存 ${localization.cached} · 待处理 ${localization.pending} · 失败 ${localization.failed}</p>` : ''
