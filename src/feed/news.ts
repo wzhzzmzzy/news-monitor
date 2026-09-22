@@ -20,14 +20,17 @@ const itemSchema = z.object({
   change: z.enum(['new', 'updated', 'unchanged', 'resurfaced', 'observed']),
 })
 const windowSchema = z.object({ start: timestamp, end: timestamp, basis: z.enum(['collectedAt', 'publishedAt']) })
+const publicationFilterSchema = z.object({
+  basis: z.literal('publishedAt'), scope: z.enum(['news', 'blogs']), missingDate: z.literal('exclude'), included: z.number().int().nonnegative(),
+  excluded: z.object({ beforeStart: z.number().int().nonnegative(), atOrAfterEnd: z.number().int().nonnegative(), missingDate: z.number().int().nonnegative(), invalidDate: z.number().int().nonnegative() }),
+})
+
 export const newsSchema = z.object({
   version: z.literal('news-list-v1'), snapshotId: z.string().uuid(), snapshotPath: z.string(), createdAt: timestamp,
   edition: z.enum(['morning', 'evening', 'custom']), window: windowSchema,
   observedThrough: timestamp.optional(),
-  publicationFilter: z.object({
-    basis: z.literal('publishedAt'), scope: z.literal('news'), missingDate: z.literal('exclude'), included: z.number().int().nonnegative(),
-    excluded: z.object({ beforeStart: z.number().int().nonnegative(), atOrAfterEnd: z.number().int().nonnegative(), missingDate: z.number().int().nonnegative(), invalidDate: z.number().int().nonnegative() }),
-  }).optional(),
+  publicationFilter: publicationFilterSchema.extend({ scope: z.literal('news') }).optional(),
+  blogPublicationFilter: publicationFilterSchema.extend({ scope: z.literal('blogs') }).optional(),
   status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), maxPicks: z.number().int() }),
   coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), incompleteSources: z.array(z.string()).default([]), note: z.string() }),
   items: z.array(itemSchema),
@@ -57,6 +60,7 @@ export function parseNews(value: unknown): NewsList {
   }
   if (Date.parse(list.window.end) <= Date.parse(list.window.start)) throw new Error('Invalid snapshot window')
   if (list.publicationFilter && (list.publicationFilter.included !== list.items.length || list.items.some(item => !item.publishedAt || Date.parse(item.publishedAt) < Date.parse(list.window.start) || Date.parse(item.publishedAt) >= Date.parse(list.window.end)))) throw new Error('Snapshot news does not match its publication window')
+  if (list.blogPublicationFilter && (list.blogPublicationFilter.included !== list.blogs.length || list.blogs.some(item => !item.publishedAt || Date.parse(item.publishedAt) < Date.parse(list.window.start) || Date.parse(item.publishedAt) >= Date.parse(list.window.end)))) throw new Error('Snapshot blogs do not match their publication window')
   return list
 }
 export async function loadNews(file: string) { return parseNews(JSON.parse(await fs.readFile(file, 'utf8'))) }
@@ -88,21 +92,23 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     observedThrough = new Date(Math.max(Date.now(), Date.parse(result.collectedAt)) + 1)
   }
   return new FeedStore(config.archiveDir).withLock(async () => {
-    const evidence = await readEvidenceWindow(config.archiveDir, start, observedThrough, previous?.observedThrough ? new Date(previous.observedThrough) : start)
+    const evidence = await readEvidenceWindow(config.archiveDir, start, observedThrough, { includeUnchangedBlogs: true })
     const classified = evidence.items.map(item => belongsToBlog(item.url, config.sources) ? { ...item, channel: 'blogs' as const } : item)
     // A direct blog article takes precedence over community metadata for its URL.
     const blogUrls = new Set(classified.filter(item => isBlog(item) && item.contentKind !== 'link-metadata').map(item => item.url))
     const publicationFilter: NonNullable<NewsList['publicationFilter']> = { basis: 'publishedAt', scope: 'news', missingDate: 'exclude', included: 0,
       excluded: { beforeStart: 0, atOrAfterEnd: 0, missingDate: 0, invalidDate: 0 } }
+    const blogPublicationFilter: NonNullable<NewsList['blogPublicationFilter']> = { ...publicationFilter, scope: 'blogs', excluded: { ...publicationFilter.excluded } }
     const eligible = classified.filter(item => {
-      if (isBlog(item)) return !(item.contentKind === 'link-metadata' && blogUrls.has(item.url))
+      if (isBlog(item) && item.contentKind === 'link-metadata' && blogUrls.has(item.url)) return false
+      const filter = isBlog(item) ? blogPublicationFilter : publicationFilter
       // A recent observation does not make an old or undated article recent news.
-      if (!item.publishedAt) { publicationFilter.excluded.missingDate++; return false }
-      if (!timestamp.safeParse(item.publishedAt).success) { publicationFilter.excluded.invalidDate++; return false }
+      if (!item.publishedAt) { filter.excluded.missingDate++; return false }
+      if (!timestamp.safeParse(item.publishedAt).success) { filter.excluded.invalidDate++; return false }
       const published = Date.parse(item.publishedAt)
-      if (published < +start) { publicationFilter.excluded.beforeStart++; return false }
-      if (published >= +end) { publicationFilter.excluded.atOrAfterEnd++; return false }
-      publicationFilter.included++
+      if (published < +start) { filter.excluded.beforeStart++; return false }
+      if (published >= +end) { filter.excluded.atOrAfterEnd++; return false }
+      filter.included++
       return true
     })
     // Collection already spent the blog translation budget; reuse its cache here.
@@ -139,11 +145,11 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
       version: 'news-list-v1', snapshotId, snapshotPath, createdAt: new Date().toISOString(), edition: options.edition || 'custom',
       window: { start: start.toISOString(), end: end.toISOString(), basis: 'publishedAt' },
       observedThrough: observedThrough.toISOString(),
-      publicationFilter,
-      status: !all.length ? 'empty' : failedSources.length || missingSources.length || incompleteSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
+      publicationFilter, blogPublicationFilter,
+      status: !all.length ? 'empty' : failedSources.length || missingSources.length || incompleteSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || blogPublicationFilter.excluded.missingDate || blogPublicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
       preferences: { interests: config.curation.interests, maxPicks: config.curation.maxPicks },
       coverage: { complete: false, observations: evidence.observations, failedSources, missingSources, incompleteSources,
-        note: '有限 RSS/X 快照，不能保证全量覆盖。新闻按固定发布时间窗口筛选；observedThrough 单独记录可用采集批次的截止时间，刷新补采不会移动报告截止；无有效发布时间的新闻不纳入。博客保留截至 observedThrough 观察到的更新，晚报从早报 observedThrough 接续，不限制发布时间。未再出现不表示撤稿；原文变化不等于事件进展。' },
+        note: '有限 RSS/X 快照，不能保证全量覆盖。新闻与博客按固定发布时间窗口筛选；observedThrough 单独记录可用采集批次的截止时间，刷新补采不会移动报告截止；无有效发布时间的条目不纳入。历史博客继续归档，重复观察或正文变化不会绕过发布时间限制。未再出现不表示撤稿；原文变化不等于事件进展。' },
       items, blogs,
       baseline: previous ? { snapshotId: previous.snapshotId, snapshotPath: path.resolve(options.baseline!), window: previous.window, observedThrough: previous.observedThrough, status: previous.status, items: previous.items, blogs: previous.blogs, coverage: previous.coverage } : null,
       counts, evidenceSha256: hashBytes(packed),

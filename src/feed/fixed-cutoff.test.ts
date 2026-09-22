@@ -24,7 +24,7 @@ it('includes an 08:00 article collected at 10:45 without shifting the 10:00 publ
   expect(result.coverage.observations).toContain('2026-09-22T02:45:00.000Z')
 })
 
-it('carries 10:30 news first fetched by the morning run into evening without repeating morning blog observations', async () => {
+it('carries 10:30 news and blogs into evening even after the morning run first observes them', async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fixed-cutoff-baseline-'))
   const config = feedConfigSchema.parse({ archiveDir: dir, localization: { enabled: false }, sources: [
     { id: 'rss', name: 'RSS', type: 'rss', url: 'https://news.example/feed' },
@@ -34,19 +34,19 @@ it('carries 10:30 news first fetched by the morning run into evening without rep
   let morningRun = true
   const collect = (cfg: typeof config, options: Parameters<typeof runFeed>[1]) => runFeed(cfg, options, async source => {
     if (!morningRun) return []
-    return [{ id: source.id, publishedAt: source.id === 'blog' ? '2020-01-01T00:00:00Z' : '2026-09-22T02:30:00Z',
+    return [{ id: source.id, publishedAt: '2026-09-22T02:30:00Z',
       title: source.name, content: source.name, sourceId: source.id, sourceName: source.name, category: '技术',
       channel: source.channel, url: `https://${source.id}.example/post`, fetchedAt: new Date().toISOString(), contentKind: 'feed-content' as const, raw: {} }]
   }, localizeItems)
   const before = await queryNews(config, { ...range, edition: 'morning', refresh: true }, localizeItems, collect)
   expect(before.items).toEqual([])
-  expect(before.blogs.map(i => i.id)).toEqual(['blog'])
+  expect(before.blogs).toEqual([])
   const bytes = await fs.readFile(before.snapshotPath, 'utf8')
   morningRun = false
   vi.setSystemTime(new Date('2026-09-22T12:30:00Z'))
   const after = await queryNews(config, { ...editionRange('evening', '2026-09-22'), edition: 'evening', baseline: before.snapshotPath, refresh: true }, localizeItems, collect)
   expect(after.window).toMatchObject({ start: range.end.toISOString(), end: '2026-09-22T12:00:00.000Z', basis: 'publishedAt' })
   expect(after.items.map(i => i.id)).toEqual(['rss'])
-  expect(after.blogs).toEqual([])
+  expect(after.blogs.map(i => i.id)).toEqual(['blog'])
   expect(await fs.readFile(before.snapshotPath, 'utf8')).toBe(bytes)
 })

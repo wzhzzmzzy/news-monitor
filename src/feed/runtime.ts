@@ -60,7 +60,7 @@ export function validateSchedule(config: FeedConfig) {
   if (config.schedule.analyze || config.schedule.sendEmail) throw new Error('Scheduled editing and delivery belong to the calling agent; disable schedule.analyze/sendEmail')
 }
 
-export async function readEvidenceWindow(directory: string, start?: Date, end?: Date, blogStart = start) {
+export async function readEvidenceWindow(directory: string, start?: Date, end?: Date, options: { includeUnchangedBlogs?: boolean } = {}) {
   let runs: string[]
   try { runs = await fs.readdir(path.join(directory, 'runs')) }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { items: [], results: [], observations: [] as string[] }; throw error }
@@ -78,10 +78,12 @@ export async function readEvidenceWindow(directory: string, start?: Date, end?: 
     if (pack.version !== 1 || !Array.isArray(pack.items) || !Array.isArray(pack.results) || !Number.isFinite(Date.parse(pack.collectedAt))) throw new Error(`Invalid source pack in run ${run}`)
     if ((start && Date.parse(pack.collectedAt) < +start) || (end && Date.parse(pack.collectedAt) >= +end)) continue
     observations.push(pack.collectedAt)
+    // Publication-window reports also need unchanged copies; publication time
+    // determines their edition. Archive previews retain observation deltas.
     // Repeated polls are observations, not new blog updates. A changed copy
     // already observed in this window remains visible after later seen copies.
     for (const item of pack.items) {
-      if (isBlog(item) && (item.change === 'seen' || (blogStart && Date.parse(pack.collectedAt) < +blogStart))) continue
+      if (isBlog(item) && !options.includeUnchangedBlogs && item.change === 'seen') continue
       items.set(item.id, item)
     }
     for (const result of pack.results) results.set(result.sourceId, result)

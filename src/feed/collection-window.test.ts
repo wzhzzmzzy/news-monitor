@@ -20,8 +20,9 @@ async function config(type: 'rss' | 'x-user' = 'rss') {
 const tweet = (id: number, created_at = '2026-09-22T01:00:00.000Z') => ({ id: String(id), author: 'example', text: `post ${id}`, url: `https://x.com/example/status/${id}`, created_at })
 afterEach(async () => { vi.useRealTimers(); vi.unstubAllGlobals(); for (const dir of dirs.splice(0)) await fs.rm(dir, { recursive: true, force: true }) })
 
-it('archives every returned RSS entry for reports but translates only eligible news', async () => {
+it.each(['news', 'blogs'] as const)('archives all %s entries for reports but translates only eligible articles', async channel => {
   const cfg = await config()
+  cfg.sources[0].channel = channel
   const feed = '<rss version="2.0"><channel><title>News</title>' + [
     ['too-new', '2026-09-22T02:15:00Z'], ['eligible', '2026-09-22T01:00:00Z'], ['old', '2020-01-01T00:00:00Z'],
   ].map(([id, time]) => `<item><title>${id}</title><link>https://news.example/${id}</link><description>${id}</description><pubDate>${new Date(time).toUTCString()}</pubDate></item>`).join('') + '</channel></rss>'

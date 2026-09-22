@@ -61,7 +61,7 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false })
     const backlog = options.channel === 'news' ? [] : await store.readBlogs()
     const candidates = [...new Map([...backlog, ...stored].map(item => [item.id, item])).values()]
-    const reading = await localize(options.publicationWindow ? candidates.filter(item => isBlog(item) ||
+    const reading = await localize(options.publicationWindow ? candidates.filter(item =>
       (item.publishedAt && Date.parse(item.publishedAt) >= +options.publicationWindow!.start && Date.parse(item.publishedAt) < +options.publicationWindow!.end)) : candidates, config)
     await writeJson(path.join(runDir, 'reading-pack.json'), reading)
     const newsCount = reading.items.filter(item => !isBlog(item)).length

@@ -32,25 +32,30 @@ beforeEach(async () => {
 })
 afterEach(async () => { vi.useRealTimers(); await fs.rm(dir, { recursive: true, force: true }) })
 
-it('excludes stale, undated and future news before snapshot translation while preserving raw evidence and blogs', async () => {
+it('filters publication dates for news and blogs before translation while preserving raw archives', async () => {
   const file = await observe('2026-09-21T01:00:00.000Z', [
     item('old', '2026-09-18T12:00:00Z'), item('missing'),
     item('at-start', morning.start.toISOString()), item('recent', '2026-09-21T08:30:00+08:00'),
-    item('at-end', morning.end.toISOString()), item('old-blog', '2020-01-01T00:00:00Z', 'https://blog.example/post'),
+    item('at-end', morning.end.toISOString()),
+    ...[['old-blog', '2020-01-01T00:00:00Z'], ['blog-start', morning.start.toISOString()], ['blog-end', morning.end.toISOString()], ['blog-missing', undefined], ['blog-invalid', 'not-a-date']].map(([id, date]) => ({ ...item(id!, date, `https://blog.example/${id}`), channel: 'blogs' as const })),
   ])
   const original = await fs.readFile(file, 'utf8')
   const localize = vi.fn(localizeItems)
   const snapshot = await queryNews(config, { ...morning, edition: 'morning' }, localize)
   expect(snapshot.items.map(i => i.id)).toEqual(['at-start', 'recent'])
-  expect(snapshot.blogs.map(i => i.id)).toEqual(['old-blog'])
-  expect(localize.mock.calls[0][0].map(i => i.id).sort()).toEqual(['at-start', 'old-blog', 'recent'])
+  expect(snapshot.blogs.map(i => i.id)).toEqual(['blog-start'])
+  expect(localize.mock.calls[0][0].map(i => i.id).sort()).toEqual(['at-start', 'blog-start', 'recent'])
   expect(snapshot).toMatchObject({ publicationFilter: { basis: 'publishedAt', scope: 'news', missingDate: 'exclude', included: 2,
     excluded: { beforeStart: 1, atOrAfterEnd: 1, missingDate: 1, invalidDate: 0 } } })
   expect((await loadSnapshotEvidence(snapshot, snapshot.snapshotPath)).items).toHaveLength(3)
   expect(await fs.readFile(file, 'utf8')).toBe(original)
   expect(() => parseNews({ ...snapshot, items: snapshot.items.map(i => ({ ...i, publishedAt: morning.end.toISOString() })) })).toThrow('publication window')
+  expect(snapshot.blogPublicationFilter).toMatchObject({ included: 1, excluded: { beforeStart: 1, atOrAfterEnd: 1, missingDate: 1, invalidDate: 1 } })
+  expect(() => parseNews({ ...snapshot, blogs: snapshot.blogs.map(i => ({ ...i, publishedAt: morning.end.toISOString() })) })).toThrow('publication window')
   const legacy = { ...snapshot } as Record<string, unknown>
   delete legacy.publicationFilter
+  delete legacy.blogPublicationFilter
+  legacy.blogs = snapshot.blogs.map(i => ({ ...i, publishedAt: '2020-01-01T00:00:00Z' }))
   expect(parseNews(legacy).snapshotId).toBe(snapshot.snapshotId)
 })
 
@@ -91,4 +96,20 @@ it('filters invalid dates in custom windows and preserves source coverage when n
   expect(snapshot.status).toBe('empty')
   expect(snapshot.coverage).toMatchObject({ observations: ['2026-09-21T01:00:00.000Z'], failedSources: [], missingSources: [] })
   expect(snapshot).toMatchObject({ publicationFilter: { included: 0, excluded: { beforeStart: 1, atOrAfterEnd: 0, missingDate: 1, invalidDate: 1 } } })
+})
+
+it('includes unchanged in-window blogs but excludes historical blogs even after edits', async () => {
+  const fresh = { ...item('fresh-blog', '2026-09-20T03:00:00Z', 'https://blog.example/fresh'), channel: 'blogs' as const }
+  const old = { ...item('historical-blog', '2020-01-01T00:00:00Z', 'https://blog.example/old'), channel: 'blogs' as const }
+  await observe('2026-09-20T01:00:00.000Z', [fresh, old])
+  const file = await observe('2026-09-21T01:00:00.000Z', [fresh, { ...old, content: 'Edited historical article' }])
+  const original = await fs.readFile(file, 'utf8')
+  expect(JSON.parse(original).items.find((i: {id: string}) => i.id === fresh.id).change).toBe('seen')
+  const snapshot = await queryNews(config, { start: new Date('2026-09-20T05:00:00Z'), end: morning.end })
+  expect(snapshot.blogs).toEqual([])
+  // Same unchanged copy qualifies when its original publication is in the window.
+  const within = await queryNews(config, morning)
+  expect(within.blogs.map(i => i.id)).toEqual(['fresh-blog'])
+  expect(within.blogPublicationFilter?.excluded.beforeStart).toBe(1)
+  expect(await fs.readFile(file, 'utf8')).toBe(original)
 })
