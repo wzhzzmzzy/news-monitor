@@ -51,7 +51,8 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
     // Raw payloads remain replayable even if indexing or the model fails later.
     await writeJson(path.join(runDir, 'raw.json'), items)
     const stored = await store.merge(items)
-    await writeJson(path.join(runDir, 'source-pack.json'), { version: 1, collectedAt: new Date().toISOString(), results, items: stored })
+    const collectedAt = new Date().toISOString()
+    await writeJson(path.join(runDir, 'source-pack.json'), { version: 1, collectedAt, results, items: stored })
     let html = renderFeed(stored, results, now)
     await fs.writeFile(path.join(runDir, 'preview.html'), html, { mode: 0o600 })
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false })
@@ -64,7 +65,7 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
     html = renderFeed(reading.items, results, now, undefined, reading.stats, curation)
     await fs.writeFile(path.join(runDir, 'preview.html'), html, { mode: 0o600 })
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false, localization: reading.stats, curation })
-    return { runDir, preview: path.join(runDir, 'preview.html'), count: stored.length, results, localization: reading.stats, curation,
+    return { runDir, collectedAt, preview: path.join(runDir, 'preview.html'), count: stored.length, results, localization: reading.stats, curation,
       changes: { new: stored.filter(i => i.change === 'new').length, updated: stored.filter(i => i.change === 'updated').length, seen: stored.filter(i => i.change === 'seen').length },
     }
   })

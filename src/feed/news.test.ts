@@ -9,6 +9,7 @@ import type { FeedItem } from './collect.js'
 import { editionRange, queryNews, loadSnapshotEvidence, shanghaiDay } from './news.js'
 import { renderAgentReport, validateAgentReport } from './agent-report.js'
 import { runFeed } from './pipeline.js'
+import { localizeItems } from './localize.js'
 
 let dir: string, config: FeedConfig
 const morning = editionRange('morning', '2026-09-21')
@@ -66,6 +67,52 @@ it('refuses missing/wrong baselines, malformed windows and future cutoffs', asyn
   await expect(queryNews(config, { start: new Date(+evening.start + 1), end: evening.end, baseline: baseline.snapshotPath })).rejects.toThrow('gaps and overlaps')
   await expect(queryNews(config, { ...editionRange('evening', '2026-09-23'), edition: 'evening', baseline: baseline.snapshotPath })).rejects.toThrow('not ended')
   await expect(queryNews(config, { ...evening, edition: 'morning' })).rejects.toThrow('cutoff')
+})
+it('collects news and blogs once per edition and includes the batch after the nominal cutoff', async () => {
+  config.sources.push({ ...config.sources[0], type: 'rss', id: 'blog', name: 'Blog', channel: 'blogs', url: 'https://blog.example/feed' })
+  config.sources.push({ ...config.sources[0], id: 'broken' })
+  let completion = '2026-09-22T02:05:00.000Z'
+  const collect = vi.fn(async (cfg: FeedConfig) => runFeed(cfg, {}, async source => {
+    if (source.id === 'broken') throw new Error('Source offline')
+    return [{ id: source.id, sourceId: source.id, sourceName: source.name, category: '技术', title: source.name,
+      content: completion, contentKind: 'feed-content' as const, url: `https://${source.id}.example/article`, fetchedAt: new Date().toISOString(), raw: {} }]
+  }, async (items, cfg) => {
+    vi.setSystemTime(new Date(completion))
+    return localizeItems(items, cfg)
+  }))
+  const localize = vi.fn(localizeItems)
+  vi.setSystemTime(new Date('2026-09-22T02:00:00Z'))
+  const before = await queryNews(config, { ...editionRange('morning', '2026-09-22'), edition: 'morning', refresh: true }, localize, collect)
+  expect(collect).toHaveBeenCalledTimes(1)
+  expect(before.window).toMatchObject({ start: '2026-09-21T02:05:00.000Z', end: completion })
+  expect(before.items.map(item => item.id)).toEqual(['rss'])
+  expect(before.blogs.map(item => item.id)).toEqual(['blog'])
+  expect(before.coverage.failedSources).toEqual(['broken'])
+  expect(before.status).toBe('partial')
+  expect(localize.mock.calls[0][1].localization.blogBatchSize).toBe(0)
+  expect(config.localization.blogBatchSize).toBe(20)
+  const bytes = await fs.readFile(before.snapshotPath, 'utf8')
+  completion = '2026-09-22T12:03:00.000Z'
+  vi.setSystemTime(new Date('2026-09-22T12:00:00Z'))
+  const after = await queryNews(config, { ...editionRange('evening', '2026-09-22'), edition: 'evening', baseline: before.snapshotPath, refresh: true }, localize, collect)
+  expect(collect).toHaveBeenCalledTimes(2)
+  expect(after.window).toMatchObject({ start: before.window.end, end: completion })
+  expect(after.items[0].change).toBe('updated')
+  expect(after.blogs[0].change).toBe('updated')
+  expect(after.baseline?.snapshotId).toBe(before.snapshotId)
+  expect(await fs.readFile(before.snapshotPath, 'utf8')).toBe(bytes)
+  await loadSnapshotEvidence(after, after.snapshotPath)
+})
+it('validates refresh dates and baselines before collecting', async () => {
+  const collect = vi.fn(runFeed)
+  const before = await queryNews(config, { ...morning, edition: 'morning' })
+  vi.setSystemTime(new Date('2026-09-22T12:00:00Z'))
+  await expect(queryNews(config, { ...morning, refresh: true }, localizeItems, collect)).rejects.toThrow('--edition')
+  await expect(queryNews(config, { ...morning, edition: 'morning', refresh: true }, localizeItems, collect)).rejects.toThrow('today')
+  await expect(queryNews(config, { ...editionRange('morning', '2026-09-23'), edition: 'morning', refresh: true }, localizeItems, collect)).rejects.toThrow('not ended')
+  await expect(queryNews(config, { ...editionRange('evening', '2026-09-22'), edition: 'evening', refresh: true }, localizeItems, collect)).rejects.toThrow('baseline')
+  await expect(queryNews(config, { ...editionRange('evening', '2026-09-22'), edition: 'evening', refresh: true, baseline: before.snapshotPath }, localizeItems, collect)).rejects.toThrow('earlier today')
+  expect(collect).not.toHaveBeenCalled()
 })
 it('renders only external decisions, validates citations and retains every unselected item', async () => {
   await observe('2026-09-21T01:00:00.000Z', [['a', '初稿']])

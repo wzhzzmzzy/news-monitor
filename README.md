@@ -55,9 +55,9 @@ llm:
 | 命令 | 职责 |
 | --- | --- |
 | `collect` | 抓取、去重、归档、中文处理；monitor/feed 是别名 |
-| `news` | 按窗口输出全部新闻、中文摘要、来源覆盖、原文版本与可选基线；不精选 |
+| `news` | 按窗口输出新闻与博客快照；`--refresh` 在早晚报生成前统一采集；不精选 |
 | `render` | 接收 Agent 编写的 JSON，离线校验并输出 HTML；`--email` 为邮件版，不投递 |
-| `serve` | 持续采集与翻译，提供本机状态端口；不调度 Agent 或报告 |
+| `serve` | 可选的独立采集调度器；随早晚报采集时无需启动 |
 | `report` | 兼容命令：未经精选的归档阅读预览，可 `--all` 补处理历史内容 |
 
 `collect` / `news` 从不调用内置精选或专题分析模型，即便旧配置中 `curation.enabled: true`。`curation.interests` / `maxPicks` 仅作为偏好交给外部 Agent。旧 `--analyze` 已从 CLI 移除。旧编辑模块和缓存保留供历史实验读取，不在新运行流程中使用。
@@ -66,14 +66,14 @@ Skill 本身不提供网络连接。具备本机命令工具的 ChatGPT/其他 A
 
 ## 10:00 早报与 20:00 增量报
 
-全部按北京时间，窗口使用采集批次完成时间与半开区间：
+默认随每天早报、晚报各采集一次：新闻 RSS/X 与博客共用同一轮抓取、归档和中文处理，无需另启博客定时任务或 `serve`。全部按北京时间，窗口使用实际采集批次时间与半开区间：
 
 ```bash
-# 早报：前一天 10:00 至当天 10:00，保存输出中的 snapshotPath
-node dist/index.js news -c config.yaml --edition morning --day 2026-09-22
+# 10:00 开始生成早报：先统一采集，再冻结最近 24 小时，保存 snapshotPath
+node dist/index.js news -c config.yaml --edition morning --refresh
 
-# 晚报：当天 10:00 至 20:00，严格使用那份早报快照
-node dist/index.js news -c config.yaml --edition evening --day 2026-09-22 --baseline /absolute/morning/news.json
+# 20:00 开始生成晚报：先统一采集，从当天早报实际截止时间接续
+node dist/index.js news -c config.yaml --edition evening --refresh --baseline /absolute/morning/news.json
 
 # Agent 根据列表写 editorial.json；此步骤由 Agent 完成
 node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/editorial.json --output /absolute/report.html
@@ -83,7 +83,11 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 早报快照不回写，晚报不使用可变的“最新报告”代替基线。没有早报快照就不能假装有对照；空基线会保留为空，报告应说明数据缺口。未到截止时间拒绝生成正式版，可用自定义窗口做中途预览。
 
-持续采集应在窗口开始前启动：
+`--refresh` 仅用于当天且已到 10:00/20:00 的版次。截止时间在本轮采集和中文处理完成后确定，例如早报 10:05 完成，则早报覆盖前一天 10:05 至当天 10:05，晚报从当天 10:05 接续，包含本轮刚抓取的数据。采集跨到次日时保留归档并报错，需用明确的自定义窗口处理。省略 `--refresh` 只读取归档，版次仍使用固定 10:00/20:00 截止，适合历史回放；复用实际截止时间的快照时，用其 `window` 明确指定自定义窗口。
+
+10:00/20:00 编辑任务由宿主 Agent 安排，调用上面的 `news --refresh` 并保存实际早报快照。只采集两次会降低高频来源的覆盖，RSS 已滚出的条目无法补回；博客历史翻译积压也随这两轮逐步处理。程序不会自行安装定时任务。
+
+仅需独立持续采集时才启动可选的 `serve`，其频率由配置决定，30 分钟只是示例：
 
 ```yaml
 schedule:
@@ -96,7 +100,7 @@ serverPort: 12440
 node dist/index.js serve -c config.yaml
 ```
 
-10:00/20:00 编辑任务由宿主 Agent 的调度器安排，并持久保存当天早报的快照位置。程序不自行安装系统服务；启动 serve 本身不立即采集。旧 `schedule.report/analyze/sendEmail` 请移除，避免以为内部仍生成早晚报。采集串行执行，状态在 `http://127.0.0.1:12440/`，配置变更需重启。
+随早晚报采集时保持 `serve` 停止，避免重复抓取。启动 `serve` 本身不立即采集，也不生成报告。旧 `schedule.report/analyze/sendEmail` 请移除。独立采集串行执行，状态在 `http://127.0.0.1:12440/`，配置变更需重启。
 
 ## 来源与证据
 
@@ -117,14 +121,14 @@ RSS 可能只有摘要；HN 是社区链接元数据，不代表外链正文；X
 ```bash
 # 首次采集或手动刷新，仅拉取博客
 node dist/index.js collect -c config.yaml --channel blogs
-# 不加 --channel 时同时采集新闻和博客；serve 继续使用 schedule.collect
+# 日常由早晚报 news --refresh 同时采集新闻和博客，无需单独轮询
 ```
 
 博客 RSS 不使用普通来源的 `limit` 截断，保存 Feed 当前返回的所有条目；首次订阅可能包含多年的历史内容，这些只是首次观察，不能当作今天新发表。后续窗口只纳入新文章或正文变化，不反复展示未变化的轮询结果。订阅不能恢复 Feed 已移除的漏采文章，也不能保证没有 RSS 的网站持续覆盖。
 
 博客沿用中文翻译和不超过 200 字摘要。`localization.blogBatchSize` 默认每轮新处理 20 篇（0 为只复用缓存），优先较新文章，已缓存内容不占额度；全部原文均归档，未完成项显示 pending，后续采集自动续跑，即便条目已退出 Feed。长文仍完整分段处理，预算按文章数而非耗时或 token 数限制；可按机器和模型用量调大。普通新闻不占博客批次额度。首次回填可能需要多轮，pending 会使 CLI 返回部分完成状态。
 
-RSS 并发由 `collection.rssConcurrency` 控制，默认 4、最大 8；X 仍串行。使用 `serve` 或宿主定时 `collect` 之一持续轮询，同归档不要重复启动调度器。来源短时失败会保留已有内容，并在来源状态显示；清单中未验证的订阅保持停用，需要修复后再启用。
+RSS 并发由 `collection.rssConcurrency` 控制，默认 4、最大 8；X 仍串行。`news --refresh` 的抓取阶段使用一次博客中文额度，快照阶段仅复用博客缓存；不会叠加第二批额度。日常随早晚报采集，同归档不要重复启动调度器。来源短时失败会保留已有内容，并在来源状态显示；清单中未验证的订阅保持停用，需要修复后再启用。
 
 ## 翻译、摘要与状态
 
@@ -148,7 +152,7 @@ RSS 并发由 `collection.rssConcurrency` 控制，默认 4、最大 8；X 仍�
 
 ## 升级与验证
 
-停止旧 serve，保留个人配置与归档；更新后安装依赖、重新构建。删除旧报告调度配置，让外部 Agent 负责早晚报；用 collect/news 验证，再启动采集服务。新窗口/快照机制不会自动补回早期漏采数据。
+停止旧 serve，保留个人配置与归档；更新后安装依赖、重新构建。删除旧报告调度配置，让外部 Agent 负责早晚报；用 collect/news 验证，日常早晚报改用 `news --refresh`，无需重启独立采集服务。新窗口/快照机制不会自动补回早期漏采数据。
 
 ```bash
 pnpm test --run

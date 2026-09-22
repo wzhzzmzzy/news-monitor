@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
+import { setTimeout as delay } from 'node:timers/promises'
 import { z } from 'zod'
 import type { FeedConfig } from './config.js'
 import type { StoredItem } from './store.js'
@@ -8,6 +9,7 @@ import { FeedStore, writeJson } from './store.js'
 import { localizeItems, localizationIncomplete, type ReadingItem } from './localize.js'
 import { readEvidenceWindow, reportRange } from './runtime.js'
 import { belongsToBlog, isBlog } from './blogs.js'
+import { runFeed } from './pipeline.js'
 
 const timestamp = z.string().datetime({ offset: true })
 const itemSchema = z.object({
@@ -54,24 +56,39 @@ export function parseNews(value: unknown): NewsList {
 }
 export async function loadNews(file: string) { return parseNews(JSON.parse(await fs.readFile(file, 'utf8'))) }
 
-export async function queryNews(config: FeedConfig, options: { start: Date; end: Date; edition?: 'morning' | 'evening'; baseline?: string }, localize = localizeItems): Promise<NewsList> {
-  const { start, end } = reportRange({ start: options.start.toISOString(), end: options.end.toISOString() })
+export async function queryNews(config: FeedConfig, options: { start: Date; end: Date; edition?: 'morning' | 'evening'; baseline?: string; refresh?: boolean }, localize = localizeItems, collect = runFeed): Promise<NewsList> {
+  let { start, end } = reportRange({ start: options.start.toISOString(), end: options.end.toISOString() })
+  if (options.refresh && !options.edition) throw new Error('--refresh requires --edition')
   if (+end > Date.now()) throw new Error('Window has not ended yet; use a custom window ending now for an interim snapshot')
   if (options.edition === 'evening' && !options.baseline) throw new Error('Evening news requires the actual morning --baseline snapshot')
   const previous = options.baseline ? await loadNews(options.baseline) : undefined
-  if (previous && Date.parse(previous.window.end) !== +start) throw new Error('Baseline end must equal the new window start; gaps and overlaps are not allowed')
+  if (!options.refresh && previous && Date.parse(previous.window.end) !== +start) throw new Error('Baseline end must equal the new window start; gaps and overlaps are not allowed')
   if (options.edition === 'morning' && previous) throw new Error('Morning news uses a 24-hour window, not a baseline')
   if (options.edition) {
     const expected = editionRange(options.edition, shanghaiDay(end))
     if (+expected.start !== +start || +expected.end !== +end) throw new Error('Edition window does not match Asia/Shanghai cutoff')
     if (options.edition === 'evening' && previous?.edition !== 'morning') throw new Error('Evening baseline must be a morning snapshot')
   }
+  if (options.refresh) {
+    const day = shanghaiDay(end)
+    if (day !== shanghaiDay()) throw new Error('--refresh only supports today; historical editions read the archive without --refresh')
+    if (previous && (shanghaiDay(new Date(previous.window.end)) !== day || Date.parse(previous.window.end) >= Date.now())) throw new Error('Evening baseline must end earlier today')
+    // Collect every configured channel once, then include that batch in this edition.
+    const result = await collect(config)
+    // The archive uses [start, end); even an instant collection must precede end.
+    if (Date.now() <= Date.parse(result.collectedAt)) await delay(Date.parse(result.collectedAt) - Date.now() + 1)
+    end = new Date()
+    if (shanghaiDay(end) !== day) throw new Error('Collection crossed midnight; data is archived, but this edition must be generated with an explicit custom window')
+    start = previous ? new Date(previous.window.end) : new Date(+end - 24 * 3600000)
+  }
   return new FeedStore(config.archiveDir).withLock(async () => {
     const evidence = await readEvidenceWindow(config.archiveDir, start, end)
     const classified = evidence.items.map(item => belongsToBlog(item.url, config.sources) ? { ...item, channel: 'blogs' as const } : item)
     // A direct blog article takes precedence over community metadata for its URL.
     const blogUrls = new Set(classified.filter(item => isBlog(item) && item.contentKind !== 'link-metadata').map(item => item.url))
-    const reading = await localize(classified.filter(item => !(isBlog(item) && item.contentKind === 'link-metadata' && blogUrls.has(item.url))), config)
+    // Collection already spent the blog translation budget; reuse its cache here.
+    const readingConfig = options.refresh ? { ...config, localization: { ...config.localization, blogBatchSize: 0 } } : config
+    const reading = await localize(classified.filter(item => !(isBlog(item) && item.contentKind === 'link-metadata' && blogUrls.has(item.url))), readingConfig)
     const old = new Map([...(previous?.items || []), ...(previous?.blogs || [])].map(i => [i.id, i]))
     const all: NewsItem[] = reading.items.map((item): NewsItem => {
       const revision = contentRevision(item)

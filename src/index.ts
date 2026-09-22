@@ -58,12 +58,13 @@ cli.command('news', 'Return a frozen JSON news list for an external agent; never
   .option('--edition <name>', 'morning (24h to 10:00) or evening (10:00–20:00), Asia/Shanghai')
   .option('--day <date>', 'Edition date YYYY-MM-DD, default today in Asia/Shanghai')
   .option('--baseline <file>', 'Frozen morning news.json; required for evening')
+  .option('--refresh', 'Collect news and blogs once before today’s edition; end at collection completion')
   .action(async options => {
     try {
       if (options.edition && (options.start || options.end)) throw new Error('Use --edition/--day or --start/--end')
       if (options.day && !options.edition) throw new Error('--day requires --edition')
       const range = options.edition ? editionRange(options.edition, options.day || shanghaiDay()) : reportRange(options)
-      const result = await queryNews(await loadConfig(options.config), { ...range, edition: options.edition, baseline: options.baseline })
+      const result = await queryNews(await loadConfig(options.config), { ...range, edition: options.edition, baseline: options.baseline, refresh: options.refresh })
       console.log(JSON.stringify(result, null, 2))
       if (result.status !== 'ready') process.exitCode = 1
     } catch (error) { showError(error) }

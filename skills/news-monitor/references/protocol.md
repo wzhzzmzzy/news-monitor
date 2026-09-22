@@ -3,16 +3,19 @@
 运行要求：Node.js 22、pnpm，仓库已安装依赖并 `pnpm build`，配置了 RSS/X 来源和翻译模型。以下命令在仓库根目录执行；独立安装 Skill 时，运行环境必须提供仓库绝对路径及配置路径。
 
 ```bash
+node dist/index.js news -c config.yaml --edition morning --refresh
+node dist/index.js news -c config.yaml --edition evening --refresh --baseline /absolute/morning/news.json
+# 手动补采或历史回放
 node dist/index.js collect -c config.yaml
-node dist/index.js news -c config.yaml --edition morning --day 2026-09-22
-node dist/index.js news -c config.yaml --edition evening --day 2026-09-22 --baseline /absolute/morning/news.json
-node dist/index.js news -c config.yaml --start 2026-09-22T10:00:00+08:00 --end 2026-09-22T15:00:00+08:00 --baseline /absolute/morning/news.json
+node dist/index.js news -c config.yaml --edition morning --day 2026-09-21
 node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/editorial.json --output /absolute/report.html
 ```
 
-`collect` 返回运行位置与来源/中文处理状态；`monitor`、`feed` 是别名。`news` 不抓取新闻网站，读取已有归档并补齐中文处理，只返回一个 JSON 对象到 stdout。命令错误输出 stderr，退出码 1；`news` 的 `partial` / `empty` 也退出 1，此时 JSON 与快照仍有效。成功不表示已核实新闻或覆盖全部信息流。源失败不能被解释成该源没有新闻。
+`collect` 返回运行位置与来源/中文处理状态；`monitor`、`feed` 是别名。`news --refresh` 在当天早晚报生成前统一执行一轮新闻与博客采集、归档和中文处理，然后冻结快照；不加 `--refresh` 则只读取归档并补齐中文处理。两种方式都只返回一个 JSON 对象到 stdout。命令错误输出 stderr，退出码 1；`news` 的 `partial` / `empty` 也退出 1，此时 JSON 与快照仍有效。成功不表示已核实新闻或覆盖全部信息流。源失败不能被解释成该源没有新闻。
 
-`news` 支持自定义 `--start/--end` 或 `--hours`（1–168，默认 24）。预设版次只使用北京时间：早报 `[前一天10:00, 当天10:00)`，晚报 `[当天10:00, 当天20:00)`；`--day` 默认北京时间当天。未到截止时间会拒绝生成正式版次，可用明确截止当前的自定义窗口生成预览。基线结束必须恰好等于新窗口开始。晚报必须使用 `edition: morning` 的快照。窗口由采集批次完成时间 collectedAt 决定；截止后完成的批次不会倒填窗口。以第一次观察到的时间区分新增与旧内容重现，不把文章发布时间等同采集时间。
+`--refresh` 必须搭配 `--edition morning|evening`，仅支持北京时间当天且已到 10:00/20:00 的版次；历史日期、缺失或非当天早报基线会在抓取前拒绝。截止时间取采集和中文处理完成后的实际时间，包含刚保存的批次；早报覆盖此前 24 小时，晚报从当天早报的实际 `window.end` 接续。采集跨到次日则保留原文并报错，使用明确的自定义窗口处理。博客中文额度只在采集阶段使用一次，快照阶段仅复用博客缓存。
+
+不加 `--refresh` 时，`news` 支持自定义 `--start/--end` 或 `--hours`（1–168，默认 24）。历史预设版次只使用北京时间：早报 `[前一天10:00, 当天10:00)`，晚报 `[当天10:00, 当天20:00)`；`--day` 默认北京时间当天。未到截止时间会拒绝生成正式版次，可用明确截止当前的自定义窗口生成预览。基线结束必须恰好等于新窗口开始。晚报必须使用 `edition: morning` 的快照。窗口由采集批次完成时间 collectedAt 决定；截止后完成的批次不会倒填窗口。以第一次观察到的时间区分新增与旧内容重现，不把文章发布时间等同采集时间。
 
 ## news-list-v1
 
@@ -64,4 +67,4 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 Skill 是调用说明，不会赋予 ChatGPT 或其他宿主访问本机的权限。有本机执行工具的 Agent 可直接调用 CLI；只有远程连接器能力的宿主需要另外部署可达的受控工具桥接，此仓库尚未提供 MCP/远程 HTTP 新闻接口。`serve` 的 HTTP 端口仅是本机采集状态，不是 ChatGPT 连接器。
 
-持续采集用 `serve`；它只按 `schedule.collect` 运行采集与翻译。10:00/20:00 的 Agent 编辑任务由宿主调度，早晚共享保存的早报 snapshotPath。应在截止前持续采集；临时在 10:00 才抓取不能证明此前 24 小时覆盖。多进程访问同归档受锁保护，锁冲突时等待在途任务结束后重试，不删除活跃锁。
+日常只在 10:00/20:00 的 Agent 编辑任务开始时调用 `news --refresh`，新闻与博客一起采集；不另设博客定时任务，不启动 `serve`。早晚共享实际早报 snapshotPath。`serve` 保留为可选的独立采集调度器，`schedule.collect` 只影响它，30 分钟不是报告流程要求。一天两轮不能保证抓到高频 RSS 已滚出的条目，博客积压翻译也仅随这两轮继续。多进程访问同归档受锁保护，锁冲突时等待在途任务结束后重试，不删除活跃锁。
