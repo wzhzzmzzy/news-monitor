@@ -139,7 +139,7 @@ it('renders only external decisions, validates citations and retains every unsel
   expect(document.querySelector('.report-note')?.textContent).toBe(report.summary)
   expect(document.querySelector('.report-overview .report-note')).toBeNull()
   expect(document.querySelector('#overview-heading')?.textContent).toBe('新闻综述')
-  const references = [...document.querySelectorAll('.report-overview article p > sup > a')]
+  const references = [...document.querySelectorAll('.report-overview ol > li > p > sup > a')]
   expect(references.map(a => a.textContent)).toEqual(['[1]', '[2]'])
   expect(references[0].getAttribute('title')).toContain('RSS')
   expect(references[1].getAttribute('title')).toContain('早前：RSS')

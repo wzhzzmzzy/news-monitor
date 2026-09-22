@@ -158,7 +158,7 @@ RSS 并发由 `collection.rssConcurrency` 控制，默认 4、最大 8；X 仍�
 node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/editorial.json --output /absolute/report.html --publish-koalablog
 ```
 
-报告的时间范围和采集状态以 11px 灰色说明展示。新闻综述使用独立背景、小标题和 13px 正文，每条新闻末尾以编号上标链接引用原文，悬停可查看标题和来源；Agent 按一条新闻一个 section 编写。本地 HTML 和在线阅读页保持一致。
+报告的时间范围和采集状态以 11px 灰色说明展示。新闻综述使用独立背景、小标题和 13px 正文，逐条以有序列表展示，每条新闻末尾以编号上标链接引用原文，悬停可查看标题和来源；Agent 按一条新闻一个 section 编写。本地 HTML 和在线阅读页保持一致。
 
 固定入口为 `https://koala.wzhzzmzzy.workers.dev/news-feed`，使用 `templates/news-feed.svelte`。日报数据为 `/data/news-feed/YYYY-MM-DD/morning` 或 `evening`，`/data/news-feed/latest` 指向已成功发布的最新一期。均为 public memo；页面支持日期/早晚报、精选 / 博客 / 时间线三个 Tab、主题过滤、搜索和日期分组折叠。时间线包含全部非博客新闻，按发布时间倒序、北京时间分组，缺少时间的条目单列“时间未知”；精选也在时间线中标注。侧边按日期和小时快速定位，点击自动展开目标日期；搜索和主题过滤同步索引，窄屏显示横向索引。邮件顺序阅读时不重复精选。补发旧报告不会回退首页，同一报告路径的不同内容会拒绝覆盖。支持直达链接 `/news-feed?date=2026-09-21&edition=evening`（早报用 `morning`）；指定版次未发布则显示空状态，日期/版次切换自动同步 URL。
 
