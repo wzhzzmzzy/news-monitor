@@ -2,14 +2,14 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { FeedConfig } from './config.js'
-import { collectSource, type FeedItem, type SourceResult, type PublicationWindow } from './collect.js'
+import { collectSource, classifyCollectionFailure, collectionFailureNote, type FeedItem, type SourceResult, type PublicationWindow } from './collect.js'
 import { FeedStore, writeJson } from './store.js'
 import { renderFeed } from './view.js'
 import { localizeItems } from './localize.js'
 import type { Curation } from './curate.js'
 import { belongsToBlog, isBlog } from './blogs.js'
 
-export async function runFeed(config: FeedConfig, options: { analyze?: boolean; channel?: 'news' | 'blogs'; publicationWindow?: PublicationWindow } = {}, collect = collectSource, localize = localizeItems) {
+export async function runFeed(config: FeedConfig, options: { analyze?: boolean; channel?: 'news' | 'blogs'; publicationWindow?: PublicationWindow; deferLocalization?: boolean } = {}, collect = collectSource, localize = localizeItems) {
   if (options.analyze) throw new Error('Editorial analysis belongs to the calling agent; use news and render')
   const store = new FeedStore(config.archiveDir)
   return store.withLock(async () => {
@@ -21,8 +21,8 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
     const sources = config.sources.filter(source => !options.channel || (source.channel || 'news') === options.channel)
     const batches: Array<{ items: FeedItem[]; result: SourceResult }> = new Array(sources.length)
     const collectOne = async (source: typeof sources[number], index: number) => {
-      if (!source.enabled) {
-        batches[index] = { items: [], result: { sourceId: source.id, sourceName: source.name, status: 'disabled', count: 0, coverage: 'unknown', note: source.disabledReason || '配置中已停用此来源' } }
+      if (!source.enabled || (!config.opencli.enabled && (source.type === 'x-user' || source.type === 'x-list'))) {
+        batches[index] = { items: [], result: { sourceId: source.id, sourceName: source.name, status: 'disabled', count: 0, coverage: 'unknown', note: !config.opencli.enabled && (source.type === 'x-user' || source.type === 'x-list') ? '配置中已全局停用 OpenCLI / X 采集' : source.disabledReason || '配置中已停用此来源' } }
         return
       }
       const isFeed = source.type === 'rss' || source.type === 'rsshub'
@@ -37,9 +37,10 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
           ...(windowStartReached !== undefined ? { windowStartReached } : {}),
           note: isFeed ? 'RSS 当前快照，正文完整性未核验' : windowStartReached === false ? 'X 未确认回溯到窗口起点；可能达到采集上限、上游截断或分页失败，已保留成功取得的条目' : 'X 有限条目快照；上游可能返回部分分页，时间覆盖未知',
         } }
-      } catch {
+      } catch (error) {
+        const failure = classifyCollectionFailure(error, isFeed)
         batches[index] = { items: [], result: { sourceId: source.id, sourceName: source.name, status: 'failed', count: 0, coverage: 'unknown',
-          note: isFeed ? '无法读取或解析 RSS，检查源地址与网络；RSSHub 源同时检查实例与上游状态' : 'OpenCLI 采集失败；检查 Brave、X 登录和 opencli doctor',
+          failure, note: collectionFailureNote(failure),
         } }
       }
     }
@@ -61,8 +62,13 @@ export async function runFeed(config: FeedConfig, options: { analyze?: boolean; 
     await writeJson(path.join(config.archiveDir, 'latest.json'), { runId, runDir, results, count: stored.length, analyzed: false })
     const backlog = options.channel === 'news' ? [] : await store.readBlogs()
     const candidates = [...new Map([...backlog, ...stored].map(item => [item.id, item])).values()]
-    const reading = await localize(options.publicationWindow ? candidates.filter(item =>
-      (item.publishedAt && Date.parse(item.publishedAt) >= +options.publicationWindow!.start && Date.parse(item.publishedAt) < +options.publicationWindow!.end)) : candidates, config)
+    const eligible = options.publicationWindow ? candidates.filter(item =>
+      (item.publishedAt && Date.parse(item.publishedAt) >= +options.publicationWindow!.start && Date.parse(item.publishedAt) < +options.publicationWindow!.end)) : candidates
+    // news --refresh localizes the final archive window once, after collection.
+    const reading = options.deferLocalization
+      ? { items: eligible.map(item => ({ ...item, chineseStatus: 'pending' as const, chineseError: '等待报告阶段统一生成摘要。' })),
+        stats: { enabled: config.localization.enabled, total: eligible.length, ready: 0, cached: 0, generated: 0, pending: eligible.length, failed: 0 } }
+      : await localize(eligible, config)
     await writeJson(path.join(runDir, 'reading-pack.json'), reading)
     const newsCount = reading.items.filter(item => !isBlog(item)).length
     const curation: Curation = { status: 'disabled', entries: {}, total: newsCount, selected: 0, reading: newsCount, other: 0, cached: 0, note: '由调用方 Agent 筛选新闻；博客独立展示' }

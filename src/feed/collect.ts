@@ -31,6 +31,45 @@ export interface SourceResult {
   windowStartReached?: boolean
   coverage: 'feed-snapshot' | 'unknown'
   note: string
+  failure?: CollectionFailure
+}
+
+const failureNotes = {
+  rss_http: 'RSS 返回 HTTP 错误', rss_timeout: 'RSS 请求或正文读取超时',
+  rss_network: 'RSS 网络连接失败', rss_parse: 'RSS 内容无法解析为有效条目', rss_failed: 'RSS 采集失败，具体原因未知',
+  x_timeout: 'OpenCLI 采集超时', x_navigation: 'OpenCLI 浏览器导航被拒绝',
+  x_rate_limited: 'OpenCLI 返回限流错误', x_auth: 'OpenCLI 要求登录或授权',
+  x_connection: 'OpenCLI 无法连接浏览器或扩展', x_invalid_response: 'OpenCLI 返回的数据不符合新闻格式',
+  x_failed: 'OpenCLI 采集失败，具体原因未知',
+} as const
+export interface CollectionFailure { code: keyof typeof failureNotes; httpStatus?: number; exitCode?: number }
+class CollectionError extends Error {
+  constructor(readonly failure: CollectionFailure) { super(collectionFailureNote(failure)) }
+}
+export function collectionFailureNote(failure: CollectionFailure): string {
+  return failureNotes[failure.code] + (failure.httpStatus ? ` ${failure.httpStatus}` : '')
+}
+// Only fixed categories and numeric statuses leave this boundary. Never retain
+// child stderr, source response bodies, URLs, cookies or arbitrary exceptions.
+export function classifyCollectionFailure(error: unknown, isFeed: boolean): CollectionFailure {
+  if (error instanceof CollectionError) return error.failure
+  const e = error as { name?: string; message?: string; stderr?: string; killed?: boolean; code?: string | number; cause?: { code?: string } } | null
+  if (isFeed) {
+    const status = String(e?.message || '').match(/^RSS HTTP ([1-5]\d\d)$/)?.[1]
+    if (status) return { code: 'rss_http', httpStatus: Number(status) }
+    if (e?.name === 'TimeoutError' || e?.name === 'AbortError' || e?.cause?.code === 'UND_ERR_CONNECT_TIMEOUT') return { code: 'rss_timeout' }
+    if (e?.message === 'fetch failed' || ['ENOTFOUND', 'ECONNRESET', 'ECONNREFUSED', 'EAI_AGAIN'].includes(String(e?.cause?.code || e?.code))) return { code: 'rss_network' }
+    return { code: 'rss_failed' }
+  }
+  const diagnostic = String(e?.stderr || e?.message || '')
+  const exitCode = typeof e?.code === 'number' && Number.isInteger(e.code) ? e.code : undefined
+  const code: CollectionFailure['code'] = e?.killed || e?.name === 'TimeoutError' ? 'x_timeout'
+    : /Navigation rejected|Pre-navigation.*failed/i.test(diagnostic) ? 'x_navigation'
+    : /rate.?limit|too many requests|\b429\b/i.test(diagnostic) ? 'x_rate_limited'
+    : /not logged in|login required|authentication required|unauthorized|\b401\b/i.test(diagnostic) ? 'x_auth'
+    : /extension.*(?:not connected|disconnected)|connection refused|ECONNREFUSED|no browser/i.test(diagnostic) ? 'x_connection'
+    : error instanceof z.ZodError || e?.name === 'SyntaxError' ? 'x_invalid_response' : 'x_failed'
+  return { code, ...(exitCode !== undefined ? { exitCode } : {}) }
 }
 
 export function canonicalUrl(raw: string): string {
@@ -57,7 +96,7 @@ function optionalUrl(value: unknown, base: string): string | undefined {
   try { return canonicalUrl(new URL(value, base).href) } catch { return undefined }
 }
 
-const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': 'news-monitor/1.0 (personal RSS reader)' } })
+const parser = new Parser()
 export async function parseFeed(xml: string, source: Extract<FeedSource, { type: 'rss' }>, now: string, allEntries = false): Promise<FeedItem[]> {
   const feed = await parser.parseString(xml)
   // Blog subscriptions retain every entry present in the publisher's feed.
@@ -108,45 +147,48 @@ export function parseTweets(json: string, source: FeedSource, now: string): Feed
 export type OpenCliRunner = (args: string[], profile?: string) => Promise<string>
 const exec = promisify(execFile)
 const require = createRequire(import.meta.url)
-export const runOpenCli: OpenCliRunner = async (args, profile) => {
+export const runOpenCli = async (args: string[], profile?: string, options?: FeedConfig['opencli']): Promise<string> => {
   try {
     const { stdout } = await exec(process.execPath, [require.resolve('@jackwener/opencli'), ...args], {
-      timeout: 120000, maxBuffer: 10 * 1024 * 1024,
+      timeout: options?.timeoutMs ?? 120000, maxBuffer: options?.maxBufferBytes ?? 10485760,
       env: { ...process.env, ...(profile ? { OPENCLI_PROFILE: profile } : {}) },
     })
     return stdout
-  } catch {
+  } catch (error) {
     // Child stderr can contain session details. Keep it out of reports and archives.
-    throw new Error('OpenCLI failed; check Brave, X login and `pnpm exec opencli doctor`')
+    throw new CollectionError(classifyCollectionFailure(error, false))
   }
 }
 
-async function fetchFeed(url: string): Promise<string> {
-  // One bounded retry for network errors and upstream 5xx responses. Do not
+async function fetchFeed(url: string, options: FeedConfig['collection']): Promise<string> {
+  // Configured bounded retries for network errors and upstream 5xx responses. Do not
   // retry invalid XML, authentication errors or rate limits as if they were news.
   for (let attempt = 0; ; attempt++) {
     let response: Response
     try {
-      response = await fetch(url, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': 'news-monitor/1.0 (personal RSS reader)' } })
+      response = await fetch(url, { signal: AbortSignal.timeout(options.rssTimeoutMs), headers: { 'User-Agent': options.userAgent } })
     } catch (error) {
-      if (attempt === 1) throw error
-      await new Promise(resolve => setTimeout(resolve, 500))
+      if (attempt >= options.rssRetries) throw error
+      await new Promise(resolve => setTimeout(resolve, options.retryDelayMs))
       continue
     }
     if (response.ok) return response.text()
     await response.body?.cancel()
-    if (attempt === 1 || response.status < 500) throw new Error(`RSS HTTP ${response.status}`)
-    await new Promise(resolve => setTimeout(resolve, 500))
+    if (attempt >= options.rssRetries || response.status < 500) throw new Error(`RSS HTTP ${response.status}`)
+    await new Promise(resolve => setTimeout(resolve, options.retryDelayMs))
   }
 }
 
 export interface PublicationWindow { start: Date; end: Date }
 
-export async function collectSource(source: FeedSource, config: FeedConfig, now: string, run: OpenCliRunner = runOpenCli, window?: PublicationWindow): Promise<FeedItem[]> {
+export async function collectSource(source: FeedSource, config: FeedConfig, now: string, run: OpenCliRunner = (args, profile) => runOpenCli(args, profile, config.opencli), window?: PublicationWindow): Promise<FeedItem[]> {
   if (source.type === 'rss' || source.type === 'rsshub') {
     const url = source.type === 'rss' ? source.url : `${(source.baseUrl || config.rsshub.baseUrl).replace(/\/$/, '')}${source.route}`
-    return parseFeed(await fetchFeed(url), { ...source, type: 'rss', url }, now, !!window)
+    const xml = await fetchFeed(url, config.collection)
+    try { return await parseFeed(xml, { ...source, type: 'rss', url }, now, !!window) }
+    catch { throw new CollectionError({ code: 'rss_parse' }) }
   }
+  if (!config.opencli.enabled) throw new Error('OpenCLI is disabled in configuration')
   const args = source.type === 'x-list'
     ? ['twitter', 'list-tweets', source.listId]
     : ['twitter', 'tweets', source.username]

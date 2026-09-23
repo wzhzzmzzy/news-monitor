@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { feedConfigSchema, type FeedConfig } from './config.js'
 import { runFeed } from './pipeline.js'
+import { localizeItems } from './localize.js'
 import type { FeedItem } from './collect.js'
 import { readEvidenceWindow, reportRange, runFeedReport, serialTasks, validateSchedule } from './runtime.js'
 
@@ -64,7 +65,8 @@ describe('RSS/X reporting and scheduling', () => {
     await expect(runFeedReport(config, { start, end, send: true }, deliver)).rejects.toThrow('NEWS_TEST_SMTP_PASS')
     expect(deliver).not.toHaveBeenCalled()
     vi.stubEnv('NEWS_TEST_SMTP_PASS', 'test-only')
-    const report = await runFeedReport(config, { start, end, send: true }, deliver)
+    config.localization.enabled = true
+    const report = await runFeedReport(config, { start, end, send: true }, deliver, (items, cfg) => localizeItems(items, cfg, async () => ({ titleZh: '新闻标题', summaryZh: '中文摘要。' })))
     expect(deliver).toHaveBeenCalledTimes(1)
     expect(deliver.mock.calls[0][0].smtpPass).toBe('test-only')
     expect(deliver.mock.calls[0][2]).toContain('Body a')

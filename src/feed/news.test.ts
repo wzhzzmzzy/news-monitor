@@ -89,7 +89,7 @@ it('collects news and blogs once per edition and includes the batch after the no
   expect(before.blogs.map(item => item.id)).toEqual(['blog'])
   expect(before.coverage.failedSources).toEqual(['broken'])
   expect(before.status).toBe('partial')
-  expect(localize.mock.calls[0][1].localization.blogBatchSize).toBe(0)
+  expect(localize.mock.calls[0][1].localization.blogBatchSize).toBe(2)
   expect(config.localization.blogBatchSize).toBe(20)
   const bytes = await fs.readFile(before.snapshotPath, 'utf8')
   completion = '2026-09-22T12:03:00.000Z'

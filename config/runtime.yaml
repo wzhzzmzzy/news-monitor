@@ -1,0 +1,19 @@
+# 采集、摘要预算；个人覆盖请写入主配置。
+collection:
+  rssConcurrency: 4
+  rssTimeoutMs: 20000
+  rssRetries: 1
+  retryDelayMs: 500
+  userAgent: news-monitor/1.0 (personal RSS reader)
+  xMaxItems: 1000
+opencli:
+  enabled: true
+  timeoutMs: 120000
+  maxBufferBytes: 10485760
+localization:
+  enabled: true
+  mode: summary
+  summaryChunkChars: 24000
+  chunkChars: 3000
+  concurrency: 2
+  blogBatchSize: 20

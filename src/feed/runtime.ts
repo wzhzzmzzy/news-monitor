@@ -8,7 +8,7 @@ import { FeedStore, writeJson, type StoredItem } from './store.js'
 import { renderFeed } from './view.js'
 import { NotifierService, type MailConfig } from '../services/notifier.js'
 import { formatDate, parseDateTime } from '../utils/time.js'
-import { localizeItems, localizationIncomplete } from './localize.js'
+import { localizeItems, localizeReportItems, localizationIncomplete } from './localize.js'
 import { requireLlm } from './llm.js'
 import type { Curation } from './curate.js'
 import { isBlog } from './blogs.js'
@@ -103,7 +103,7 @@ export async function runFeedReport(config: FeedConfig, options: { start: Date; 
     const directory = path.join(config.archiveDir, 'reports', reportId)
     const window = { start: options.all ? null : options.start.toISOString(), end: options.all ? null : options.end.toISOString(), basis: 'collectedAt', all: !!options.all }
     await writeJson(path.join(directory, 'source-pack.json'), { version: 1, window, results, items })
-    const reading = await localize(items, config)
+    const reading = await localizeReportItems(items, config, localize)
     await writeJson(path.join(directory, 'reading-pack.json'), reading)
     const label = options.all ? '全部已归档内容' : `${window.start} 至 ${window.end}（采集窗口）`
     const preview = path.join(directory, 'report.html')

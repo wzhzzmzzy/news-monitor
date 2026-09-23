@@ -1,0 +1,122 @@
+- id: hacker-news
+  name: Hacker News · 社区链接（HNRSS）
+  category: 技术
+  type: rss
+  url: https://hnrss.org/frontpage?count=10
+  contentKind: link-metadata
+  limit: 10
+- id: ars-technica
+  name: Ars Technica
+  category: 技术
+  type: rss
+  url: https://feeds.arstechnica.com/arstechnica/index
+  limit: 5
+- id: techcrunch
+  name: TechCrunch
+  category: 商业
+  type: rss
+  url: https://techcrunch.com/feed/
+  contentKind: feed-summary
+  limit: 5
+- id: npr-world
+  name: NPR · 国际新闻
+  category: 综合
+  type: rss
+  url: https://feeds.npr.org/1004/rss.xml
+  contentKind: feed-summary
+  limit: 5
+- id: owid
+  name: Our World in Data · 数据研究
+  category: 人文
+  type: rss
+  url: https://ourworldindata.org/atom.xml
+  contentKind: feed-summary
+  limit: 3
+- id: aeon
+  name: Aeon · 思想与文化
+  category: 人文
+  type: rss
+  url: https://aeon.co/feed.rss
+  contentKind: feed-summary
+  limit: 3
+- id: ithome
+  name: IT之家
+  category: 技术
+  type: rss
+  url: https://www.ithome.com/rss/
+  limit: 10
+- id: wallstreetcn-hot
+  name: 华尔街见闻 · 日热门
+  category: 商业
+  type: rsshub
+  route: /wallstreetcn/hot/day
+  limit: 10
+- id: thepaper
+  name: 澎湃新闻 · 热榜
+  category: 综合
+  type: rsshub
+  baseUrl: https://rss.injahow.cn
+  route: /thepaper/sidebar/hotNews
+  limit: 10
+- id: cls-hot
+  name: 财联社 · 热门
+  category: 商业
+  type: rsshub
+  route: /cls/hot
+  limit: 10
+- id: jin10
+  name: 金十数据 · 快讯
+  category: 商业
+  type: rsshub
+  route: /jin10
+  limit: 20
+- id: zaobao
+  name: 联合早报 · 中港台即时
+  category: 综合
+  type: rsshub
+  route: /zaobao/realtime/china
+  limit: 5
+- id: zaobao-world
+  name: 联合早报 · 国际即时
+  category: 综合
+  type: rsshub
+  route: /zaobao/realtime/world
+  limit: 5
+- id: zaobao-singapore
+  name: 联合早报 · 新加坡即时
+  category: 综合
+  type: rsshub
+  route: /zaobao/realtime/singapore
+  limit: 5
+- id: zaobao-finance
+  name: 联合早报 · 财经即时
+  category: 商业
+  type: rsshub
+  route: /zaobao/realtime/zfinance
+  limit: 5
+- id: weibo
+  name: 微博 · 热搜
+  category: 综合
+  type: rsshub
+  route: /weibo/search/hot
+  enabled: false
+  disabledReason: 2026-09-21 三个实例均返回错误页；需修复 RSSHub 浏览器运行环境或访客 Cookie 后再启用。热搜只提供关键词，不等于新闻正文。
+  limit: 10
+- id: simon-rss
+  name: Simon Willison
+  category: 技术
+  type: rss
+  url: https://simonwillison.net/atom/entries/
+  limit: 5
+- id: econlib-rss
+  name: Econlib
+  category: 商业
+  type: rss
+  url: https://www.econlib.org/feed/
+  limit: 3
+- id: wip-rss
+  name: Works in Progress
+  category: 人文
+  type: rss
+  url: https://worksinprogress.co/rss.xml
+  limit: 3

@@ -37,7 +37,7 @@
 - 随早晚报 `news --refresh` 统一采集，X 使用已有 OpenCLI 浏览器适配器串行读取。无需新增定时任务或启动 serve。
 - 早报仅纳入截止前 24 小时发布的动态；晚报仍按早报截止到 20:00 的增量窗口。窗口外原文保留归档。
 - 新账号独立 collect 的 limit 为 20；原 Simon 配置保留。报告刷新仍从每源至少 100 条开始，按既有规则回溯，受 `collection.xMaxItems` 限制。未确认覆盖窗口起点时仍标 partial，不声称完整覆盖。
-- 中文翻译与摘要沿用新闻处理；这些 X 条目是新闻候选，可参与 Agent 精选和时间线。博客仍为独立频道。
+- 中文标题与摘要沿用新闻处理，不生成全文译文；这些 X 条目是新闻候选，可参与 Agent 精选和时间线。博客仍为独立频道。
 - 模型厂商公告是来源方陈述，人物动态是个人观点；编辑时标明归属，同一公告在公司与个人时间线重复出现时应合并处理。
 - 增加来源会延长串行采集时间并增加窗口内中文处理量；验证的小样本耗时不是整轮日报耗时保证。
 
@@ -46,3 +46,5 @@
 2026-09-22 使用现有已登录 Brave 会话逐个读取公开 profile（核对 screen_name、显示名称、简介）和最近 3 条动态，并通过 news-monitor collectSource 校验 ID、链接及发布时间。该记录只证明当时可读取，不保证未来登录、限流及网页接口稳定。
 
 身份入口除表中账号主页外，亦参考 [OpenAI 官方账号说明](https://help.openai.com/en/articles/11725090-verifying-communications-from-openai)、[Karpathy 个人主页](https://karpathy.ai/)、[Ai2 官网的 X 链接](https://allenai.org/)、[Stanford HAI 账号简介](https://x.com/StanfordHAI/with_replies)。[Qwen 官方社交链接](https://qwenlm.github.io/about/) 指向 @Alibaba_Qwen，Ai2 官网指向 @allen_ai，[DeepSeek 官网](https://www.deepseek.com/) 指向 @deepseek_ai，[CNCF 官网](https://www.cncf.io/) 指向 @cloudnativefdn。使用这些官方入口确认账号，避免相似拼写账号。
+
+公开来源配置在 `config/sources/x.yaml`；本机覆盖可放 `config/local/x.yaml` 并通过主配置的 `sourceFiles` 引用。`opencli.enabled: false` 全局停用 X 采集，逐项 `enabled` 控制单个账号。

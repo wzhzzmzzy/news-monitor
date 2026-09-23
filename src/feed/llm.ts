@@ -40,7 +40,7 @@ export function resolveLlm(config: LlmConfig) {
 }
 
 export function requireLlm(config: FeedConfig['llm']) {
-  if (!config) throw new Error('Configure llm for Chinese translation and summaries or --analyze')
+  if (!config) throw new Error('Configure llm for Chinese titles and summaries')
   const resolved = resolveLlm(config)
   if (!resolved.apiKey) throw new Error(config.piProvider ? 'Pi provider has no usable API key' : `Set ${config.apiKeyEnv} before using the model`)
   return resolved

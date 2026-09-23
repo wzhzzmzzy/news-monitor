@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
-import { collectSource, type FeedItem } from './collect.js'
+import { collectSource, classifyCollectionFailure, type FeedItem } from './collect.js'
 import { feedConfigSchema } from './config.js'
 import { runFeed } from './pipeline.js'
 import { localizeItems } from './localize.js'
@@ -64,4 +64,37 @@ it('stops at the configured X cap or short result without claiming exhaustion', 
   run.mockReset().mockResolvedValue(JSON.stringify([tweet(1)]))
   expect(await collectSource(cfg.sources[0], cfg, now, run, window)).toHaveLength(1)
   expect(run).toHaveBeenCalledTimes(1)
+})
+
+it('archives a safe RSS HTTP status instead of dropping the failure reason', async () => {
+  const cfg = await config()
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('private upstream body', { status: 403 })))
+  const result = await runFeed(cfg)
+  expect(result.results[0]).toMatchObject({ status: 'failed', failure: { code: 'rss_http', httpStatus: 403 } })
+  expect(result.results[0].note).toContain('403')
+  const saved = await fs.readFile(path.join(result.runDir, 'source-pack.json'), 'utf8')
+  expect(saved).toContain('rss_http')
+  expect(saved).not.toContain('private upstream body')
+})
+
+it('distinguishes RSS timeouts and malformed XML without archiving exception text', async () => {
+  const cfg = await config()
+  const timeout = await runFeed(cfg, {}, async () => { throw new DOMException('secret request context', 'TimeoutError') })
+  expect(timeout.results[0]).toMatchObject({ failure: { code: 'rss_timeout' } })
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('<rss>secret unclosed XML')))
+  const invalid = await runFeed(cfg)
+  expect(invalid.results[0]).toMatchObject({ failure: { code: 'rss_parse' } })
+  expect(JSON.stringify([timeout.results, invalid.results])).not.toContain('secret')
+})
+
+it.each([
+  ['Pre-navigation failed: Navigation rejected. cookie=secret', 'x_navigation'],
+  ['HTTP 429 Too Many Requests; token=secret', 'x_rate_limited'],
+  ['Login required; cookie=secret', 'x_auth'],
+  ['Browser extension disconnected; secret', 'x_connection'],
+  ['Unrecognized upstream secret', 'x_failed'],
+])('classifies OpenCLI errors without storing stderr: %s', (stderr, code) => {
+  const failure = classifyCollectionFailure(Object.assign(new Error('secret'), { stderr, code: 1 }), false)
+  expect(failure).toEqual({ code, exitCode: 1 })
+  expect(JSON.stringify(failure)).not.toContain('secret')
 })

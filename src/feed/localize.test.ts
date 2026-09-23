@@ -24,7 +24,7 @@ const translate = (request: ReadingRequest) => request.kind === 'summarize' ? { 
 }
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'news-chinese-test-'))
-  config = feedConfigSchema.parse({ archiveDir: dir, localization: { chunkChars: 500, concurrency: 2 },
+  config = feedConfigSchema.parse({ archiveDir: dir, localization: { mode: 'full', chunkChars: 500, concurrency: 2 },
     sources: [{ id: 'rss', name: 'RSS', type: 'rss', url: 'https://example.com/feed' }],
     llm: { model: 'test', apiKeyEnv: 'NEWS_TEST_READING_KEY', maxItems: 1, maxCharsPerItem: 200 },
   })
@@ -32,6 +32,67 @@ beforeEach(async () => {
 afterEach(async () => { vi.unstubAllEnvs(); await fs.rm(dir, { recursive: true, force: true }) })
 
 describe('per-item Chinese reading', () => {
+  it('defaults to summaries and keeps full source evidence without asking for a translation', async () => {
+    const summaryConfig = feedConfigSchema.parse({ ...config, localization: {} })
+    const original = item()
+    const runner = vi.fn(async (_r: ReadingRequest) => ({ titleZh: '新产品', summaryZh: '产品将于十月发布。' }))
+    const result = await localizeItems([original], summaryConfig, runner)
+    expect(result.stats).toMatchObject({ ready: 1, generated: 1 })
+    expect(runner.mock.calls[0]?.[0]).toMatchObject({ kind: 'summary-part' })
+    expect(result.items[0].content).toBe(original.content)
+    expect(result.items[0].chinese).toMatchObject({ mode: 'summary', contentZh: '', titleZh: '新产品' })
+    const html = renderFeed(result.items, [], now)
+    expect(html).toContain('查看原文')
+    expect(html).not.toContain('完整中文')
+    expect(html).toContain(original.content)
+  })
+
+  it('summarizes every long-text segment including the tail, then combines summaries', async () => {
+    const summaryConfig = feedConfigSchema.parse({ ...config, localization: { mode: 'summary', summaryChunkChars: 500 } })
+    const body = 'A long paragraph. 🦀\n'.repeat(80) + 'FINAL EVIDENCE'
+    const runner = vi.fn(async (r: ReadingRequest) => ({ titleZh: '新产品', summaryZh: r.kind === 'summarize' ? '合并所有段落的摘要。' : '当前段的中文摘要。' }))
+    const result = await localizeItems([item('long-summary', body)], summaryConfig, runner)
+    const requests = runner.mock.calls.map(([r]) => r)
+    expect(result.stats.ready).toBe(1)
+    expect(requests.every(r => r.kind !== 'translate')).toBe(true)
+    expect(requests.filter(r => r.kind === 'summary-part').map(r => r.payload.content).join('')).toBe(body)
+    expect(requests.at(-1)?.kind).toBe('summarize')
+    expect(result.items[0].chinese?.contentZh).toBe('')
+    const cached = vi.fn().mockRejectedValue(new Error('No model expected'))
+    expect((await localizeItems([item('long-summary', body)], summaryConfig, cached)).stats.cached).toBe(1)
+    expect(cached).not.toHaveBeenCalled()
+  })
+
+  it('reuses existing full-mode summaries without including old translated bodies or changing caches', async () => {
+    const original = item('reuse-full')
+    await localizeItems([original], config, async r => translate(r))
+    const files = await fs.readdir(path.join(dir, 'chinese', 'items'))
+    const file = path.join(dir, 'chinese', 'items', files[0])
+    const before = await fs.readFile(file, 'utf8')
+    const summaryConfig = feedConfigSchema.parse({ ...config, localization: { ...config.localization, mode: 'summary' } })
+    const runner = vi.fn().mockRejectedValue(new Error('No model expected'))
+    const result = await localizeItems([original], summaryConfig, runner)
+    expect(result.stats.cached).toBe(1)
+    expect(result.items[0].chinese).toMatchObject({ mode: 'summary', contentZh: '', summaryZh: '产品将于十月发布。' })
+    expect(runner).not.toHaveBeenCalled()
+    expect(await fs.readFile(file, 'utf8')).toBe(before)
+  })
+
+  it('resumes only failed summary parts and preserves Chinese titles', async () => {
+    const summaryConfig = feedConfigSchema.parse({ ...config, localization: { mode: 'summary', summaryChunkChars: 500 } })
+    const original = { ...item('summary-retry', '正文'.repeat(600)), title: '原始中文标题' }
+    const runner = vi.fn(async (r: ReadingRequest) => {
+      if (r.payload.part === 2) throw new Error('Failure')
+      return { titleZh: '不应修改的标题', summaryZh: '该段摘要。' }
+    })
+    expect((await localizeItems([original], summaryConfig, runner)).stats.failed).toBe(1)
+    const retry = vi.fn(async (_r: ReadingRequest) => ({ titleZh: '模型标题', summaryZh: '完整中文摘要。' }))
+    const result = await localizeItems([original], summaryConfig, retry)
+    expect(result.stats.ready).toBe(1)
+    expect(retry.mock.calls.map(([r]) => r.payload.part).filter(Boolean)).toEqual([2, 3])
+    expect(result.items[0].chinese?.titleZh).toBe(original.title)
+  })
+
   it('translates every item beyond digest limits and preserves the source evidence', async () => {
     const original = [item('a'), item('b'), { ...item('c', '中文原文\n保留数字 123。'), title: '中文标题' }]
     const snapshot = structuredClone(original)

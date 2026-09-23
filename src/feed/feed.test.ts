@@ -139,7 +139,7 @@ describe('RSS/X collection pipeline', () => {
 
   it('preserves long X posts and quoted text and invokes only a read command', async () => {
     const run = vi.fn().mockResolvedValue(JSON.stringify([tweet]))
-    const [item] = await collectSource(config.sources[1], { ...config, opencli: { profile: 'brave-context' } }, now, run)
+    const [item] = await collectSource(config.sources[1], { ...config, opencli: { ...config.opencli, profile: 'brave-context' } }, now, run)
     expect(run).toHaveBeenCalledWith(['twitter', 'tweets', 'simonw', '--limit', '10', '-f', 'json'], 'brave-context')
     expect(item.content).toContain(tweet.text)
     expect(item.content).toContain('Quoted evidence')

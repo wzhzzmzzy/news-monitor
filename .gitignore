@@ -10,3 +10,6 @@ coverage/
 archive/
 config.yaml
 config.feed.local.yaml
+
+# Personal source and model overrides
+config/local/

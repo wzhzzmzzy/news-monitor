@@ -5,7 +5,7 @@ import { z } from 'zod'
 import type { FeedConfig } from './config.js'
 import type { StoredItem } from './store.js'
 import { FeedStore, writeJson } from './store.js'
-import { localizeItems, localizationIncomplete, type ReadingItem } from './localize.js'
+import { localizeItems, localizeReportItems, localizationIncomplete, type ReadingItem } from './localize.js'
 import { readEvidenceWindow, reportRange } from './runtime.js'
 import { belongsToBlog, isBlog } from './blogs.js'
 import { runFeed } from './pipeline.js'
@@ -31,7 +31,7 @@ export const newsSchema = z.object({
   observedThrough: timestamp.optional(),
   publicationFilter: publicationFilterSchema.extend({ scope: z.literal('news') }).optional(),
   blogPublicationFilter: publicationFilterSchema.extend({ scope: z.literal('blogs') }).optional(),
-  status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), maxPicks: z.number().int() }),
+  status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), minPicks: z.number().int().optional(), maxPicks: z.number().int(), selectionCriteria: z.array(z.string()).optional() }),
   coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), incompleteSources: z.array(z.string()).default([]), note: z.string() }),
   items: z.array(itemSchema),
   blogs: z.array(itemSchema).default([]),
@@ -86,7 +86,7 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     // The publication cutoff is fixed even when collection finishes later.
     if (previous) start = new Date(previous.window.end)
     if (+start >= +end) throw new Error('Baseline must end before the edition cutoff')
-    const result = await collect(config, { publicationWindow: { start, end } })
+    const result = await collect(config, { publicationWindow: { start, end }, deferLocalization: true })
     // Evidence uses a half-open observation interval; include this batch even
     // when collection and query finish in the same millisecond.
     observedThrough = new Date(Math.max(Date.now(), Date.parse(result.collectedAt)) + 1)
@@ -111,9 +111,7 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
       filter.included++
       return true
     })
-    // Collection already spent the blog translation budget; reuse its cache here.
-    const readingConfig = options.refresh ? { ...config, localization: { ...config.localization, blogBatchSize: 0 } } : config
-    const reading = await localize(eligible, readingConfig)
+    const reading = await localizeReportItems(eligible, config, localize)
     const old = new Map([...(previous?.items || []), ...(previous?.blogs || [])].map(i => [i.id, i]))
     const all: NewsItem[] = reading.items.map((item): NewsItem => {
       const revision = contentRevision(item)
@@ -147,7 +145,7 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
       observedThrough: observedThrough.toISOString(),
       publicationFilter, blogPublicationFilter,
       status: !all.length ? 'empty' : failedSources.length || missingSources.length || incompleteSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || blogPublicationFilter.excluded.missingDate || blogPublicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
-      preferences: { interests: config.curation.interests, maxPicks: config.curation.maxPicks },
+      preferences: { interests: config.curation.interests, minPicks: config.curation.minPicks, maxPicks: config.curation.maxPicks, selectionCriteria: config.curation.selectionCriteria },
       coverage: { complete: false, observations: evidence.observations, failedSources, missingSources, incompleteSources,
         note: '有限 RSS/X 快照，不能保证全量覆盖。新闻与博客按固定发布时间窗口筛选；observedThrough 单独记录可用采集批次的截止时间，刷新补采不会移动报告截止；无有效发布时间的条目不纳入。历史博客继续归档，重复观察或正文变化不会绕过发布时间限制。未再出现不表示撤稿；原文变化不等于事件进展。' },
       items, blogs,
@@ -172,7 +170,7 @@ export async function loadSnapshotEvidence(snapshot: NewsList, file: string) {
   for (const item of pack.items) {
     const listed = all.find(i => i.id === item.id)
     if (isBlog(item) !== blogIds.has(item.id)) throw new Error('Snapshot blog channel mismatch')
-    if (!listed || contentRevision(item) !== listed.revision || (item.chinese?.summaryZh || null) !== listed.summary || (item.chinese?.titleZh || item.title) !== listed.title) throw new Error('Snapshot evidence content mismatch')
+    if (!listed || (item.chineseStatus || (item.chinese ? 'ready' : 'disabled')) !== listed.languageStatus || contentRevision(item) !== listed.revision || (item.chinese?.summaryZh || null) !== listed.summary || (item.chinese?.titleZh || item.title) !== listed.title) throw new Error('Snapshot evidence content mismatch')
   }
   return pack
 }

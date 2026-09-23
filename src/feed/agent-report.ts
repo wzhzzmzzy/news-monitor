@@ -23,8 +23,12 @@ export const agentReportSchema = z.object({
 })
 export type AgentReport = z.infer<typeof agentReportSchema>
 export function validateAgentReport(value: unknown, snapshot: NewsList) {
+  if ([...snapshot.items, ...snapshot.blogs].some(item => !['ready', 'failed'].includes(item.languageStatus))) {
+    throw new Error('Report summaries have not settled; regenerate the snapshot after all summaries complete or fail')
+  }
   const report = agentReportSchema.parse(value)
   if (report.snapshotId !== snapshot.snapshotId) throw new Error('Report belongs to another snapshot')
+  if (report.picks.length > (snapshot.preferences?.maxPicks ?? 20)) throw new Error('Too many picks for this snapshot')
   const ids = new Set(snapshot.items.map(i => i.id))
   const before = new Set(snapshot.baseline?.items.map(i => i.id))
   const selected = [...report.picks.map(p => p.id), ...report.readingIds]

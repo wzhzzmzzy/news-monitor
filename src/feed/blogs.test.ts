@@ -50,7 +50,8 @@ it('continues Chinese processing from durable blog backlog without truncating ar
   ])
   const first = await localizeItems(stored, cfg, runner)
   expect(first.stats).toMatchObject({ ready: 2, pending: 1 })
-  expect(first.items.find(i => i.id === 'latest')?.chinese?.contentZh).toBe('原文')
+  expect(first.items.find(i => i.id === 'latest')?.chinese).toMatchObject({ mode: 'summary', contentZh: '' })
+  expect(first.items.find(i => i.id === 'latest')?.content).toBe('原文')
   expect(first.items.find(i => i.id === 'old')?.chineseStatus).toBe('pending')
   // A later empty feed still drains archived pending work; cached items spend no batch budget.
   const result = await runFeed(cfg, {}, async () => [], (items, config) => localizeItems(items, config, runner))
