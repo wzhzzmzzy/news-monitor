@@ -111,6 +111,8 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 ## 宿主接入与调度
 
+宿主定时任务的可复制提示词与首次接入见实际仓库 `docs/automation.md`；OpenCLI 与 serve 操作见 `docs/operations.md`。发布、学城体积处理、通知去重和断点恢复统一按 [delivery.md](delivery.md) 执行。
+
 Skill 是调用说明，不会赋予 ChatGPT 或其他宿主访问本机的权限。有本机执行工具的 Agent 可直接调用 CLI；只有远程连接器能力的宿主需要另外部署可达的受控工具桥接，此仓库尚未提供 MCP/远程 HTTP 新闻接口。`serve` 的 HTTP 端口仅是本机采集状态，不是 ChatGPT 连接器。
 
 日常在 10:00/20:00 或补生成当天报告时调用 `news --refresh`，新闻与博客一起采集；不另设博客定时任务，不启动 `serve`。早晚共享实际早报 snapshotPath。`serve` 保留为可选的独立采集调度器，`schedule.collect` 只影响它，30 分钟不是报告流程要求。一天两轮不能保证抓到高频 RSS 已滚出的条目，报告摘要额度仅用于窗口内博客。多进程访问同归档受锁保护，锁冲突时等待在途任务结束后重试，不删除活跃锁。

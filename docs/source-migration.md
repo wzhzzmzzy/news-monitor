@@ -1,6 +1,6 @@
 # NewsNow 来源迁移
 
-核验日期：2026-09-21（Asia/Shanghai）。原仓库 `b7fe7b624b92ec236217181ec71fe5d196ad2550` 的两个配置文件实际使用了 6 个媒体来源；其中 5 家已迁移成功。“联合早报四个频道”指它内部的中港台、国际、新加坡和财经，不是全部媒体的数量。新配置全部改为 Feed/X，运行入口不再访问 NewsNow。
+来源探测记录日期：2026-09-21（Asia/Shanghai）；“配置与行为迁移”已按 2026-09-24 当前流程更新。原仓库 `b7fe7b624b92ec236217181ec71fe5d196ad2550` 的两个配置文件实际使用了 6 个媒体来源；其中 5 家已迁移成功。“联合早报四个频道”指它内部的中港台、国际、新加坡和财经，不是全部媒体的数量。新配置全部改为 Feed/X，运行入口不再访问 NewsNow。
 
 ## 映射与内容变化
 
@@ -14,7 +14,7 @@
 | 联合早报（覆盖扩展） | `/zaobao/realtime/world`、`/zaobao/realtime/singapore`、`/zaobao/realtime/zfinance` | `https://hub.slarker.me` | 分别 24 / 24 / 27 条 | 国际、新加坡、财经；财经首次超时，有限重试成功；新加坡有无正文音频链接 |
 | 微博热搜 `weibo` | `/weibo/search/hot` | 停用 | 三实例均 503 错误页 | 仅热搜关键词/搜索链接，不等于新闻正文。保留停用项及原因，未接回 NewsNow |
 
-以上为单源验证时的完整 Feed 数量；应用按各源 `limit` 取样，后续快照数量会变化。除上述原来源，还保留已试采的 Simon Willison、Econlib、Works in Progress 原生 RSS/Atom 和本机 `@simonw` X 来源。
+以上为当时单源验证的 Feed 数量；独立 collect 按普通来源的 `limit` 取样，当前报告刷新保存 Feed 返回的全部条目，后续数量会变化。除上述原来源，还保留已试采的 Simon Willison、Econlib、Works in Progress 原生 RSS/Atom 和本机 `@simonw` X 来源。
 
 这里的 Feed 由 RSSHub 转换，并非已找到媒体原生官方 RSS。公共实例没有 SLA；可修改全局 `rsshub.baseUrl` 或来源的 `baseUrl` 换成自建实例。路由语义来自固定版本源码，实例部署版本可能不同，代码阅读与本次请求成功不能证明长期稳定。
 
@@ -29,7 +29,7 @@
 
 ## 新增 Hacker News 与其他来源
 
-已启用 Hacker News（HNRSS）、Ars Technica、TechCrunch、NPR 国际新闻、Our World in Data 和 Aeon；每次分别取 10 / 5 / 5 / 5 / 3 / 3 条。RSS 地址与用途见 [应用说明](../README.md#新增英文新闻与人文来源)。
+当时已启用 Hacker News（HNRSS）、Ars Technica、TechCrunch、NPR 国际新闻、Our World in Data 和 Aeon；独立采集的配置样本量分别为 10 / 5 / 5 / 5 / 3 / 3 条，当前实际配置与报告模式以配置文件和协议为准。RSS 地址与用途见 [RSS 来源配置](../config/sources/rss.yaml)。
 
 选取新闻编辑部、数据研究机构与具名思想写作各自承担不同角色，不把它们统一当成“已经核实的事实”。Hacker News 是社区链接来源，本机官方 RSS 连接超时，改用公开的 HNRSS；其余五项直接读取发布方 Feed。BBC 和 Guardian 本轮网络探测失败，未放入默认配置。
 
@@ -41,11 +41,11 @@
 
 ## 配置与行为迁移
 
-1. 将旧配置重写为 `config.example.yaml` 的 `sources` 结构。旧 API 配置会报错，避免看似迁移却继续走旧地址。
-2. `monitor` / `feed` 采集正文并归档；`report` 汇总窗口内全部批次；`serve` 调度同一套流程。默认逐条生成中文翻译及不超过 200 字的核心摘要，`report --all` 可补处理全部归档；`--analyze` 仅控制额外专题分析。
-3. 默认中文处理需要配置 LLM，支持环境变量凭据或复用 Pi provider；缺模型时保留原文并标为待处理，退出码为 1。可用 `localization.enabled: false` 显式关闭。SMTP 仍为可选项，手动投递使用 `report --send`；定时投递使用 `schedule.sendEmail: true`。中文处理未完成时不发送报告。
-4. 旧归档保留原位，新数据使用 `archive/feed-v1`。旧的标题热度分析、历史趋势定时器和 HTTP 触发接口退出主流程。邮件格式改为带来源证据的阅读简报。
-5. 仅 URL/X ID/GUID 层面去重；不同媒体报道同一事件、早晚报告重复投递的内容，尚需事件模型及发送记录处理。
+1. 将旧配置迁为当前 [外部配置结构](../config/README.md)：主 YAML 的 includes/sourceFiles 分别加载运行、提示词、编辑规则及来源。旧 API 配置会报错，不会继续访问 NewsNow。
+2. `collect`（别名 monitor/feed）用于独立采集；日常 Agent 使用 `news --edition morning --refresh` 统一采集、按发布时间筛选、等待全部中文摘要成功或失败后导出快照。默认只生成中文标题与 200 字符以内摘要，不翻译全文。
+3. `serve` 只调度独立采集，完整日报由宿主 Agent 按 [定时任务模板](automation.md) 执行。旧 `schedule.report/analyze/sendEmail` 与 `--analyze` 已退出主流程；兼容 `report` 是未经 Agent 精选的归档预览。
+4. 摘要依赖环境变量或 Pi provider 提供的 LLM；独立 collect 可保留 pending/disabled，报告阶段必须收敛到 ready/failed，失败保留原文。SMTP 仍为可选项，只有显式 `report --send` 等投递命令才发送；`render --email` 仅生成邮件 HTML，不负责发送。
+5. 新归档路径由 archiveDir 配置，建议放在 Git 仓库之外；旧证据保留。按 URL/X ID/GUID 去重后，Agent 可在 editorial.json 的 events 中合并同一事件，脚本核验引用且保留全部原始报道。跨日发布和通知通过[独立回执与恢复流程](../skills/news-monitor/references/delivery.md)处理。
 
 ## 核验来源
 

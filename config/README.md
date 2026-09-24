@@ -43,6 +43,17 @@ curation:
 
 ## 模型与摘要
 
+初次接入可把 [LLM 模板](llm.example.yaml)复制到 `config/local/llm.yaml`，并在主配置 includes 中引用；`apiKeyEnv` 填宿主已导出的环境变量名。复用 Pi 时改为：
+
+```yaml
+llm:
+  piProvider: gateway
+  model: deepseek-v4-flash
+  mode: json
+```
+
+模型必须存在于该 provider。默认运行时读取 `~/.pi/agent/models.json`，支持 openai-completions 及文件内的字面密钥或环境变量引用；凭据留在仓库外，不复制、不执行凭据命令，不支持 OAuth 或自定义鉴权头。
+
 默认 `localization.mode: summary` 对 RSS、X、Blog 全部生成中文标题和不超过 200 个 Unicode 字符的中文摘要，不生成正文译文。原始内容、发布时间和链接继续归档；HTML 可展开原文。中文原题保持，外语标题在同一次摘要请求中处理。
 
 - `summaryChunkChars: 24000`：每段最大输入字符数；常规文章一次调用，超长文本逐段摘要，再递归合并全部段落，保留尾部信息。按模型上下文容量调小即可。
@@ -69,6 +80,8 @@ LLM 配置通过 `includes` 引用 `config/local/llm.yaml`，从 `llm.example.ya
 
 ## 采集与其他参数
 
+首次连接浏览器、选择 `opencli.profile`、验证 X 小样本或停止采集，见 [OpenCLI 与 serve 操作](../docs/operations.md)。该 profile 不限定浏览器品牌。宿主任务使用[独立的定时流程模板](../docs/automation.md)，不是把任务提示词写进 CLI YAML。
+
 `collection` 支持 `rssConcurrency`（4）、`rssTimeoutMs`（20000）、`rssRetries`（1）、`retryDelayMs`（500）、`userAgent`、`xMaxItems`（1000）。RSS 只对网络错误/5xx 重试，不对认证、限流或无效 XML 重试。`opencli` 支持 `enabled`（true）、`profile`、`timeoutMs`（120000）、`maxBufferBytes`（10485760）。X 仍串行采集；关闭总开关会记录 disabled，不能解释为没有新闻。来源错误只保存脱敏类别、HTTP 状态与退出码，不保存可能带凭据的 stderr。
 
 来源字段为 `id/name/category/type/limit/enabled/disabledReason`，RSS 使用 `url`，RSSHub 使用 `route/baseUrl`，X 使用 `username` 或数字 `listId`。可加 `channel: blogs` 作为独立博客来源。报告刷新时 RSS 不受小 `limit` 限制，X 按需扩大到 `xMaxItems`；窗口筛选不变。
@@ -86,3 +99,5 @@ LLM 配置通过 `includes` 引用 `config/local/llm.yaml`，从 `llm.example.ya
 凭据只能通过环境变量或仓库外的 Pi 配置读取；config/local/ 被 Git 忽略，但也不要在其中保存明文密钥。采集的网页可能自带第三方 token、签名链接或公开站点标识，建议将 archiveDir 指向 Git 仓库之外。本机归档已迁至项目 data/news-monitor-archive/feed-v1，config.feed.local.yaml 使用相对路径 `../../data/news-monitor-archive/feed-v1`。历史原始证据不作脱敏改写；查看旧回执时按新归档根定位，勿把归档拷回源码仓库。
 
 提交前可用 Gitleaks 扫描：`gitleaks dir . --redact` 与 `gitleaks git . --log-opts="--all --full-history" --redact`。扫描历史前须补齐浅克隆及全部远端分支/标签；日志中不打印凭据。规则扫描不等于能识别所有未知格式的秘密，仍须核对暂存文件及外部配置引用。
+
+归档目录内，`runs/` 保存批次的 raw/source-pack/reading-pack 与阅读预览，`items/` 和 `index.json` 保存最新版本及去重索引，`chinese/` 保存摘要和成功分段缓存。`snapshots/<uuid>/news.json` 与同目录 `reading-pack.json` 用 SHA-256 绑定；Agent 另存 editorial.json、HTML 与发布回执。旧 reports/editorial 及译文缓存保留，不倒填或改写旧快照。
