@@ -35,6 +35,14 @@ it('merges in order, lets the root override and replaces arrays; sourceFiles app
   expect(config.llm).toMatchObject({ model: 'b', maxRetries: 0 })
 })
 
+it('loads editorial policy from external configuration with root overrides', async () => {
+  await write('editorial.yaml', { curation: { editorialPolicy: ['Cover multiple substantive domains'], interests: 'A general daily briefing' } })
+  await write('main.yaml', { includes: ['./editorial.yaml'], sources: [source] })
+  expect((await loadFeedConfig(path.join(dir, 'main.yaml'))).curation.editorialPolicy).toEqual(['Cover multiple substantive domains'])
+  await write('main.yaml', { includes: ['./editorial.yaml'], sources: [source], curation: { editorialPolicy: ['Quality before quotas'] } })
+  expect((await loadFeedConfig(path.join(dir, 'main.yaml'))).curation.editorialPolicy).toEqual(['Quality before quotas'])
+})
+
 it('rejects duplicate IDs, missing files, include cycles, unsafe keys and invalid parameters', async () => {
   await write('rss.yaml', [source])
   await write('dup.yaml', { sourceFiles: ['./rss.yaml'], sources: [source] })

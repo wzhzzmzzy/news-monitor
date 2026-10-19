@@ -11,10 +11,12 @@ import { editionRange, queryNews } from './news.js'
 const window = editionRange('morning', '2026-09-22')
 const now = '2026-09-22T02:45:00.000Z'
 const dirs: string[] = []
-async function config(type: 'rss' | 'x-user' = 'rss') {
+async function config(type: 'rss' | 'x-user' | 'x-list' = 'rss') {
   const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), 'collection-window-')); dirs.push(archiveDir)
   return feedConfigSchema.parse({ archiveDir, localization: { enabled: false }, collection: { xMaxItems: 200 }, sources: [
-    type === 'rss' ? { id: 'rss', name: 'RSS', type, url: 'https://news.example/feed', limit: 1 } : { id: 'x', name: 'X', type, username: 'example', limit: 5 },
+    type === 'rss' ? { id: 'rss', name: 'RSS', type, url: 'https://news.example/feed', limit: 1 }
+      : type === 'x-list' ? { id: 'x', name: 'X', type, listId: '123', limit: 5 }
+      : { id: 'x', name: 'X', type, username: 'example', limit: 5 },
   ] })
 }
 const tweet = (id: number, created_at = '2026-09-22T01:00:00.000Z') => ({ id: String(id), author: 'example', text: `post ${id}`, url: `https://x.com/example/status/${id}`, created_at })
@@ -34,18 +36,41 @@ it.each(['news', 'blogs'] as const)('archives all %s entries for reports but tra
   expect(localize.mock.calls[0][0].map(i => i.title)).toEqual(['eligible'])
 })
 
-it.each(['x-user', 'x-list'] as const)('expands %s requests past the small source limit and preserves all returned posts', async type => {
+it.each([5, 20])('caps report account collection at %i recent posts without expanding the window', async limit => {
   const cfg = await config('x-user')
-  const source = type === 'x-user' ? cfg.sources[0] : { ...cfg.sources[0], type, listId: '123' }
+  cfg.sources[0].limit = limit
+  // An oversized adapter response must also stay within the configured cap.
+  const run = vi.fn(async () => JSON.stringify(Array.from({ length: 100 }, (_, i) => tweet(i + 1))))
+  const items = await collectSource(cfg.sources[0], cfg, now, run, window)
+  expect(run).toHaveBeenCalledExactlyOnceWith(['twitter', 'tweets', 'example', '--limit', String(limit), '-f', 'json'], undefined)
+  expect(items.map(item => item.id)).toEqual(Array.from({ length: limit }, (_, i) => `x:${i + 1}`))
+})
+
+it('keeps account coverage partial when its recent-post cap does not reach the report start', async () => {
+  const cfg = await config('x-user')
+  vi.useFakeTimers(); vi.setSystemTime(new Date(now))
+  const run = vi.fn(async () => JSON.stringify(Array.from({ length: 5 }, (_, i) => tweet(i + 1))))
+  const collect = (c: typeof cfg, options: Parameters<typeof runFeed>[1]) => runFeed(c, options, (source, config, time, _run, range) => collectSource(source, config, time, run, range), localizeItems)
+  const snapshot = await queryNews(cfg, { ...window, edition: 'morning', refresh: true }, localizeItems, collect)
+  expect(snapshot.items).toHaveLength(5)
+  expect(snapshot.coverage.incompleteSources).toEqual(['x'])
+  expect(snapshot.coverage.complete).toBe(false)
+  expect(snapshot.status).toBe('partial')
+  expect(run).toHaveBeenCalledTimes(1)
+})
+
+it('expands list requests past the small source limit and preserves all returned posts', async () => {
+  const cfg = await config('x-list')
+  const source = cfg.sources[0]
   const run = vi.fn(async (args: string[]) => JSON.stringify(Array.from({ length: Number(args[args.indexOf('--limit') + 1]) }, (_, i) => tweet(i + 1, i === 150 ? '2026-09-20T00:00:00Z' : undefined))))
   const items = await collectSource(source, cfg, now, run, window)
   expect(run.mock.calls.map(([args]) => args[args.indexOf('--limit') + 1])).toEqual(['100', '200'])
   expect(items).toHaveLength(200)
-  expect(run.mock.calls[0][0].slice(0, 3)).toEqual(type === 'x-user' ? ['twitter', 'tweets', 'example'] : ['twitter', 'list-tweets', '123'])
+  expect(run.mock.calls[0][0].slice(0, 3)).toEqual(['twitter', 'list-tweets', '123'])
 })
 
-it('preserves successful X pages when expansion fails and marks an unconfirmed window as partial', async () => {
-  const cfg = await config('x-user')
+it('preserves successful list pages when expansion fails and marks an unconfirmed window as partial', async () => {
+  const cfg = await config('x-list')
   vi.useFakeTimers(); vi.setSystemTime(new Date(now))
   const run = vi.fn().mockResolvedValueOnce(JSON.stringify(Array.from({ length: 100 }, (_, i) => tweet(i + 1)))).mockRejectedValueOnce(new Error('pagination failed'))
   const collect = (c: typeof cfg, options: Parameters<typeof runFeed>[1]) => runFeed(c, options, (source, config, time, _run, range) => collectSource(source, config, time, run, range), localizeItems)
@@ -56,8 +81,8 @@ it('preserves successful X pages when expansion fails and marks an unconfirmed w
   expect(run).toHaveBeenCalledTimes(2)
 })
 
-it('stops at the configured X cap or short result without claiming exhaustion', async () => {
-  const cfg = await config('x-user')
+it('stops at the configured list cap or short result without claiming exhaustion', async () => {
+  const cfg = await config('x-list')
   const run = vi.fn(async (args: string[]) => JSON.stringify(Array.from({ length: Number(args[args.indexOf('--limit') + 1]) }, (_, i) => tweet(i + 1))))
   expect(await collectSource(cfg.sources[0], cfg, now, run, window)).toHaveLength(200)
   expect(run).toHaveBeenCalledTimes(2)

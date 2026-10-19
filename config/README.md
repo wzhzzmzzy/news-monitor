@@ -10,7 +10,7 @@
 | `feeds/hn-popular-blogs.json` | Blog 排名、Feed URL、别名、启用状态和未接入原因，通过 `blogCatalog` 引用 |
 | `config/runtime.yaml` | 采集超时、重试、并发、X 开关与摘要处理预算 |
 | `config/llm.example.yaml` | LLM 接口、模型、鉴权变量、请求与输出参数模板 |
-| `config/editorial.yaml` | 精选数量范围与四类入选标准，传给报告编辑 Agent |
+| `config/editorial.yaml` | 精选数量、四类质量标准与领域/来源集中度规则，传给报告编辑 Agent |
 | `config/prompts.yaml` | 中文摘要、长文合并、格式重试及可选全文模式提示词 |
 | `config/local/` | Git 忽略的本机覆盖：`rss.yaml`、`x.yaml`、`llm.yaml`；可自行增加文件 |
 
@@ -33,8 +33,8 @@ opencli:
   enabled: false # 要恢复 X 采集时设为 true；也可逐个 source.enabled 控制
 curation:
   minPicks: 10
-  maxPicks: 20
-  interests: 技术、商业与人文；优先重要变化、原始信息和深入分析。
+  maxPicks: 10
+  interests: 综合日报；优先重要变化、原始信息和深入分析。
 ```
 
 `includes` 按顺序加载，本文件最后覆盖；对象递归合并，数组和标量整体替换。各文件均为普通 YAML 对象，可以拆分邮件、调度和编辑偏好等任意现有配置块，不限于这些文件名。`sourceFiles` 中每个文件必须是来源数组，按顺序与同文件内的 `sources` 拼接，然后整体替换被包含文件的来源列表；全局 ID 重复直接报错，不静默覆盖。循环引用、缺失文件和非法参数在采集前报错。旧版单文件 `sources` 配置继续可用。
@@ -84,7 +84,9 @@ LLM 配置通过 `includes` 引用 `config/local/llm.yaml`，从 `llm.example.ya
 
 `collection` 支持 `rssConcurrency`（4）、`rssTimeoutMs`（20000）、`rssRetries`（1）、`retryDelayMs`（500）、`userAgent`、`xMaxItems`（1000）。RSS 只对网络错误/5xx 重试，不对认证、限流或无效 XML 重试。`opencli` 支持 `enabled`（true）、`profile`、`timeoutMs`（120000）、`maxBufferBytes`（10485760）。X 仍串行采集；关闭总开关会记录 disabled，不能解释为没有新闻。来源错误只保存脱敏类别、HTTP 状态与退出码，不保存可能带凭据的 stderr。
 
-来源字段为 `id/name/category/type/limit/enabled/disabledReason`，RSS 使用 `url`，RSSHub 使用 `route/baseUrl`，X 使用 `username` 或数字 `listId`。可加 `channel: blogs` 作为独立博客来源。报告刷新时 RSS 不受小 `limit` 限制，X 按需扩大到 `xMaxItems`；窗口筛选不变。
+来源字段为 `id/name/category/type/limit/enabled/disabledReason`，RSS 使用 `url`，RSSHub 使用 `route/baseUrl`，X 使用 `username` 或数字 `listId`。可加 `channel: blogs` 作为独立博客来源。报告刷新时 RSS 不受小 `limit` 限制；`x-user` 严格按来源 `limit` 采集最近帖子，当前账号配置为 5 条，不因报告窗口自动扩量；`x-list` 仍按需扩大到 `xMaxItems`。窗口筛选不变，账号快照未回溯到窗口起点时保持 partial，不保证全天完整覆盖。
+
+RSS 示例包含科技、经济、国际公共事务、科学医疗、环境与文化频道；X 清单及启用建议见 [账号与领域](../feeds/x-accounts.md)。RSS 新增 BBC、Guardian、Nature、联合国新闻、The Conversation 和 NASA 的 11 个频道。主配置若引用 `config/local/`，应同步调整对应本机来源文件；修改公开示例不会自动改变本机任务。
 
 调度、时区、端口、SMTP 和编辑偏好仍由 `schedule`、`serverPort`、`email`、`curation` 配置。`schedule.collect` 只影响可选 serve，实际每日 10:00 的宿主自动任务独立维护。精选与综述由宿主 Agent 按 `skills/news-monitor` 协议完成；旧 `curate/report` 模型模块已不在 CLI 主链路，旧 `llm.maxItems/maxCharsPerItem` 不控制摘要长度。
 
@@ -92,7 +94,9 @@ LLM 配置通过 `includes` 引用 `config/local/llm.yaml`，从 `llm.example.ya
 
 报告阶段固定等待全部候选摘要任务结束，不提供跳过等待的开关。`news --refresh` 的采集阶段不调用模型，筛选完报告窗口后统一处理全部新闻和博客；只在每条成为 ready 或 failed 后导出快照。失败使用配置的有限重试，不无限等待或重复采集。`render` 拒绝尚有 pending/disabled 的快照，失败项仍保留原文和明确状态。
 
-`curation.minPicks/maxPicks` 默认 10/20，`selectionCriteria` 是四类入选条件的列表。编辑 Agent 自主决定 10–20 条，每条必须有证据支持至少一个条件，在 reason 中具体说明。同一事件去重后只选一次；博客独立展示。优质候选确实不足时，报告说明原因，不降低质量凑数。旧配置只设置较小 maxPicks 时，minPicks 会下调至该上限；新日常配置明确为 10–20。语义判断属于编辑 Agent，脚本检查数量上限、ID 和引用关系。
+`curation.minPicks/maxPicks` 默认 10/10，`selectionCriteria` 是四类入选条件的列表。日常目标为 10 条，每条必须有证据支持至少一个条件，在 reason 中具体说明。同一事件去重后只选一次；博客独立展示。优质候选确实不足时，报告说明原因，不降低质量凑数。旧配置只设置较小 maxPicks 时，minPicks 会下调至该上限；新日常配置明确为 10 条。语义判断属于编辑 Agent，脚本检查数量上限、ID 和引用关系。
+
+`curation.editorialPolicy` 是可配置的编辑规则列表，随 interests 和质量标准冻结在快照 preferences 中；修改后仅影响新快照。当前配置要求日常 10 条中 AI/互联网通常最多 4 条、有合格候选时覆盖至少 4 类实质领域、同一媒体或机构通常最多 2 条。按文章实际内容判断，跨 RSS/X 的同一机构也计入同一来源；质量优先，重大事件可例外并在 reason 说明。具体规则以 [editorial.yaml](editorial.yaml) 为准，属于 Agent 的语义判断，不是按来源 category 强行凑配额；旧快照缺少该字段仍可读取。
 
 ## 凭据与归档隔离
 

@@ -9,6 +9,7 @@ import { NotifierService } from './services/notifier.js'
 import { queryNews, editionRange, shanghaiDay } from './feed/news.js'
 import { renderAgentReport } from './feed/agent-report.js'
 import { localizationIncomplete, type LocalizationStats } from './feed/localize.js'
+import { prepareBriefing, deliverBriefing, briefingStatus, reconcileNotification, unlockBriefing } from './feed/briefing.js'
 
 const cli = cac('news-monitor')
 const configOption = { default: 'config.example.yaml' }
@@ -58,13 +59,14 @@ cli.command('news', 'Return a frozen JSON news list for an external agent; never
   .option('--edition <name>', 'morning (24h to 10:00) or evening (10:00–20:00), Asia/Shanghai')
   .option('--day <date>', 'Edition date YYYY-MM-DD, default today in Asia/Shanghai')
   .option('--baseline <file>', 'Frozen morning news.json; required for evening')
+  .option('--observed-through <time>', 'Read later archived evidence for a historical backfill; publication window stays fixed (ISO timezone)')
   .option('--refresh', 'Refresh RSS/X for today’s edition while keeping the fixed publication cutoff')
   .action(async options => {
     try {
       if (options.edition && (options.start || options.end)) throw new Error('Use --edition/--day or --start/--end')
       if (options.day && !options.edition) throw new Error('--day requires --edition')
       const range = options.edition ? editionRange(options.edition, options.day || shanghaiDay()) : reportRange(options)
-      const result = await queryNews(await loadConfig(options.config), { ...range, edition: options.edition, baseline: options.baseline, refresh: options.refresh })
+      const result = await queryNews(await loadConfig(options.config), { ...range, edition: options.edition, baseline: options.baseline, refresh: options.refresh, observedThrough: options.observedThrough ? new Date(options.observedThrough) : undefined })
       console.log(JSON.stringify(result, null, 2))
       if (result.status !== 'ready') process.exitCode = 1
     } catch (error) { showError(error) }
@@ -77,12 +79,36 @@ cli.command('render', 'Render Agent decisions; optionally publish a public Koala
   .option('--email', 'Generate an email-compatible HTML artifact without sending')
   .option('--publish-koalablog', 'Publish report data for the public Svelte reader')
   .option('--koalablog-update-shell', 'Update the Svelte reader Source; Dashboard Deploy is then required')
+  .option('--koalablog-data-only', 'Require a deployed reader and publish only data Markdown')
   .option('--koalablog-url <url>', 'Koalablog HTTPS origin', { default: 'https://koala.wzhzzmzzy.workers.dev' })
   .option('--koalablog-token-env <name>', 'API token environment variable name', { default: 'KOALABLOG_API_TOKEN' })
   .action(async options => {
     try {
       if (!options.snapshot || !options.decisions || !options.output) throw new Error('render requires --snapshot, --decisions and --output')
-      console.log(JSON.stringify(await renderAgentReport(options.snapshot, options.decisions, options.output, options.email, options.publishKoalablog ? { url: options.koalablogUrl, tokenEnv: options.koalablogTokenEnv, updateShell: options.koalablogUpdateShell } : undefined), null, 2))
+      console.log(JSON.stringify(await renderAgentReport(options.snapshot, options.decisions, options.output, options.email, options.publishKoalablog ? { url: options.koalablogUrl, tokenEnv: options.koalablogTokenEnv, updateShell: options.koalablogUpdateShell, dataOnly: options.koalablogDataOnly } : undefined), null, 2))
+    } catch (error) { showError(error) }
+  })
+
+cli.command('briefing <action>', 'prepare / deliver / status / unlock / reconcile-notification: durable workflow')
+  .option('--dir <directory>', 'One directory per report date and edition')
+  .option('-c, --config <file>', 'Feed configuration for prepare; delivery JSON for deliver')
+  .option('--day <date>', 'Report date in Asia/Shanghai')
+  .option('--edition <name>', 'morning or evening; defaults to saved edition, then morning')
+  .option('--baseline <file>', 'Actual morning snapshot for an evening report')
+  .option('--snapshot <file>', 'Adopt an existing settled snapshot without collecting')
+  .option('--target <key>', 'Uncertain notification target key to reconcile')
+  .option('--proof <file>', 'Recorded chat verification evidence for reconciliation')
+  .action(async (action, options) => {
+    try {
+      if (!options.dir) throw new Error('briefing requires --dir')
+      const result = action === 'status' ? await briefingStatus(options.dir)
+        : action === 'prepare' ? await prepareBriefing(options.dir, options)
+        : action === 'deliver' ? await deliverBriefing(options.dir, options.config)
+        : action === 'reconcile-notification' ? await reconcileNotification(options.dir, options.config, options.target, options.proof)
+        : action === 'unlock' ? await unlockBriefing(options.dir)
+        : (() => { throw new Error('Use briefing prepare, deliver or status') })()
+      console.log(JSON.stringify(result, null, 2))
+      if (action === 'deliver' && !result.complete) process.exitCode = 1
     } catch (error) { showError(error) }
   })
 

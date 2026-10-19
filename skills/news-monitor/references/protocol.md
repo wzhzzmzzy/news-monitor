@@ -33,7 +33,7 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 - `publicationFilter`：新快照记录 `basis: publishedAt`、`scope: news`、`missingDate: exclude`、`included`，以及 `excluded.beforeStart / atOrAfterEnd / missingDate / invalidDate` 数量。`blogPublicationFilter` 使用同样结构，`scope: blogs`，单独记录博客筛选统计。缺失或无效日期被排除时，非空快照为 partial；旧快照可无这些筛选字段。
 - `edition`：`morning | evening | custom`；`status`：`ready | partial | empty`。
 - `coverage`：实际采集批次时间 `observations`，`failedSources`、`missingSources`、`incompleteSources`（X 未确认回溯到窗口起点）；`complete` 固定 false，RSS/X 有限快照不承诺全量覆盖。
-- `preferences`：`interests`、`minPicks`、`maxPicks`、`selectionCriteria`，给 Agent 的偏好、10–20 条范围与四类入选门槛；新字段在旧快照中可不存在。
+- `preferences`：`interests`、`minPicks`、`maxPicks`、`selectionCriteria`、`editorialPolicy`，给 Agent 的偏好、目标数量与四类入选门槛；新字段在旧快照中可不存在。
 - `items`：每条有 `id`、`revision`、`title`、`summary`、`languageStatus`、`source`、`sourceId`、`category`、`url`、可选 `discussionUrl`、`publishedAt`、`observedAt`、`firstSeen`、`contentKind`、`change`。摘要未完成时为 null，标题可能仍是原文。`contentKind` 限定证据是全文未核验的 RSS 内容、摘要、社区链接元数据、仅标题或 X 原文。
 - `change`：无基线时 `observed`；有基线时 `new`（窗口内首次观察）、`resurfaced`（更早见过但基线里没有）、`updated`（同 ID 原文版本不同）、`unchanged`（同 ID 原文版本相同）。这是文本变化，不是事件判断；社区分数若写在正文中也会触发 updated。
 - `baseline`：基线 ID、位置、窗口、状态、覆盖与完整候选列表，供跨 URL 事件关联。无基线则为 null。基线未在当前出现的条目不会被标成删除或撤稿。
@@ -79,13 +79,13 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 同一事件最多一个精选、一个 section；引用事件成员的 section 必须只引用该事件的当前成员，基线引用仍使用 `beforeIds`。未分组新闻继续独立展示。时间线和精选用事件标题、合并摘要展示，展开后保留所有原始标题、来源、链接和摘要；独立 HTML 还保留各条原文（显式全文模式还包含译文）。事件按成员最新发布时间排序，各条时间保留。搜索和主题筛选覆盖全部成员；页面卡片数量按折叠后的事件和独立条目计数，公开数据仍包含全部原始新闻。事件代表优先选精选条目，否则使用 `itemIds[0]`。博客不参加事件合并。
 
-`picks` 默认在 10–20 条之间由编辑 Agent 决定，每条至少满足以下一个条件：有切实影响并且影响力大、影响程度深、影响范围广；内容非常优质、非常值得阅读；属于某领域的重大进展；非常奇怪，超出常规认知。reason 说明符合的条件与来源证据支持的具体事实，不能只抄条件或以热度、夸张标题取代证据。同事件只精选一次；合格候选不足 10 条时在报告说明原因，不凑数。数量和标准由 config/editorial.yaml 传入 preferences，按数组顺序展示；`topic` 为 AI/技术/商业/人文/综合。`readingIds` 保留为编辑优先级元数据；页面不再单设继续阅读或其他资讯 Tab，全部非博客新闻统一进入时间线，精选条目同时标记。两组 ID 必须唯一且互不重叠。条目 `reason` 最多 300 字，报告 `summary` 最多 3000 字，可留空（不渲染空段落）。报告主标题仅保留日期与版次，不附“首次观察版”等运行标签。
+`picks` 日常目标为 10 条，数量以快照 preferences.minPicks/maxPicks 为准，每条至少满足以下一个条件：有切实影响并且影响力大、影响程度深、影响范围广；内容非常优质、非常值得阅读；属于某领域的重大进展；非常奇怪，超出常规认知。reason 说明符合的条件与来源证据支持的具体事实，不能只抄条件或以热度、夸张标题取代证据。同事件只精选一次；合格候选不足目标条数时在报告说明原因，不凑数。数量和标准由 config/editorial.yaml 传入 preferences，按数组顺序展示；`topic` 为 AI/技术/商业/人文/综合。`readingIds` 保留为编辑优先级元数据；页面不再单设继续阅读或其他资讯 Tab，全部非博客新闻统一进入时间线，精选条目同时标记。两组 ID 必须唯一且互不重叠。条目 `reason` 最多 300 字，报告 `summary` 最多 3000 字，可留空（不渲染空段落）。报告主标题仅保留日期与版次，不附“首次观察版”等运行标签。
 
 `overview` 用短段陈述重要新闻事实，必要时注明报道方；不写编辑议论、建议、反问或泛化免责声明。整个综述区显示“新闻综述”小标题和背景底色，各条按有序列表展示；各段 `title` 保留为结构化元数据，其他段类型保留变化标题。每个 section 只讲一条新闻或同一组证据支持的紧密相关事实，以便编号引用紧跟该条新闻末句。不同来源支持不同新闻时拆成独立 section，不将多条新闻合成一段。渲染器统一生成可点击的上标 `[1]` 尾注，完整标题和来源放在悬停提示里；body 只写正文。`summary` 用于时间范围、采集状态等必要说明，单独以小字号、弱化颜色展示。
 
 `sections` 最多 50 段，每段 `body` 最多 5000 字。`kind` 为 overview/new/update/correction/watch，每段必须有至少一个当前证据；update/correction 必须有基线证据。渲染器验证 ID 存在、快照绑定和原始内容哈希，**不验证文字是否真实受到引用支持**，该责任属于编辑 Agent。没有证据时可生成空 sections/picks/readingIds 和诚实说明缺口的 summary。
 
-`render` 默认离线，不调用模型，不发送邮件，输出文件必须不存在；只有显式指定 `--publish-koalablog` 时访问发布站点。`--email` 生成无脚本邮件 HTML。所有正文按纯文本转义，不接受 Agent 注入 HTML。Agent 也可不调用 render，直接使用新闻 JSON 制作其他格式。
+`render` 默认离线，不调用模型，不发送邮件，已有输出仅在字节完全一致时复用，不同内容拒绝覆盖；只有显式指定 `--publish-koalablog` 时访问发布站点。`--email` 生成无脚本邮件 HTML。所有正文按纯文本转义，不接受 Agent 注入 HTML。Agent 也可不调用 render，直接使用新闻 JSON 制作其他格式。
 
 ## 发布为 Koalablog public memo
 
@@ -105,9 +105,9 @@ node dist/index.js render --snapshot /absolute/news.json --decisions /absolute/e
 
 指定日期和版次可分享 `/news-feed?date=2026-09-21&edition=morning` 或 `edition=evening`。只传 date 时读取该日期最新一期；不传这两个参数时读取 latest。指定版次不存在时显示该版次暂无报告，不回退到另一版。日期/版次切换会同步 URL，浏览器前进/后退恢复对应选择；“最新一期”清除这两个参数。错误日期、未知版次、缺日期的 edition 和重复参数会显示错误。自定义时段可用 `edition=custom-HHmmss`。
 
-本地额外生成 `<output>.report.md`、`<output>.latest-candidate.md` 和 `<output>.svelte`；candidate 是本次报告的索引候选，不代表已替换服务器 latest。保存 `<output>.koalablog.json` 回执，`url` 为最新入口，`reportUrl` 为本期日期/版次直达链接，并记录实际 latest、数据路径和部署状态。仅在加发布参数且 HTML 完全一致时复用已有输出文件。
+本地 render 始终生成 `<output>.report.md` 与 `<output>.latest-candidate.md`；candidate 是本次报告的索引候选，不代表已替换服务器 latest。底层 render 选择发布时还保存 `<output>.svelte` 模板副本与 `<output>.koalablog.json` 回执。briefing 的 data-only 发布不复制模板，回执单独为 `koalablog.json`。`url` 为最新入口，`reportUrl` 为本期日期/版次直达链接，并记录实际 latest、数据路径和部署状态。离线和发布模式均允许复用字节一致的输出文件；不同内容保留原文件并停止。
 
-**首次上传 Svelte 后，在已登录 Dashboard 对 `/news-feed` 执行 Deploy。** Source 上传不会自动附加可执行 Artifact；`publication.deploymentRequired` 为 true 时必须明确报告尚需部署，不能宣称页面可用。以后只更新报告数据，无需重新部署。修改页面模板后显式添加 `--koalablog-update-shell` 更新 Source，再执行 Dashboard Deploy；部署失败保留上一版已部署 Artifact。不要在本地编译 Artifact 后上传绕过 Dashboard 工作流。若已有入口 Source 与模板不同，默认拒绝覆盖。
+**首次上传 Svelte 后，在已登录 Dashboard 对 `/news-feed` 执行 Deploy。** Source 上传不会自动附加可执行 Artifact；`publication.deploymentRequired` 为 true 时必须明确报告尚需部署，不能宣称页面可用。以后只更新报告数据，无需重新部署。修改页面模板后显式添加 `--koalablog-update-shell` 更新 Source，再执行 Dashboard Deploy；部署失败保留上一版已部署 Artifact。不要在本地编译 Artifact 后上传绕过 Dashboard 工作流。底层默认发布模式在已有入口 Source 与模板不同时拒绝覆盖。日常使用 `--koalablog-data-only`（`briefing deliver` 自动启用）：要求线上存在已部署 Artifact 且匿名入口可访问；Source 为 deployment_drift 时保留旧 Artifact，只写当期数据与 latest，不比较或修改阅读页 Source；匿名读取数据正文并与本期 JSON 比对。
 
 ## 宿主接入与调度
 
@@ -117,4 +117,4 @@ Skill 是调用说明，不会赋予 ChatGPT 或其他宿主访问本机的权�
 
 日常在 10:00/20:00 或补生成当天报告时调用 `news --refresh`，新闻与博客一起采集；不另设博客定时任务，不启动 `serve`。早晚共享实际早报 snapshotPath。`serve` 保留为可选的独立采集调度器，`schedule.collect` 只影响它，30 分钟不是报告流程要求。一天两轮不能保证抓到高频 RSS 已滚出的条目，报告摘要额度仅用于窗口内博客。多进程访问同归档受锁保护，锁冲突时等待在途任务结束后重试，不删除活跃锁。
 
-报告刷新时 RSS 不按来源 `limit` 截断，保存 Feed 当前全部条目；上游自身返回数量仍可能有限。X 复用 OpenCLI 分页，从至少 100 条按需扩大请求至 `collection.xMaxItems`（默认 1000）；读到窗口起点之前、返回不足或失败时停止，保留成功条目。未确认到达起点则列入 `coverage.incompleteSources` 并使非空快照为 partial；上游数组返回不足无法区分历史耗尽和分页截断。独立 collect 保留来源 limit 语义。
+报告刷新时 RSS 不按来源 `limit` 截断，保存 Feed 当前全部条目；上游自身返回数量仍可能有限。X 用户时间线直接使用每账号配置的 `limit`（当前本机为 5 条），报告刷新不再扩量；X List 仍复用 OpenCLI 分页，从至少 100 条按需扩大请求至 `collection.xMaxItems`（默认 1000），读到窗口起点之前、返回不足或失败时停止，保留成功条目。未确认到达起点则列入 `coverage.incompleteSources` 并使非空快照为 partial；上游数组返回不足无法区分历史耗尽和分页截断。独立 collect 保留来源 limit 语义。

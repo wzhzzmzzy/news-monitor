@@ -56,8 +56,9 @@ export const feedConfigSchema = z.object({
   curation: z.object({
     enabled: z.boolean().default(false),
     minPicks: z.number().int().min(0).max(20).default(10),
-    maxPicks: z.number().int().min(1).max(20).default(20),
+    maxPicks: z.number().int().min(1).max(20).default(10),
     selectionCriteria: z.array(z.string().min(1)).min(1).default(['有切实影响并且影响力大、影响程度深、影响范围广', '内容非常优质、非常值得阅读', '属于某领域的重大进展', '非常奇怪，超出常规认知']),
+    editorialPolicy: z.array(z.string().min(1).max(1000)).max(20).default([]),
     interests: z.string().min(1).max(1000).default('技术、商业与人文。优先重要变化、原始信息、扎实分析、可复用知识与有启发的观点；降低日常行情碎片、消费品促销上新、标题党、重复报道和缺乏上下文的闲聊的优先级。'),
   }).transform(value => ({ ...value, minPicks: Math.min(value.minPicks, value.maxPicks) })).default({}),
   schedule: z.object({

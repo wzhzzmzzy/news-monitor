@@ -35,6 +35,7 @@ node dist/index.js news -c config.yaml --edition morning --refresh
 | 安装、连接 OpenCLI 支持的浏览器、选择 profile、启停 serve、升级和排错 | [操作指南](docs/operations.md) |
 | 设置 RSS/X/Blog、LLM、提示词、摘要与精选规则、归档和凭据 | [配置指南](config/README.md) |
 | 每天早报、可选增量晚报、安装 Skill、复用任务提示词 | [定时任务指南](docs/automation.md) |
+| 统一生成 HTML、发布 data Markdown/学城、发送通知与断点恢复 | [日报流程](docs/briefing.md) |
 | 让 Agent 采集、判断、成稿并恢复中断任务 | [Agent Skill](skills/news-monitor/SKILL.md) |
 | 查看命令参数、时间窗口、快照与 editorial.json 格式 | [CLI 与数据协议](skills/news-monitor/references/protocol.md) |
 | 发布 Koalablog/学城、发送大象通知、查重与断点恢复 | [发布与恢复](skills/news-monitor/references/delivery.md) |
@@ -47,6 +48,7 @@ node dist/index.js news -c config.yaml --edition morning --refresh
 | `collect` | 独立采集、归档与中文处理；`monitor` / `feed` 是别名 |
 | `news` | 按窗口生成冻结快照；`--refresh` 在早晚报前统一采集 |
 | `render` | 校验 Agent 决策并生成 HTML，可显式发布 Koalablog |
+| `briefing` | prepare / deliver / status；冻结定稿、独立平台回执与逐目标通知去重 |
 | `serve` | 可选的独立采集调度器，仅提供本机状态，不负责精选与发布 |
 | `report` | 兼容的未精选归档预览 |
 

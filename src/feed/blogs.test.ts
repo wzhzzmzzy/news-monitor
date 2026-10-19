@@ -99,10 +99,10 @@ it('separates blog snapshots from Agent decisions and renders every blog in an i
     await renderAgentReport(snapshot.snapshotPath, path.join(dir, 'decision.json'), output, email)
     const { document } = parseHTML(await fs.readFile(output, 'utf8'))
     expect(document.querySelectorAll('[data-panel]')).toHaveLength(3)
-    expect(document.querySelectorAll('#panel-blogs [data-entry]')).toHaveLength(1)
-    expect(document.querySelectorAll('#panel-timeline [data-entry]')).toHaveLength(1)
-    expect(document.querySelector('#panel-blogs .why')).toBeNull()
-    if (email) expect(document.querySelector('#panel-blogs h2')?.textContent).toBe('博客')
+    expect(document.querySelectorAll('[data-panel=blogs] [data-entry]')).toHaveLength(1)
+    expect(document.querySelectorAll('[data-panel=timeline] [data-entry]')).toHaveLength(1)
+    expect(document.querySelector('[data-panel=blogs] .why')).toBeNull()
+    if (email) { expect(document.querySelector('[data-panel=blogs]')?.getAttribute('aria-label')).toBe('博客'); expect(document.querySelector('script')).toBeNull() }
   }
   const moved = { ...snapshot, items: [...snapshot.items, ...snapshot.blogs], blogs: [] }
   await expect(loadSnapshotEvidence(moved, snapshot.snapshotPath)).rejects.toThrow('channel mismatch')

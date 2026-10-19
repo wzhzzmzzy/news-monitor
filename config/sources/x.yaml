@@ -5,196 +5,300 @@
   username: simonw
   limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-openai
   name: OpenAI / X
   category: AI
   type: x-user
   username: OpenAI
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-anthropicai
   name: Anthropic / X
   category: AI
   type: x-user
   username: AnthropicAI
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-googledeepmind
   name: Google DeepMind / X
   category: AI
   type: x-user
   username: GoogleDeepMind
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-microsoft
   name: Microsoft / X
   category: 技术
   type: x-user
   username: Microsoft
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-nvidiaai
   name: NVIDIA AI / X
   category: AI
   type: x-user
   username: NVIDIAAI
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-huggingface
   name: Hugging Face / X
   category: AI
   type: x-user
   username: huggingface
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-github
   name: GitHub / X
   category: 技术
   type: x-user
   username: github
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-cloudflare
   name: Cloudflare / X
   category: 技术
   type: x-user
   username: Cloudflare
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-vercel
   name: Vercel / X
   category: 技术
   type: x-user
   username: vercel
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-alibaba-qwen
   name: Qwen / X
   category: AI
   type: x-user
   username: Alibaba_Qwen
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-deepseek-ai
   name: DeepSeek / X
   category: AI
   type: x-user
   username: deepseek_ai
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-mistralai
   name: Mistral AI / X
   category: AI
   type: x-user
   username: MistralAI
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-mit-csail
   name: MIT CSAIL / X
   category: 技术
   type: x-user
   username: MIT_CSAIL
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-stanfordhai
   name: Stanford HAI / X
   category: AI
   type: x-user
   username: StanfordHAI
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-allen-ai
   name: Allen Institute for AI / X
   category: AI
   type: x-user
   username: allen_ai
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-cloudnativefdn
   name: Cloud Native Computing Foundation / X
   category: 技术
   type: x-user
   username: CloudNativeFdn
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-sama
   name: Sam Altman / X
   category: AI
   type: x-user
   username: sama
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-karpathy
   name: Andrej Karpathy / X
   category: AI
   type: x-user
   username: karpathy
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
 - id: x-demishassabis
   name: Demis Hassabis / X
   category: AI
   type: x-user
   username: demishassabis
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-andrewyng
   name: Andrew Ng / X
   category: AI
   type: x-user
   username: AndrewYNg
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-drfeifei
   name: Fei-Fei Li / X
   category: AI
   type: x-user
   username: drfeifei
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-ylecun
   name: Yann LeCun / X
   category: AI
   type: x-user
   username: ylecun
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-fchollet
   name: François Chollet / X
   category: AI
   type: x-user
   username: fchollet
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 降低 AI 与互联网来源集中度，暂停同类厂商/人物重复覆盖；可按需恢复。
 - id: x-mitchellh
   name: Mitchell Hashimoto / X
   category: 技术
   type: x-user
   username: mitchellh
-  limit: 20
+  limit: 5
   enabled: false
-  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置 Brave profile 后启用。
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-imf
+  name: IMF / X
+  category: 商业
+  type: x-user
+  username: IMFNews
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-worldbank
+  name: World Bank / X
+  category: 商业
+  type: x-user
+  username: WorldBank
+  limit: 5
+  enabled: false
+  disabledReason: 2026-10-09 小样本验证未通过，保留停用；恢复读取并核验后再启用。
+- id: x-oecd
+  name: OECD / X
+  category: 商业
+  type: x-user
+  username: OECD
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-iea
+  name: International Energy Agency / X
+  category: 环境
+  type: x-user
+  username: IEA
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-un
+  name: United Nations / X
+  category: 公共事务
+  type: x-user
+  username: UN
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-who
+  name: World Health Organization / X
+  category: 医疗
+  type: x-user
+  username: WHO
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-nasa
+  name: NASA / X
+  category: 科学
+  type: x-user
+  username: NASA
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-esa
+  name: European Space Agency / X
+  category: 科学
+  type: x-user
+  username: esa
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-nature
+  name: Nature / X
+  category: 科学
+  type: x-user
+  username: Nature
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-science
+  name: Science Magazine / X
+  category: 科学
+  type: x-user
+  username: ScienceMagazine
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-reuters
+  name: Reuters / X
+  category: 综合
+  type: x-user
+  username: Reuters
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-bbcworld
+  name: BBC World / X
+  category: 综合
+  type: x-user
+  username: BBCWorld
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。
+- id: x-smithsonian
+  name: Smithsonian Magazine / X
+  category: 人文
+  type: x-user
+  username: SmithsonianMag
+  limit: 5
+  enabled: false
+  disabledReason: 安装 OpenCLI 官方扩展、登录 X 并设置浏览器 profile，验证小样本后启用。

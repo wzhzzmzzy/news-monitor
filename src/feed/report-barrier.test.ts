@@ -76,12 +76,12 @@ it('records unavailable configuration as an explicit terminal failure and refuse
   }
 })
 
-it('exports the 10–20 range and all four criteria and accepts a model-selected 15 items', async () => {
+it('exports the ten-pick target and all four criteria, and rejects eleven picks', async () => {
   await seed(21, false)
   const snapshot = await queryNews(config, range, (items, cfg) => localizeItems(items, cfg, async () => ({ titleZh: '中文标题', summaryZh: '新闻摘要。' })))
-  expect(snapshot.preferences).toMatchObject({ minPicks: 10, maxPicks: 20, selectionCriteria: config.curation.selectionCriteria })
+  expect(snapshot.preferences).toMatchObject({ minPicks: 10, maxPicks: 10, selectionCriteria: config.curation.selectionCriteria })
   expect(snapshot.preferences.selectionCriteria).toHaveLength(4)
   const picks = snapshot.items.map(item => ({ id: item.id, reason: '某领域重大进展，具体事实见原文。', topic: '技术' }))
-  expect(validateAgentReport({ ...decision(snapshot.snapshotId), picks: picks.slice(0, 15) }, snapshot).picks).toHaveLength(15)
-  expect(() => validateAgentReport({ ...decision(snapshot.snapshotId), picks }, snapshot)).toThrow()
+  expect(validateAgentReport({ ...decision(snapshot.snapshotId), picks: picks.slice(0, 10) }, snapshot).picks).toHaveLength(10)
+  expect(() => validateAgentReport({ ...decision(snapshot.snapshotId), picks: picks.slice(0, 11) }, snapshot)).toThrow()
 })

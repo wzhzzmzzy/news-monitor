@@ -32,6 +32,13 @@ it('anchors morning and evening in Shanghai independently of machine timezone', 
   expect(() => editionRange('morning', '2026-02-30')).toThrow()
   expect(() => editionRange('invalid', '2026-09-21')).toThrow()
 })
+it('freezes the configured editorial policy for the report editor', async () => {
+  config.curation.editorialPolicy = ['Quality before quotas', 'Cover multiple substantive domains']
+  const snapshot = await queryNews(config, { ...morning, edition: 'morning' })
+  config.curation.editorialPolicy = ['Changed after freezing']
+  const saved = JSON.parse(await fs.readFile(snapshot.snapshotPath, 'utf8'))
+  expect(saved.preferences.editorialPolicy).toEqual(['Quality before quotas', 'Cover multiple substantive domains'])
+})
 it('compares raw revisions against a frozen baseline, never the mutable latest item', async () => {
   await observe('2026-09-19T12:00:00.000Z', [['old', '旧文章']])
   await observe('2026-09-21T01:00:00.000Z', [['a', '初稿'], ['b', '不变'], ['gone', '未再出现']])
@@ -131,21 +138,25 @@ it('renders only external decisions, validates citations and retains every unsel
   const html = await fs.readFile(htmlFile, 'utf8')
   const { document } = parseHTML(html)
   expect(document.querySelectorAll('[data-entry]')).toHaveLength(3)
-  expect(document.querySelectorAll('#panel-timeline article[data-entry]')).toHaveLength(2)
+  expect(document.querySelectorAll('[data-panel=timeline] li[data-entry]')).toHaveLength(2)
   expect(document.querySelector('#panel-other')).toBeNull()
   expect(document.querySelectorAll('script')).toHaveLength(1)
   expect(html).toContain('&lt;script&gt;bad&lt;/script&gt;')
   expect(html).toContain('早前：RSS')
   expect(document.querySelector('.report-note')?.textContent).toBe(report.summary)
-  expect(document.querySelector('.report-overview .report-note')).toBeNull()
+  expect(document.querySelector('.overview .report-note')).toBeNull()
   expect(document.querySelector('#overview-heading')?.textContent).toBe('新闻综述')
-  const references = [...document.querySelectorAll('.report-overview ol > li > p > sup > a')]
+  const references = [...document.querySelectorAll('.overview ol > li > p > sup > a')]
   expect(references.map(a => a.textContent)).toEqual(['[1]', '[2]'])
   expect(references[0].getAttribute('title')).toContain('RSS')
   expect(references[1].getAttribute('title')).toContain('早前：RSS')
   expect(references[0].getAttribute('href')).toMatch(/^https?:/)
   expect(references[0].parentElement?.parentElement?.textContent).toBe(report.sections[0].body + '[1][2]')
   expect(fetch).not.toHaveBeenCalled()
+  await renderAgentReport(snapshot.snapshotPath, decisions, htmlFile)
+  expect(await fs.readFile(htmlFile, 'utf8')).toBe(html)
+  expect(await fs.readFile(`${htmlFile}.report.md`, 'utf8')).toContain('news-feed-reader-v1')
+  await fs.appendFile(htmlFile, 'changed')
   await expect(renderAgentReport(snapshot.snapshotPath, decisions, htmlFile)).rejects.toThrow('EEXIST')
   await fs.appendFile(path.join(path.dirname(snapshot.snapshotPath), 'reading-pack.json'), ' ')
   await expect(renderAgentReport(snapshot.snapshotPath, decisions, path.join(dir, 'bad.html'))).rejects.toThrow('hash mismatch')
@@ -156,4 +167,16 @@ it('collection ignores legacy curation enabled and performs only the injected Ch
   expect(localize).toHaveBeenCalledOnce()
   expect(result.curation.status).toBe('disabled')
   await expect(fs.access(path.join(dir, 'editorial'))).rejects.toThrow()
+})
+
+it('backfills later archive observations without widening the publication window', async () => {
+  const time='2026-09-21T04:00:00.000Z'
+  const raw: FeedItem[]=['inside','outside'].map(id=>({id,content:id,title:id,sourceId:'rss',sourceName:'RSS',category:'技术',url:`https://example.com/${id}`,fetchedAt:time,publishedAt:id==='inside'?'2026-09-21T01:00:00.000Z':time,contentKind:'feed-content',raw:{}}))
+  const items=await new FeedStore(dir).merge(raw)
+  await writeJson(path.join(dir,'runs','later','source-pack.json'),{version:1,collectedAt:time,items,results:[{sourceId:'rss',sourceName:'RSS',status:'ok',count:2,coverage:'feed-snapshot',note:''}]})
+  expect((await queryNews(config,{...morning,edition:'morning'})).items).toEqual([])
+  const result=await queryNews(config,{...morning,edition:'morning',observedThrough:new Date('2026-09-21T05:00:00Z')})
+  expect(result.items.map(i=>i.id)).toEqual(['inside'])
+  expect(result.window.end).toBe(morning.end.toISOString())
+  await expect(queryNews(config,{...morning,observedThrough:new Date('2026-09-23T00:00:00Z')})).rejects.toThrow('observedThrough')
 })

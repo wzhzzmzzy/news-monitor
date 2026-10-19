@@ -120,3 +120,80 @@
   type: rss
   url: https://worksinprogress.co/rss.xml
   limit: 3
+- id: bbc-culture
+  name: BBC · 文化与艺术
+  category: 人文
+  type: rss
+  url: https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml
+  contentKind: feed-summary
+  limit: 5
+- id: bbc-business
+  name: BBC · 商业与产业
+  category: 商业
+  type: rss
+  url: https://feeds.bbci.co.uk/news/business/rss.xml
+  contentKind: feed-summary
+  limit: 5
+- id: bbc-science
+  name: BBC · 科学与环境
+  category: 科学
+  type: rss
+  url: https://feeds.bbci.co.uk/news/science_and_environment/rss.xml
+  contentKind: feed-summary
+  limit: 5
+- id: bbc-world
+  name: BBC · 国际
+  category: 综合
+  type: rss
+  url: https://feeds.bbci.co.uk/news/world/rss.xml
+  contentKind: feed-summary
+  limit: 5
+- id: nature-news
+  name: Nature · 科学
+  category: 科学
+  type: rss
+  url: https://www.nature.com/nature.rss
+  contentKind: feed-summary
+  limit: 5
+- id: guardian-environment
+  name: Guardian · 环境与气候
+  category: 环境
+  type: rss
+  url: https://www.theguardian.com/environment/rss
+  contentKind: feed-summary
+  limit: 5
+- id: guardian-culture
+  name: Guardian · 文化
+  category: 人文
+  type: rss
+  url: https://www.theguardian.com/culture/rss
+  contentKind: feed-summary
+  limit: 5
+- id: guardian-business
+  name: Guardian · 商业与经济
+  category: 商业
+  type: rss
+  url: https://www.theguardian.com/business/rss
+  contentKind: feed-summary
+  limit: 5
+- id: un-news
+  name: 联合国新闻 · 公共事务
+  category: 公共事务
+  type: rss
+  url: https://news.un.org/feed/subscribe/en/news/all/rss.xml
+  contentKind: feed-summary
+  limit: 5
+- id: conversation
+  name: The Conversation · 学术与社会
+  category: 人文
+  type: rss
+  url: https://theconversation.com/global/articles.atom
+  contentKind: feed-summary
+  limit: 5
+- id: nasa-news
+  name: NASA · 科学与航天
+  category: 科学
+  type: rss
+  url: https://www.nasa.gov/feed/
+  contentKind: feed-summary
+  limit: 5

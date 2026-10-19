@@ -31,7 +31,7 @@ export const newsSchema = z.object({
   observedThrough: timestamp.optional(),
   publicationFilter: publicationFilterSchema.extend({ scope: z.literal('news') }).optional(),
   blogPublicationFilter: publicationFilterSchema.extend({ scope: z.literal('blogs') }).optional(),
-  status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), minPicks: z.number().int().optional(), maxPicks: z.number().int(), selectionCriteria: z.array(z.string()).optional() }),
+  status: z.enum(['ready', 'partial', 'empty']), preferences: z.object({ interests: z.string(), minPicks: z.number().int().optional(), maxPicks: z.number().int(), selectionCriteria: z.array(z.string()).optional(), editorialPolicy: z.array(z.string()).optional() }),
   coverage: z.object({ complete: z.literal(false), observations: z.array(timestamp), failedSources: z.array(z.string()), missingSources: z.array(z.string()), incompleteSources: z.array(z.string()).default([]), note: z.string() }),
   items: z.array(itemSchema),
   blogs: z.array(itemSchema).default([]),
@@ -65,7 +65,7 @@ export function parseNews(value: unknown): NewsList {
 }
 export async function loadNews(file: string) { return parseNews(JSON.parse(await fs.readFile(file, 'utf8'))) }
 
-export async function queryNews(config: FeedConfig, options: { start: Date; end: Date; edition?: 'morning' | 'evening'; baseline?: string; refresh?: boolean }, localize = localizeItems, collect = runFeed): Promise<NewsList> {
+export async function queryNews(config: FeedConfig, options: { start: Date; end: Date; edition?: 'morning' | 'evening'; baseline?: string; refresh?: boolean; observedThrough?: Date }, localize = localizeItems, collect = runFeed): Promise<NewsList> {
   let { start, end } = reportRange({ start: options.start.toISOString(), end: options.end.toISOString() })
   if (options.refresh && !options.edition) throw new Error('--refresh requires --edition')
   if (+end > Date.now()) throw new Error('Window has not ended yet; use a custom window ending now for an interim snapshot')
@@ -78,7 +78,8 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
     if (+expected.start !== +start || +expected.end !== +end) throw new Error('Edition window does not match Asia/Shanghai cutoff')
     if (options.edition === 'evening' && previous?.edition !== 'morning') throw new Error('Evening baseline must be a morning snapshot')
   }
-  let observedThrough = end
+  if (options.observedThrough && (options.refresh || !Number.isFinite(+options.observedThrough) || +options.observedThrough < +end || +options.observedThrough > Date.now())) throw new Error('observedThrough must be between publication cutoff and now, without --refresh')
+  let observedThrough = options.observedThrough || end
   if (options.refresh) {
     const day = shanghaiDay(end)
     if (day !== shanghaiDay()) throw new Error('--refresh only supports today; historical editions read the archive without --refresh')
@@ -145,7 +146,7 @@ export async function queryNews(config: FeedConfig, options: { start: Date; end:
       observedThrough: observedThrough.toISOString(),
       publicationFilter, blogPublicationFilter,
       status: !all.length ? 'empty' : failedSources.length || missingSources.length || incompleteSources.length || publicationFilter.excluded.missingDate || publicationFilter.excluded.invalidDate || blogPublicationFilter.excluded.missingDate || blogPublicationFilter.excluded.invalidDate || localizationIncomplete(reading.stats) || !reading.stats.enabled ? 'partial' : 'ready',
-      preferences: { interests: config.curation.interests, minPicks: config.curation.minPicks, maxPicks: config.curation.maxPicks, selectionCriteria: config.curation.selectionCriteria },
+      preferences: { interests: config.curation.interests, minPicks: config.curation.minPicks, maxPicks: config.curation.maxPicks, selectionCriteria: config.curation.selectionCriteria, editorialPolicy: config.curation.editorialPolicy },
       coverage: { complete: false, observations: evidence.observations, failedSources, missingSources, incompleteSources,
         note: '有限 RSS/X 快照，不能保证全量覆盖。新闻与博客按固定发布时间窗口筛选；observedThrough 单独记录可用采集批次的截止时间，刷新补采不会移动报告截止；无有效发布时间的条目不纳入。历史博客继续归档，重复观察或正文变化不会绕过发布时间限制。未再出现不表示撤稿；原文变化不等于事件进展。' },
       items, blogs,

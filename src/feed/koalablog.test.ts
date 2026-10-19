@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import fs from 'node:fs/promises'
 import type { NewsList } from './news.js'
 import type { AgentReport } from './agent-report.js'
-import { publishReader } from './koalablog.js'
+import { publishReader, publicData } from './koalablog.js'
 import { dataMarkdown, makeReaderReport, parseData } from './reader-data.js'
 const snapshot = { snapshotId: '3101e225-cb98-4405-8df2-aef3283a3cf7', edition: 'evening', window: { start:'2026-09-21T02:00:00Z', end:'2026-09-21T12:00:00Z' }, items: [
   { id: 'a', title: '新闻 <script>bad</script>', summary: '核心事实。', category:'技术', publishedAt:null, source: '来源', url: 'https://example.com/a' },
@@ -33,11 +33,38 @@ function remote() {
     }
     expect(init?.headers).toBeUndefined()
     const file=files.get(decodeURIComponent(url.pathname))
-    return new Response('page',{status:file && !file.private?200:302})
+    return new Response(file?.renderer === 'markdown' ? file.content : 'page',{status:file && !file.private?200:302})
   })
   return {files,writes,request,fail:(p:string)=>failPath=p,conflict:(p:string)=>conflictPath=p}
 }
 afterEach(() => vi.unstubAllEnvs())
+it('daily data-only publishing tolerates an evolved deployed reader and never writes its source', async () => {
+  vi.stubEnv('KOALA_TEST_TOKEN','test-token'); const r = remote()
+  r.files.set('/news-feed',{id:99,path:'/news-feed',revision:7,renderer:'svelte',content:'custom deployed reader',private:false,artifactStatus:'deployed'})
+  await publishReader(snapshot,report,{...options,dataOnly:true},r.request)
+  expect(r.writes).toEqual(['/data/news-feed/2026-09-21/evening','/data/news-feed/latest'])
+  expect(r.files.get('/news-feed')?.revision).toBe(7)
+  const bad = async (input: any, init?: RequestInit) => String(input).includes('/data/news-feed/') && !String(input).includes('/api/') ? new Response(dataMarkdown({wrong:true})) : r.request(input, init)
+  await expect(publishReader(snapshot,report,{...options,dataOnly:true},bad)).rejects.toThrow('Anonymous report data differs')
+})
+it('requires deployment before any data-only write and decodes anonymous data HTML', async () => {
+  vi.stubEnv('KOALA_TEST_TOKEN','test-token'); const r=remote()
+  await expect(publishReader(snapshot,report,{...options,dataOnly:true},r.request)).rejects.toThrow('existing deployed')
+  expect(r.writes).toEqual([])
+  expect(publicData('<pre><code class="language-json"><span>{</span>&quot;text&quot;:&quot;A &amp; B&quot;}</code></pre>')).toEqual({text:'A & B'})
+})
+it('data-only publishing uses the still-public deployed artifact during source drift', async () => {
+  vi.stubEnv('KOALA_TEST_TOKEN','test-token'); const r=remote()
+  r.files.set('/news-feed',{id:99,path:'/news-feed',revision:9,renderer:'svelte',content:'saved but not deployed source',private:false,artifactStatus:'deployment_drift'})
+  const receipt=await publishReader(snapshot,report,{...options,dataOnly:true},r.request)
+  expect(receipt).toMatchObject({artifactStatus:'deployment_drift',readerAvailable:true,deploymentRequired:false})
+  expect(r.writes).toEqual(['/data/news-feed/2026-09-21/evening','/data/news-feed/latest'])
+  expect(r.files.get('/news-feed')?.revision).toBe(9)
+  const blocked=remote()
+  blocked.files.set('/news-feed',{id:99,path:'/news-feed',revision:9,renderer:'svelte',content:'source',private:true,artifactStatus:'deployment_drift'})
+  await expect(publishReader(snapshot,report,{...options,dataOnly:true},blocked.request)).rejects.toThrow('Public access failed')
+  expect(blocked.writes).toEqual([])
+})
 it('exports only public reading fields with independent blog channel and safe links', () => {
   const {data,latest,content}=makeReaderReport({...snapshot, blogs:[{...snapshot.items[0],id:'blog'}]},report)
   expect(latest.path).toBe('/data/news-feed/2026-09-21/evening')
@@ -106,4 +133,31 @@ it('redacts transport errors and refuses malformed existing latest index', async
   const r=remote();r.files.set('/data/news-feed/latest',{id:1,path:'/data/news-feed/latest',revision:1,renderer:'markdown',private:false,content:dataMarkdown({unexpected:true})})
   await expect(publishReader(snapshot,report,options,r.request)).rejects.toThrow()
   expect(r.files.get('/data/news-feed/latest')?.revision).toBe(1)
+})
+
+it('blocks unfinished blog summaries before any write', async () => {
+  vi.stubEnv('KOALA_TEST_TOKEN','test-token'); const r=remote()
+  const pending={...snapshot,blogs:[{...snapshot.items[0],id:'blog',languageStatus:'pending'}]} as NewsList
+  await expect(publishReader(pending,report,options,r.request)).rejects.toThrow('all news and blog summaries')
+  expect(r.writes).toEqual([])
+})
+it('verifies anonymous blog summaries and latest even outside data-only mode', async () => {
+  vi.stubEnv('KOALA_TEST_TOKEN','test-token'); const r=remote()
+  const stale=async (input: any, init?: RequestInit) => {
+    const path=new URL(String(input)).pathname
+    if (!path.startsWith('/api/') && path==='/data/news-feed/latest') return new Response(dataMarkdown({...makeReaderReport(snapshot,report).latest,date:'2026-09-20'}))
+    return r.request(input,init)
+  }
+  await expect(publishReader(snapshot,report,options,stale)).rejects.toThrow('Anonymous report data differs')
+  const blogRemote=remote()
+  const blogs={...snapshot,blogs:[{...snapshot.items[0],id:'blog',languageStatus:'ready'}]} as NewsList
+  const missing=async (input: any, init?: RequestInit) => {
+    const path=new URL(String(input)).pathname
+    if (!path.startsWith('/api/') && path.endsWith('/evening')) {
+      const data=makeReaderReport(blogs,report).data
+      return new Response(dataMarkdown({...data,items:data.items.map(i=>i.tier==='blogs'?{...i,summary:null}:i)}))
+    }
+    return blogRemote.request(input,init)
+  }
+  await expect(publishReader(blogs,report,options,missing)).rejects.toThrow('Anonymous report data differs')
 })

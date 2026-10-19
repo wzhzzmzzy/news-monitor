@@ -1,50 +1,26 @@
-# X 账号来源
+# X 账号与领域
 
-从原来的 Simon Willison 单账号扩展为 25 个账号（12 个厂商、4 个组织、9 位人物）。以模型/产品发布、研究与工程一手材料为主。此清单配置在 `sources` 中，使用 `x-user` 读取公开时间线；不是对用户 X 社交关注或平台 List 成员的修改。
+当前本机启用 24 个账号：12 个 AI/互联网/工程账号与 12 个其他领域账号。公开示例默认全部停用；个人配置需通过 OpenCLI 小样本核验后启用。来源使用 x-user 读取公开时间线，不改变社交关注或 X List 成员。
 
-本机 `config.feed.local.yaml` 启用全部 25 个；三份公开示例提供同一清单，默认停用，安装 OpenCLI 扩展、登录 X 并指定浏览器 profile 后开启。账号少发帖不等于抓取失败，窗口内没有更新时不进入当日报告。
+| 领域 | 启用账号 |
+| --- | --- |
+| 经济与产业 | [@IMFNews](https://x.com/IMFNews)、[@OECD](https://x.com/OECD) |
+| 公共事务与健康 | [@UN](https://x.com/UN)、[@WHO](https://x.com/WHO) |
+| 科学与环境 | [@IEA](https://x.com/IEA)、[@NASA](https://x.com/NASA)、[@esa](https://x.com/esa)、[@Nature](https://x.com/Nature)、[@ScienceMagazine](https://x.com/ScienceMagazine) |
+| 国际新闻与文化 | [@Reuters](https://x.com/Reuters)、[@BBCWorld](https://x.com/BBCWorld)、[@SmithsonianMag](https://x.com/SmithsonianMag) |
+| AI、互联网与工程 | [@simonw](https://x.com/simonw)、[@OpenAI](https://x.com/OpenAI)、[@AnthropicAI](https://x.com/AnthropicAI)、[@GoogleDeepMind](https://x.com/GoogleDeepMind)、[@huggingface](https://x.com/huggingface)、[@github](https://x.com/github)、[@Cloudflare](https://x.com/Cloudflare)、[@MistralAI](https://x.com/MistralAI)、[@MIT_CSAIL](https://x.com/MIT_CSAIL)、[@allen_ai](https://x.com/allen_ai)、[@karpathy](https://x.com/karpathy)、[@mitchellh](https://x.com/mitchellh) |
 
-| 类型 | 来源 | X 账号 | 关注内容 |
-| --- | --- | --- | --- |
-| 厂商 | OpenAI | [@OpenAI](https://x.com/OpenAI) | 模型、API 与产品发布 |
-| 厂商 | Anthropic | [@AnthropicAI](https://x.com/AnthropicAI) | Claude、开发工具与安全研究 |
-| 厂商 | Google DeepMind | [@GoogleDeepMind](https://x.com/GoogleDeepMind) | Gemini、科学研究与模型进展 |
-| 厂商 | Microsoft | [@Microsoft](https://x.com/Microsoft) | 开发平台、云与企业产品 |
-| 厂商 | NVIDIA AI | [@NVIDIAAI](https://x.com/NVIDIAAI) | GPU 计算、AI 框架与开发者生态 |
-| 厂商 | Hugging Face | [@huggingface](https://x.com/huggingface) | 开放模型、数据集与工具 |
-| 厂商 | GitHub | [@github](https://x.com/github) | 代码托管、Copilot 与开发流程 |
-| 厂商 | Cloudflare | [@Cloudflare](https://x.com/Cloudflare) | 网络、安全与边缘计算 |
-| 厂商 | Vercel | [@vercel](https://x.com/vercel) | Web 部署、前端框架与 AI SDK |
-| 厂商 | Qwen | [@Alibaba_Qwen](https://x.com/Alibaba_Qwen) | 通义模型与开放模型生态 |
-| 厂商 | DeepSeek | [@deepseek_ai](https://x.com/deepseek_ai) | DeepSeek 模型与 API |
-| 厂商 | Mistral AI | [@MistralAI](https://x.com/MistralAI) | 模型、代码智能与部署 |
-| 组织 | MIT CSAIL | [@MIT_CSAIL](https://x.com/MIT_CSAIL) | 计算机科学、机器人与 AI 研究 |
-| 组织 | Stanford HAI | [@StanfordHAI](https://x.com/StanfordHAI) | AI 研究、政策与社会影响 |
-| 组织 | Allen Institute for AI | [@allen_ai](https://x.com/allen_ai) | 开放模型、科学工具与研究 |
-| 组织 | Cloud Native Computing Foundation | [@CloudNativeFdn](https://x.com/CloudNativeFdn) | 云原生项目、技术报告与社区 |
-| 人物 | Sam Altman | [@sama](https://x.com/sama) | AI 产品与行业观点 |
-| 人物 | Andrej Karpathy | [@karpathy](https://x.com/karpathy) | 模型机制、工程实践与 AI 教育 |
-| 人物 | Demis Hassabis | [@demishassabis](https://x.com/demishassabis) | AI 与科学研究进展 |
-| 人物 | Andrew Ng | [@AndrewYNg](https://x.com/AndrewYNg) | AI 应用、教育与工程实践 |
-| 人物 | Fei-Fei Li | [@drfeifei](https://x.com/drfeifei) | 视觉、空间智能与人本 AI |
-| 人物 | Yann LeCun | [@ylecun](https://x.com/ylecun) | 机器学习研究与技术讨论 |
-| 人物 | François Chollet | [@fchollet](https://x.com/fchollet) | 推理、评测与机器学习 |
-| 人物 | Mitchell Hashimoto | [@mitchellh](https://x.com/mitchellh) | 开发工具、系统软件与工程实践 |
-| 人物 | Simon Willison | [@simonw](https://x.com/simonw) | LLM 工具、数据工程与实用实验 |
+同类重复覆盖暂停：Microsoft、NVIDIA AI、Vercel、Qwen、DeepSeek、Stanford HAI、Cloud Native Computing Foundation、Sam Altman、Demis Hassabis、Andrew Ng、Fei-Fei Li、Yann LeCun、François Chollet。条目保留在配置中，可按需恢复。世界银行 @WorldBank 官网链接已确认，但 2026-10-09 两次小样本均返回无法解析账号，暂时停用。
 
 ## 采集与编辑
 
-- 随早晚报 `news --refresh` 统一采集，X 使用已有 OpenCLI 浏览器适配器串行读取。无需新增定时任务或启动 serve。
-- 早报仅纳入截止前 24 小时发布的动态；晚报仍按早报截止到 20:00 的增量窗口。窗口外原文保留归档。
-- 新账号独立 collect 的 limit 为 20；原 Simon 配置保留。报告刷新仍从每源至少 100 条开始，按既有规则回溯，受 `collection.xMaxItems` 限制。未确认覆盖窗口起点时仍标 partial，不声称完整覆盖。
-- 中文标题与摘要沿用新闻处理，不生成全文译文；这些 X 条目是新闻候选，可参与 Agent 精选和时间线。博客仍为独立频道。
-- 模型厂商公告是来源方陈述，人物动态是个人观点；编辑时标明归属，同一公告在公司与个人时间线重复出现时应合并处理。
-- 增加来源会延长串行采集时间并增加窗口内中文处理量；验证的小样本耗时不是整轮日报耗时保证。
+- 来源配置：`config/sources/x.yaml`；本机覆盖：`config/local/x.yaml`，由主配置 sourceFiles 引用。两个文件互不自动同步。opencli.enabled 为总开关，source.enabled 为单账号开关。
+- 随早晚报统一采集，OpenCLI 串行读取；当前各账号 limit=5，普通 collect 与报告刷新均不扩量。快照不能回溯到窗口起点时记录 partial，最近 5 条不代表全天完整覆盖。无需增加定时任务或启动 serve。
+- 新闻按发布时间窗口筛选，窗口外内容只保留归档。中文标题与摘要处理到 ready/failed 后成稿，博客仍独立展示。
+- 精选按照 config/editorial.yaml 的质量标准与 editorialPolicy 判断实质领域；跨 RSS/X 的同一媒体或机构合并计算集中度，同一具体事件只选一次。官方公告注明自述，人物意见注明归属。
 
-## 身份与可用性核验
+## 核验与接入
 
-2026-09-22 使用现有已登录 Brave 会话逐个读取公开 profile（核对 screen_name、显示名称、简介）和最近 3 条动态，并通过 news-monitor collectSource 校验 ID、链接及发布时间。该记录只证明当时可读取，不保证未来登录、限流及网页接口稳定。
+2026-10-09 对 13 个新账号逐个执行一次最近 3 条小样本；12 个通过作者、发布时间与状态链接校验。WorldBank 的有限重试仍失败，保持停用。本次测试未运行整轮日报、摘要模型或通知，仅证明采样时可读，不保证长期登录、限流与接口稳定。浏览器接入与 sample 命令见 [操作指南](../docs/operations.md)。
 
-身份入口除表中账号主页外，亦参考 [OpenAI 官方账号说明](https://help.openai.com/en/articles/11725090-verifying-communications-from-openai)、[Karpathy 个人主页](https://karpathy.ai/)、[Ai2 官网的 X 链接](https://allenai.org/)、[Stanford HAI 账号简介](https://x.com/StanfordHAI/with_replies)。[Qwen 官方社交链接](https://qwenlm.github.io/about/) 指向 @Alibaba_Qwen，Ai2 官网指向 @allen_ai，[DeepSeek 官网](https://www.deepseek.com/) 指向 @deepseek_ai，[CNCF 官网](https://www.cncf.io/) 指向 @cloudnativefdn。使用这些官方入口确认账号，避免相似拼写账号。
-
-公开来源配置在 `config/sources/x.yaml`；本机覆盖可放 `config/local/x.yaml` 并通过主配置的 `sourceFiles` 引用。`opencli.enabled: false` 全局停用 X 采集，逐项 `enabled` 控制单个账号。
+身份入口包括账号主页、[IMF 社交账号页](https://www.imf.org/en/social-hub)、[OECD 联系页](https://www.oecd.org/en/about/contact.html)、[NASA 社交账号页](https://www.nasa.gov/social-media/)、[ESA 官网](https://www.esa.int/)、[Nature 官网](https://www.nature.com/nature/)和[Smithsonian 账号档案](https://www.si.edu/object/archives/components/sova-sia-fa19-035-refidd1e778)。原技术账号的 2026-09-22 profile 与动态核验记录继续保留在项目实验目录。

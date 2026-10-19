@@ -60,7 +60,7 @@ pnpm exec opencli --profile news-feed twitter list-tweets <数字ListID> --limit
 | --- | --- |
 | 扩展未连接 / 找不到 profile | 浏览器是否运行、目标 profile 是否启用扩展；运行 doctor 与 profile list，核对 contextId |
 | `x_auth` | 在同一 profile 恢复 X 登录与必要授权后，先验证一次小样本 |
-| `x_rate_limited` | 保留部分结果，等待上游恢复；减少启用账号或降低执行频率，避免循环刷新。降低 source.limit 不限制报告模式，报告仍按窗口扩量 |
+| `x_rate_limited` | 保留部分结果，等待上游恢复；减少启用账号或降低执行频率，避免循环刷新。`x-user` 的 source.limit 同时限制普通采集与报告刷新，建议每账号 5–20 条；`x-list` 报告仍按窗口扩量 |
 | `x_timeout` | 核对浏览器连接与网络，再评估 `opencli.timeoutMs`；加大超时不能解决限流 |
 | `rss_timeout` / `rss_http` / `rss_parse` | 检查 Feed/实例及 `collection` 参数，与浏览器登录问题分开处理 |
 | 归档锁冲突 | 等待在途采集和摘要处理完成，复用结果；保留活跃锁，不启动并行补采 |

@@ -192,9 +192,11 @@ export async function collectSource(source: FeedSource, config: FeedConfig, now:
   const args = source.type === 'x-list'
     ? ['twitter', 'list-tweets', source.listId]
     : ['twitter', 'tweets', source.username]
-  if (!window) return parseTweets(await run([...args, '--limit', String(source.limit), '-f', 'json'], config.opencli.profile), source, now)
-  // OpenCLI owns cursor pagination. Grow the requested prefix until it reaches
-  // the report start; its array response cannot prove exhaustion or full coverage.
+  // Account limits are request budgets in report mode too. Do not fetch historical
+  // pages just to reach the publication window; coverage remains explicit below.
+  if (!window || source.type === 'x-user') return parseTweets(await run([...args, '--limit', String(source.limit), '-f', 'json'], config.opencli.profile), source, now)
+  // Lists retain window-based expansion. OpenCLI owns cursor pagination; its
+  // array response cannot prove exhaustion or full coverage.
   const items = new Map<string, FeedItem>()
   let limit = Math.min(config.collection.xMaxItems, Math.max(100, source.limit))
   while (true) {

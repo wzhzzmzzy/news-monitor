@@ -1,0 +1,13 @@
+{
+  "version": "briefing-delivery-v1",
+  "koalablog": { "url": "https://blog.example.com", "tokenEnv": "KOALABLOG_API_TOKEN" },
+  "km": { "parentId": "1234567890", "mis": "your-mis", "cli": "oa-skills" },
+  "notifications": {
+    "cli": "catdesk",
+    "ledgerDir": "/absolute/output/.notification-ledger",
+    "targets": [
+      { "key": "group", "type": "group", "name": "已授权的群" },
+      { "key": "person", "type": "user", "mis": "recipient-mis", "id": "123456" }
+    ]
+  }
+}
