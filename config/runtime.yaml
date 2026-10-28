@@ -2,6 +2,7 @@
 collection:
   rssConcurrency: 4
   rssTimeoutMs: 20000
+  # rssProxyUrl: http://127.0.0.1:7897 # 可选本机覆盖；默认读取 HTTP(S)_PROXY，遵循 NO_PROXY
   rssRetries: 1
   retryDelayMs: 500
   userAgent: news-monitor/1.0 (personal RSS reader)

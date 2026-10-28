@@ -55,7 +55,7 @@
   name: 澎湃新闻 · 热榜
   category: 综合
   type: rsshub
-  baseUrl: https://rss.injahow.cn
+  baseUrl: https://hub.slarker.me
   route: /thepaper/sidebar/hotNews
   limit: 10
 - id: cls-hot

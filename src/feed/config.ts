@@ -31,6 +31,7 @@ export const feedConfigSchema = z.object({
   collection: z.object({
     rssConcurrency: z.number().int().min(1).max(8).default(4),
     rssTimeoutMs: z.number().int().min(100).max(600000).default(20000),
+    rssProxyUrl: httpUrl.optional(),
     rssRetries: z.number().int().min(0).max(5).default(1),
     retryDelayMs: z.number().int().min(0).max(60000).default(500),
     userAgent: z.string().min(1).max(500).regex(/^[^\r\n]+$/).default('news-monitor/1.0 (personal RSS reader)'),

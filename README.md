@@ -26,6 +26,8 @@ node dist/index.js news -c config.yaml --edition morning --refresh
 
 先按[配置指南](config/README.md)接入模型；密钥由进程环境或 Pi 提供，程序不自动加载 `.env`。X 默认停用，启用前完成 [OpenCLI 浏览器连接](docs/operations.md#2-连接-opencli-支持的浏览器)。
 
+RSS/博客支持 `HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY`；定时任务也可在本机配置中设置 `collection.rssProxyUrl`。多个海外源同时超时时，先按 [RSS 排错](docs/operations.md#6-rss博客网络排错)核对代理与来源状态。
+
 将仓库和配置路径交给 Agent，让它读取 [news-monitor Skill](skills/news-monitor/SKILL.md)，完成精选、成稿和已授权的发布。每天 10:00 自动执行使用[宿主任务模板](docs/automation.md)，无需启动 `serve`。命令返回 `partial` 时退出码可能为 1，仍须保留并检查有效 JSON。
 
 ## 使用指南
@@ -33,7 +35,7 @@ node dist/index.js news -c config.yaml --edition morning --refresh
 | 需要做什么 | 阅读文档 |
 | --- | --- |
 | 安装、连接 OpenCLI 支持的浏览器、选择 profile、启停 serve、升级和排错 | [操作指南](docs/operations.md) |
-| 设置 RSS/X/Blog、LLM、提示词、摘要与精选规则、归档和凭据 | [配置指南](config/README.md) |
+| 设置 RSS/X/Blog、代理、LLM、提示词、摘要与精选规则、归档和凭据 | [配置指南](config/README.md) |
 | 每天早报、可选增量晚报、安装 Skill、复用任务提示词 | [定时任务指南](docs/automation.md) |
 | 统一生成 HTML、发布 data Markdown/学城、发送通知与断点恢复 | [日报流程](docs/briefing.md) |
 | 让 Agent 采集、判断、成稿并恢复中断任务 | [Agent Skill](skills/news-monitor/SKILL.md) |

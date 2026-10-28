@@ -82,7 +82,9 @@ LLM 配置通过 `includes` 引用 `config/local/llm.yaml`，从 `llm.example.ya
 
 首次连接浏览器、选择 `opencli.profile`、验证 X 小样本或停止采集，见 [OpenCLI 与 serve 操作](../docs/operations.md)。该 profile 不限定浏览器品牌。宿主任务使用[独立的定时流程模板](../docs/automation.md)，不是把任务提示词写进 CLI YAML。
 
-`collection` 支持 `rssConcurrency`（4）、`rssTimeoutMs`（20000）、`rssRetries`（1）、`retryDelayMs`（500）、`userAgent`、`xMaxItems`（1000）。RSS 只对网络错误/5xx 重试，不对认证、限流或无效 XML 重试。`opencli` 支持 `enabled`（true）、`profile`、`timeoutMs`（120000）、`maxBufferBytes`（10485760）。X 仍串行采集；关闭总开关会记录 disabled，不能解释为没有新闻。来源错误只保存脱敏类别、HTTP 状态与退出码，不保存可能带凭据的 stderr。
+`collection` 支持 `rssConcurrency`（4）、`rssTimeoutMs`（20000）、`rssRetries`（1）、`retryDelayMs`（500）、`rssProxyUrl`（可选 HTTP(S) 代理地址）、`userAgent`、`xMaxItems`（1000）。RSS 对连接和正文读取的网络错误/超时、5xx 做有限重试，不对认证、限流或无效 XML 重试；每次尝试的超时覆盖响应头和完整正文。`opencli` 支持 `enabled`（true）、`profile`、`timeoutMs`（120000）、`maxBufferBytes`（10485760）。X 仍串行采集；关闭总开关会记录 disabled，不能解释为没有新闻。来源错误只保存脱敏类别、HTTP 状态与退出码，不保存可能带凭据的 stderr。
+
+RSS、Atom、RSSHub 和博客请求默认遵循 `HTTP_PROXY`/`HTTPS_PROXY`（也支持小写，优先于大写）及 `NO_PROXY`/`no_proxy`；没有代理配置时直连。定时任务不一定继承交互 shell 的环境，可在本机主配置的 `collection` 下填写 `rssProxyUrl: http://127.0.0.1:7897`（端口按实际代理调整）。该字段覆盖 HTTP/HTTPS 代理地址，仍尊重 `NO_PROXY`，只作用于 Feed 请求。代理需要认证时使用环境变量，不在 YAML 保存凭据；代理服务需在采集时运行，代理失败按来源报错，不自动切换直连。升级源码后执行 `pnpm build`；只修改配置时，下次运行 CLI 即生效，现有 `serve` 需重启。
 
 来源字段为 `id/name/category/type/limit/enabled/disabledReason`，RSS 使用 `url`，RSSHub 使用 `route/baseUrl`，X 使用 `username` 或数字 `listId`。可加 `channel: blogs` 作为独立博客来源。报告刷新时 RSS 不受小 `limit` 限制；`x-user` 严格按来源 `limit` 采集最近帖子，当前账号配置为 5 条，不因报告窗口自动扩量；`x-list` 仍按需扩大到 `xMaxItems`。窗口筛选不变，账号快照未回溯到窗口起点时保持 partial，不保证全天完整覆盖。
 

@@ -5,6 +5,7 @@ import { promisify } from 'node:util'
 import Parser from 'rss-parser'
 import { convert } from 'html-to-text'
 import { z } from 'zod'
+import { EnvHttpProxyAgent } from 'undici'
 import type { FeedConfig, FeedSource } from './config.js'
 
 export interface FeedItem {
@@ -161,22 +162,27 @@ export const runOpenCli = async (args: string[], profile?: string, options?: Fee
 }
 
 async function fetchFeed(url: string, options: FeedConfig['collection']): Promise<string> {
-  // Configured bounded retries for network errors and upstream 5xx responses. Do not
-  // retry invalid XML, authentication errors or rate limits as if they were news.
-  for (let attempt = 0; ; attempt++) {
-    let response: Response
-    try {
-      response = await fetch(url, { signal: AbortSignal.timeout(options.rssTimeoutMs), headers: { 'User-Agent': options.userAgent } })
-    } catch (error) {
-      if (attempt >= options.rssRetries) throw error
+  // A request-scoped dispatcher honors proxy settings without changing the LLM,
+  // publishing or OpenCLI clients. NO_PROXY still bypasses an explicit proxy.
+  const dispatcher = new EnvHttpProxyAgent({ httpProxy: options.rssProxyUrl, httpsProxy: options.rssProxyUrl })
+  try {
+    // Include the body read in the bounded network retry: headers can arrive
+    // successfully while the XML stalls. Invalid XML/4xx are not retried.
+    for (let attempt = 0; ; attempt++) {
+      let response: Response
+      try {
+        response = await fetch(url, { dispatcher, signal: AbortSignal.timeout(options.rssTimeoutMs), headers: { 'User-Agent': options.userAgent } } as RequestInit)
+        if (response.ok) return await response.text()
+        await response.body?.cancel()
+      } catch (error) {
+        if (attempt >= options.rssRetries) throw error
+        await new Promise(resolve => setTimeout(resolve, options.retryDelayMs))
+        continue
+      }
+      if (attempt >= options.rssRetries || response.status < 500) throw new Error(`RSS HTTP ${response.status}`)
       await new Promise(resolve => setTimeout(resolve, options.retryDelayMs))
-      continue
     }
-    if (response.ok) return response.text()
-    await response.body?.cancel()
-    if (attempt >= options.rssRetries || response.status < 500) throw new Error(`RSS HTTP ${response.status}`)
-    await new Promise(resolve => setTimeout(resolve, options.retryDelayMs))
-  }
+  } finally { await dispatcher.destroy() }
 }
 
 export interface PublicationWindow { start: Date; end: Date }

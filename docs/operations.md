@@ -108,3 +108,20 @@ RSS 可能只提供摘要，HN 为社区链接元数据；当前不会自动补�
 邮件使用 `render --email` 生成文件，投递由宿主按授权安排。兼容 `report --send` 会发送未精选阅读列表，需要显式配置 email 和 passwordEnv；`test-email` 会真实发送测试邮件。邮件投递无同日幂等保证，SMTP 凭据不进入报告或快照。
 
 阅读页模板 `templates/news-feed.svelte` 的固定简介为“每日自动更新的 RSS、X、HN 新闻汇总”。Koalablog 从已部署页面首个段落提取 description / og:description；修改简介需按[发布协议](../skills/news-monitor/references/protocol.md#发布为-koalablog-public-memo)更新 Source 并在 Dashboard Deploy，普通日报更新只写报告数据。
+
+## 6. RSS/博客网络排错
+
+先看归档 `source-pack.json` 的 `results[].failure`，区分 `rss_timeout`、`rss_network`、`rss_http`（含 HTTP 状态）与 `rss_parse`。多个海外来源同时超时，应检查运行采集进程的代理设置；浏览器或 curl 能打开并不说明 CLI 使用了同一路径。
+
+RSS 请求读取 `HTTP_PROXY`/`HTTPS_PROXY` 及 `NO_PROXY`（也支持小写，小写优先）。定时任务的环境可能与交互 shell 不同，可在实际使用的主 YAML 中设置：
+
+```yaml
+collection:
+  rssProxyUrl: http://127.0.0.1:7897 # 替换为实际运行的 HTTP(S) 代理
+```
+
+该设置覆盖 HTTP/HTTPS 代理地址，仍尊重 `NO_PROXY`，仅影响 RSS/Atom/RSSHub/博客请求。升级源码后重新构建；只改配置，下次 CLI 启动即生效。需要认证的代理通过环境变量配置凭据，详见[配置指南](../config/README.md#采集与其他参数)。
+
+`rssTimeoutMs` 包括连接、响应头和正文读取，每个来源最多尝试 `rssRetries + 1` 次。连接或正文超时、5xx 可以重试；403、429 和解析错误应检查站点状态、限流或响应内容，增加重试不会自动修复它们。代理不可用时保留来源失败，不自动改为直连。
+
+RSSHub 单个路由持续5xx时，可验证同一路由在其他实例上的 HTTP 状态、有效条目、原站链接和时间，再修改该来源的 `baseUrl`。2026-10-28 澎湃热榜已据此切换至 `hub.slarker.me`；公共实例仍可能间歇失败。某个博客直连与代理都返回504时，应保留失败与订阅，等待上游恢复，不能用旧缓存标记本次成功。
