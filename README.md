@@ -55,3 +55,9 @@ RSS/博客支持 `HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY`；定时任务也�
 | `report` | 兼容的未精选归档预览 |
 
 日常流程以以上指南和 Skill 为准，`docs/PRD*`、`docs/superpowers/` 保留历史设计。有限 Feed/X 快照不保证全量覆盖，来源失败与摘要失败会随快照保留。
+
+### Dagu / Aside / Pi / Codex 早报工作流
+
+入口为 [news-briefing-workflow Skill](skills/news-briefing-workflow/SKILL.md)。同目录包含 Dagu 编排、采集/模型/发布脚本、提示词及宿主配置模板。Dagu 固定每天北京时间 10:00；RSS 复用现有采集器，X 交给 Aside，中文处理由 Pi DeepSeek 一次性 Agent 完成，Codex CLI 精选并调用固定发布器。
+
+在该 Skill 目录运行 `node scripts/setup.mjs`，填写本机配置并执行 `scripts/run.sh preflight`；然后可用 `dagu start dagu/morning.yaml` 运行整条链。`scripts/install.sh` 把编排渲染进宿主常驻 Dagu（`~/.config/dagu/dags`，每天北京时间 10:00 热重载生效），`scripts/install.sh remove` 卸下；渲染会固定 Skill 绝对工作目录、fnm v22 的 `NEWS_NODE` 与 `/opt/homebrew/bin/fish`，因为 launchd 的 PATH 里没有 fish 和 fnm。常驻调度和旧自动任务切换见 [运行与恢复](skills/news-briefing-workflow/references/operations.md)。用户恢复 Aside 代理及登录后，单条 X 实采与 Dagu → Pi/DeepSeek → Codex → 本地HTML的7阶段预览已通过；新增 preview.yaml 和 CONFIG_FILE 显式配置参数。常驻调度器内已实测热重载与 preflight，但尚未等到真实定时触发、未在 launchd 环境跑采集/模型/发布，旧 Codex 自动任务也未停用。

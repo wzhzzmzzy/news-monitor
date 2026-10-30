@@ -1,0 +1,136 @@
+{
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "agent-report-v1"
+    },
+    "snapshotId": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "picks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "topic": {
+            "enum": [
+              "AI",
+              "技术",
+              "商业",
+              "人文",
+              "综合"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "topic"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "readingIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "title",
+          "summary",
+          "itemIds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "overview",
+              "new",
+              "update",
+              "correction",
+              "watch"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "beforeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "kind",
+          "body",
+          "evidenceIds",
+          "beforeIds"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "snapshotId",
+    "title",
+    "summary",
+    "picks",
+    "readingIds",
+    "events",
+    "sections"
+  ],
+  "additionalProperties": false
+}

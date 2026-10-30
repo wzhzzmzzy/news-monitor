@@ -13,3 +13,7 @@ config.feed.local.yaml
 
 # Personal source and model overrides
 config/local/
+
+# Host-specific workflow wiring and Dagu runtime
+skills/news-briefing-workflow/config/local.json
+skills/news-briefing-workflow/.runtime/

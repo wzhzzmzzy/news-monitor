@@ -1,0 +1,26 @@
+params:
+  CONFIG_FILE: ""
+working_dir: ..
+shell: /bin/sh
+steps:
+  - name: report-day
+    run: TZ=Asia/Shanghai date +%F
+    output: REPORT_DAY
+  - name: preflight
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh preflight "$REPORT_DAY"
+    depends: report-day
+  - name: collect
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh collect "$REPORT_DAY"
+    depends: preflight
+  - name: localize
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh localize "$REPORT_DAY"
+    depends: collect
+  - name: freeze
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh freeze "$REPORT_DAY"
+    depends: localize
+  - name: codex-editorial
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh editorial "$REPORT_DAY"
+    depends: freeze
+  - name: preview
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh preview "$REPORT_DAY"
+    depends: codex-editorial

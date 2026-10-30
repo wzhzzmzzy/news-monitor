@@ -1,0 +1,30 @@
+params:
+  CONFIG_FILE: ""
+schedule: 'CRON_TZ=Asia/Shanghai 0 10 * * *'
+working_dir: ..
+shell: /bin/sh
+steps:
+  - name: report-day
+    run: TZ=Asia/Shanghai date +%F
+    output: REPORT_DAY
+  - name: preflight
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh preflight "$REPORT_DAY"
+    depends: report-day
+  - name: collect
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh collect "$REPORT_DAY"
+    depends: preflight
+  - name: localize
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh localize "$REPORT_DAY"
+    depends: collect
+  - name: freeze
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh freeze "$REPORT_DAY"
+    depends: localize
+  - name: codex-editorial
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh editorial "$REPORT_DAY"
+    depends: freeze
+  - name: codex-publish
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh publish "$REPORT_DAY"
+    depends: codex-editorial
+  - name: verify
+    run: NEWS_WORKFLOW_CONFIG="$CONFIG_FILE" ./scripts/run.sh verify "$REPORT_DAY"
+    depends: codex-publish

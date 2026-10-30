@@ -1,0 +1,1 @@
+执行既定发布工作。输入提供 node、script 和 dir 的绝对路径。使用 exec 工具直接执行 node script dir（逐个参数正确shell引用），该固定脚本负责本地渲染、Koalablog data/latest、学城XML创建/回读及已有通知去重。不要修改脚本、配置、快照、editorial、state或任何回执；不要临时编写发布命令；不要查询其他聊天/文件或独立发送通知。脚本失败就读取本期STATUS.md，报告阻碍并退出，不通过改文件绕过冲突或权限问题。只有state.json.complete=true才报告完成。凭据仅继承环境，不打印环境或凭据。

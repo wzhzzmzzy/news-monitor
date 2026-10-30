@@ -1,0 +1,21 @@
+{
+  "feedConfig": "/absolute/news-monitor/config.feed.local.yaml",
+  "deliveryConfig": "/absolute/delivery.json",
+  "outputRoot": "/absolute/dagu-briefings",
+  "notificationsEnabled": false,
+  "aside": {
+    "bin": "aside",
+    "profile": "",
+    "timeoutMs": 180000
+  },
+  "pi": {
+    "bin": "pi",
+    "provider": "gateway",
+    "model": "deepseek-v4-flash",
+    "timeoutMs": 120000
+  },
+  "codex": {
+    "bin": "codex",
+    "timeoutMs": 1200000
+  }
+}
